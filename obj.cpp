@@ -3,11 +3,16 @@
 #include "obj.h"
 
 #include "SPUtils.h"
+#include "CP.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cwctype>
+#include <mutex>
 #include <string>
 #include <vector>
+
+extern int GetWuyaImageMode();
 
 namespace {
 
@@ -35,6 +40,44 @@ std::wstring GetFileNameLower(const std::wstring& fullPath) {
 	if (pos != std::wstring::npos) name = name.substr(pos + 1);
 	std::transform(name.begin(), name.end(), name.begin(), ::towlower);
 	return name;
+}
+
+std::wstring NormalizePicKey(const std::wstring& path) {
+	std::wstring key = path;
+	std::transform(key.begin(), key.end(), key.begin(), ::towlower);
+	return key;
+}
+
+std::vector<std::wstring> SplitPicNames(const std::wstring& input) {
+	std::vector<std::wstring> out;
+	size_t start = 0;
+	while (start <= input.size()) {
+		size_t pos = input.find(L'|', start);
+		if (pos == std::wstring::npos) pos = input.size();
+		if (pos > start) {
+			out.emplace_back(input.substr(start, pos - start));
+		}
+		start = pos + 1;
+	}
+	return out;
+}
+
+constexpr int kWuyaModeExternalOnly = 0;
+constexpr int kWuyaModePreferExternal = 1;
+constexpr int kWuyaModeNativeOnly = 2;
+constexpr int kWuyaBackendNone = 0;
+constexpr int kWuyaBackendExternal = 1;
+constexpr int kWuyaBackendNative = 2;
+
+std::atomic<int> g_lastImageBackend{kWuyaBackendNone};
+std::atomic<int> g_cpContextReady{0};
+
+int GetWuyaImageModeSafe() {
+	int mode = GetWuyaImageMode();
+	if (mode < kWuyaModeExternalOnly || mode > kWuyaModeNativeOnly) {
+		return kWuyaModeNativeOnly;
+	}
+	return mode;
 }
 
 bool GetProcessImageName(DWORD pid, std::wstring& outNameLower) {
@@ -100,10 +143,78 @@ CString JoinHwnds(const std::vector<long>& hwnds) {
 	return out;
 }
 
+std::once_flag g_cpDpiOnce;
+
 } // namespace
 
-sptool::sptool() : m_lastError(0), m_exitThread(0), m_boundHwnd(0) {}
-sptool::~sptool() = default;
+sptool::sptool()
+	: m_lastError(0),
+	  m_exitThread(0),
+	  m_boundHwnd(0),
+	  m_cpData(nullptr),
+	  m_cpPicTable(nullptr),
+	  m_cpHwnd(0) {}
+
+sptool::~sptool() {
+	ResetCpContext();
+}
+
+void sptool::ResetCpContext() {
+	if (m_cpPicTable) {
+		CPDeletePicTable(m_cpPicTable);
+		m_cpPicTable = nullptr;
+	}
+	if (m_cpData) {
+		CPClose(m_cpData);
+		m_cpData = nullptr;
+	}
+	m_cpLoadedPics.clear();
+	m_cpHwnd = 0;
+	g_cpContextReady.store(0);
+}
+
+bool sptool::EnsureCpContext() {
+	if (m_cpData && m_cpHwnd == m_boundHwnd) return true;
+
+	ResetCpContext();
+
+	HWND hwnd = LongToHwnd(m_boundHwnd);
+	if (hwnd == nullptr || !IsWindow(hwnd)) return false;
+
+	std::call_once(g_cpDpiOnce, []() { CPDisableDpi(); });
+
+	m_cpData = CPOpen(hwnd);
+	if (!m_cpData) return false;
+
+	m_cpPicTable = CPCreatePicTable();
+	if (!m_cpPicTable) {
+		CPClose(m_cpData);
+		m_cpData = nullptr;
+		return false;
+	}
+
+	m_cpHwnd = m_boundHwnd;
+	CPSetMode(m_cpData, MCPMI_POS, MCPCM_VIRTUAL);
+	CPSetMode(m_cpData, MCPMI_GETPIXEL, MCPGPM_STANDARD);
+	CPSetMode(m_cpData, MCPMI_FUN, MCPFM_UNICODE);
+	g_cpContextReady.store(1);
+	return true;
+}
+
+bool sptool::EnsureCpPicLoaded(const std::wstring& path) {
+	if (path.empty()) return false;
+	if (!EnsureCpContext()) return false;
+
+	std::wstring key = NormalizePicKey(path);
+	if (m_cpLoadedPics.find(key) != m_cpLoadedPics.end()) return true;
+
+	if (!CPLoadBMP(m_cpData, m_cpPicTable, path.c_str(), path.c_str(), 0)) {
+		return false;
+	}
+
+	m_cpLoadedPics.insert(key);
+	return true;
+}
 
 CString sptool::Ver() {
 	return _T("GlacialTool_AngelV_NoDM");
@@ -168,12 +279,14 @@ long sptool::BindWindowEx(long hwnd, const TCHAR* /*display*/, const TCHAR* /*mo
 		return 0;
 	}
 	m_boundHwnd = hwnd;
+	ResetCpContext();
 	SPUtils::ActivateWindowLong(hwnd);
 	return 1;
 }
 
 long sptool::UnBindWindow() {
 	m_boundHwnd = 0;
+	ResetCpContext();
 	return 1;
 }
 
@@ -236,6 +349,43 @@ long sptool::FindPic(long x1, long y1, long x2, long y2, const TCHAR* pic_name, 
 	HWND hwnd = LongToHwnd(m_boundHwnd);
 	if (hwnd == nullptr || !IsWindow(hwnd)) return 0;
 
+	int mode = GetWuyaImageModeSafe();
+	if (mode != kWuyaModeNativeOnly && EnsureCpContext()) {
+		g_lastImageBackend.store(kWuyaBackendExternal);
+		long left = x1;
+		long top = y1;
+		long right = x2;
+		long bottom = y2;
+		if (right == 0 || bottom == 0) {
+			RECT rc = {};
+			if (GetClientRect(hwnd, &rc)) {
+				if (right == 0) right = rc.right;
+				if (bottom == 0) bottom = rc.bottom;
+			}
+		}
+
+		float simValue = static_cast<float>(std::max(0.0, std::min(1.0, sim)));
+		CPSetFPSimilar(m_cpData, simValue);
+
+		auto names = SplitPicNames(ToWString(pic_name));
+		for (const auto& name : names) {
+			if (!EnsureCpPicLoaded(name)) continue;
+			long outx = -1;
+			long outy = -1;
+			if (CPFindPic(m_cpData, left, top, right, bottom, m_cpPicTable, name.c_str(), 0, &outx, &outy)) {
+				g_lastImageBackend.store(kWuyaBackendExternal);
+				if (x) *x = outx;
+				if (y) *y = outy;
+				return 1;
+			}
+		}
+		if (mode == kWuyaModeExternalOnly) return 0;
+	}
+	else if (mode == kWuyaModeExternalOnly) {
+		return 0;
+	}
+
+	g_lastImageBackend.store(kWuyaBackendNative);
 	long outx = -1, outy = -1;
 	bool found = SPUtils::FindPic(hwnd, static_cast<int>(x1), static_cast<int>(y1), static_cast<int>(x2), static_cast<int>(y2), ToWString(pic_name), sim, outx, outy);
 	if (found) {
@@ -250,6 +400,26 @@ CString sptool::GetColor(long x, long y) {
 	HWND hwnd = LongToHwnd(m_boundHwnd);
 	if (hwnd == nullptr || !IsWindow(hwnd)) return _T("");
 
+	int mode = GetWuyaImageModeSafe();
+	if (mode != kWuyaModeNativeOnly && EnsureCpContext()) {
+		g_lastImageBackend.store(kWuyaBackendExternal);
+		COLORREF color = CPGetColor(m_cpData, x, y);
+		if (color != CLR_NOTRP) {
+			g_lastImageBackend.store(kWuyaBackendExternal);
+			int r = GetRValue(color);
+			int g = GetGValue(color);
+			int b = GetBValue(color);
+			CString out;
+			out.Format(_T("%02X%02X%02X"), r, g, b);
+			return out;
+		}
+		if (mode == kWuyaModeExternalOnly) return _T("");
+	}
+	else if (mode == kWuyaModeExternalOnly) {
+		return _T("");
+	}
+
+	g_lastImageBackend.store(kWuyaBackendNative);
 	cv::Mat mat;
 	if (!SPUtils::CaptureAndResizeToLogic(hwnd, static_cast<int>(x), static_cast<int>(y), static_cast<int>(x + 1), static_cast<int>(y + 1), mat)) {
 		return _T("");
@@ -298,15 +468,7 @@ long sptool::MoveTo(long x, long y) {
 
 long sptool::LeftClick() {
 	// DM's default LeftClick() clicks at current cursor position.
-	INPUT down = {};
-	down.type = INPUT_MOUSE;
-	down.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
-	INPUT up = {};
-	up.type = INPUT_MOUSE;
-	up.mi.dwFlags = MOUSEEVENTF_LEFTUP;
-	SendInput(1, &down, sizeof(INPUT));
-	Sleep(15);
-	SendInput(1, &up, sizeof(INPUT));
+	SPUtils::LeftClickCurrent(1, 30);
 	return 1;
 }
 
@@ -332,4 +494,12 @@ CString sptool::EnumWindow(long /*parent*/, const TCHAR* title, const TCHAR* cla
 	p.classNameNeedle = ToWString(class_name);
 	EnumWindows(EnumWindowsProc, reinterpret_cast<LPARAM>(&p));
 	return JoinHwnds(p.hwnds);
+}
+
+int GetWuyaImageBackend() {
+	return g_lastImageBackend.load();
+}
+
+int GetWuyaImageContextReady() {
+	return g_cpContextReady.load();
 }

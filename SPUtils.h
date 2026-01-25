@@ -29,6 +29,7 @@ void KeyPress(const std::wstring& key, int times = 1, long delay_after_ms = 0);
 // Mouse (coords are logic coords relative to window client).
 void MoveTo(HWND hwnd, int logicalX, int logicalY, int delay_after_ms = 0);
 void LeftClick(HWND hwnd, int logicalX, int logicalY, int times = 1, int clickDelayMs = 30, int moveDelayMs = 50);
+void LeftClickCurrent(int times = 1, int clickDelayMs = 30);
 void RightClick(int times = 1, int clickDelayMs = 30);
 
 // Window helpers.

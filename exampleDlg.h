@@ -47,6 +47,8 @@ public:
     int GetExp10();
     int GetExp30();
     int GetWhiteDetect();
+    int GetWuyaImageMode();
+    int GetWuyaInputMode();
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -61,12 +63,19 @@ private:
     void InitCombos();
     void LoadUiState();
     void SaveUiState();
+    void UpdateWuyaStatus();
     int FindListIndex(long index) const;
     void SyncTabSelection(int tabIndex);
     void RegisterHotKeys();
     void UnregisterHotKeys();
 
     QLabel* m_coordLabel;
+    QLabel* m_wuyaImageModeValue;
+    QLabel* m_wuyaImageBackendValue;
+    QLabel* m_wuyaImageReadyValue;
+    QLabel* m_wuyaInputModeValue;
+    QLabel* m_wuyaInputBackendValue;
+    QLabel* m_wuyaInputReadyValue;
     QTableWidget* m_statusList;
     QStackedWidget* m_optionTabs;
     QToolButton* m_tabCommon;
@@ -86,6 +95,8 @@ private:
     QToolButton* EXP15M;
     QToolButton* EXP30M;
     QToolButton* whiteDetect;
+    QComboBox* wyImageMode;
+    QComboBox* wyInputMode;
 
     QWidget* m_titleBar;
     HWND m_hwnd;

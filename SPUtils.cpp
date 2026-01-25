@@ -1,19 +1,24 @@
 #include "stdafx.h"
 
 #include "SPUtils.h"
+#include "HKM.h"
 
 #include <ShellScalingApi.h>
 #pragma comment(lib, "Shcore.lib")
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <chrono>
 #include <cstdlib>
 #include <cwctype>
 #include <map>
+#include <mutex>
 #include <sstream>
 #include <thread>
 #include <vector>
+
+extern int GetWuyaInputMode();
 
 namespace {
 
@@ -49,6 +54,103 @@ std::string TCharPathToAnsi(const TCHAR* path) {
 #else
 	return std::string(path);
 #endif
+}
+
+struct HkmContext {
+	std::mutex mutex;
+	LPVOID dev = nullptr;
+	ULONGLONG lastInitAttemptMs = 0;
+
+	~HkmContext() {
+		if (dev) {
+			HKMClose(dev);
+			dev = nullptr;
+		}
+	}
+};
+
+HkmContext& GetHkmContext() {
+	static HkmContext ctx;
+	return ctx;
+}
+
+DWORD FindHkmDeviceId() {
+	const DWORD kAnyVidPid = 0x10000;
+	DWORD devId = HKMSearchDevice(kAnyVidPid, kAnyVidPid, HDT_KM);
+	if (devId == HKM_FAIL) devId = HKMSearchDevice(kAnyVidPid, kAnyVidPid, HDT_KEY);
+	if (devId == HKM_FAIL) devId = HKMSearchDevice(kAnyVidPid, kAnyVidPid, HDT_ALL);
+	return devId;
+}
+
+bool EnsureHkmDeviceLocked(HkmContext& ctx) {
+	if (ctx.dev) return true;
+
+	ULONGLONG now = GetTickCount64();
+	if (ctx.lastInitAttemptMs != 0 && (now - ctx.lastInitAttemptMs) < 2000) return false;
+	ctx.lastInitAttemptMs = now;
+
+	DWORD devId = FindHkmDeviceId();
+	if (devId == HKM_FAIL) return false;
+
+	ctx.dev = HKMOpen(devId, DPIM_PHYSICAL);
+	return ctx.dev != nullptr;
+}
+
+LPCWSTR VkToHkmParam(WORD vkCode) {
+	return reinterpret_cast<LPCWSTR>(static_cast<ULONG_PTR>(vkCode));
+}
+
+bool SendHkmKey(WORD vkCode, bool isKeyUp) {
+	auto& ctx = GetHkmContext();
+	std::lock_guard<std::mutex> lock(ctx.mutex);
+	if (!EnsureHkmDeviceLocked(ctx)) return false;
+	LPCWSTR param = VkToHkmParam(vkCode);
+	return isKeyUp ? HKMKeyUp(ctx.dev, param) : HKMKeyDown(ctx.dev, param);
+}
+
+bool EnsureHkmMouseLocked(HkmContext& ctx) {
+	if (!EnsureHkmDeviceLocked(ctx)) return false;
+	DWORD mode = HKMGetMouseMode(ctx.dev);
+	if (mode == HKM_FAIL || mode == HMT_NONE) return false;
+	return true;
+}
+
+bool SendHkmMouseMove(long x, long y) {
+	auto& ctx = GetHkmContext();
+	std::lock_guard<std::mutex> lock(ctx.mutex);
+	if (!EnsureHkmMouseLocked(ctx)) return false;
+	return HKMMoveTo(ctx.dev, x, y) != FALSE;
+}
+
+bool SendHkmLeftClick() {
+	auto& ctx = GetHkmContext();
+	std::lock_guard<std::mutex> lock(ctx.mutex);
+	if (!EnsureHkmMouseLocked(ctx)) return false;
+	return HKMLeftClick(ctx.dev) != FALSE;
+}
+
+bool SendHkmRightClick() {
+	auto& ctx = GetHkmContext();
+	std::lock_guard<std::mutex> lock(ctx.mutex);
+	if (!EnsureHkmMouseLocked(ctx)) return false;
+	return HKMRightClick(ctx.dev) != FALSE;
+}
+
+constexpr int kWuyaModeExternalOnly = 0;
+constexpr int kWuyaModePreferExternal = 1;
+constexpr int kWuyaModeNativeOnly = 2;
+constexpr int kWuyaBackendNone = 0;
+constexpr int kWuyaBackendExternal = 1;
+constexpr int kWuyaBackendNative = 2;
+
+std::atomic<int> g_lastInputBackend{kWuyaBackendNone};
+
+int GetWuyaInputModeSafe() {
+	int mode = GetWuyaInputMode();
+	if (mode < kWuyaModeExternalOnly || mode > kWuyaModeNativeOnly) {
+		return kWuyaModeNativeOnly;
+	}
+	return mode;
 }
 
 bool IsExtendedKey(WORD vkCode) {
@@ -174,6 +276,48 @@ bool LogicalClientToPhysicalScreen(HWND hwnd, int logicalX, int logicalY, POINT&
 
 	outPoint.x = clientTopLeft.x + static_cast<int>(std::lround(logicalX * scaleFactor));
 	outPoint.y = clientTopLeft.y + static_cast<int>(std::lround(logicalY * scaleFactor));
+	return true;
+}
+
+bool TryHkmKey(const std::wstring& key, bool isKeyUp) {
+	WORD vkCode = GetVirtualKeyCode(key);
+	if (vkCode == 0) return false;
+	return SendHkmKey(vkCode, isKeyUp);
+}
+
+bool TryHkmMoveTo(HWND hwnd, int logicalX, int logicalY, int delay_after_ms) {
+	POINT physicalPoint;
+	if (!LogicalClientToPhysicalScreen(hwnd, logicalX, logicalY, physicalPoint)) return false;
+	if (!SendHkmMouseMove(physicalPoint.x, physicalPoint.y)) return false;
+
+	if (delay_after_ms > 0) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(delay_after_ms));
+	}
+	return true;
+}
+
+bool TryHkmLeftClickCurrent(int times, int clickDelayMs) {
+	for (int i = 0; i < times; ++i) {
+		if (!SendHkmLeftClick()) return false;
+		if (i + 1 < times) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(std::max(1, clickDelayMs)));
+		}
+	}
+	return true;
+}
+
+bool TryHkmLeftClick(HWND hwnd, int logicalX, int logicalY, int times, int clickDelayMs, int moveDelayMs) {
+	if (!TryHkmMoveTo(hwnd, logicalX, logicalY, moveDelayMs)) return false;
+	return TryHkmLeftClickCurrent(times, clickDelayMs);
+}
+
+bool TryHkmRightClick(int times, int clickDelayMs) {
+	for (int i = 0; i < times; ++i) {
+		if (!SendHkmRightClick()) return false;
+		if (i + 1 < times) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(std::max(1, clickDelayMs)));
+		}
+	}
 	return true;
 }
 
@@ -333,10 +477,34 @@ void CapturePng(HWND hwnd, long logic_x1, long logic_y1, long logic_x2, long log
 }
 
 void KeyDown(const std::wstring& key) {
+	int mode = GetWuyaInputModeSafe();
+	if (mode != kWuyaModeNativeOnly) {
+		if (TryHkmKey(key, false)) {
+			g_lastInputBackend.store(kWuyaBackendExternal);
+			return;
+		}
+		if (mode == kWuyaModeExternalOnly) {
+			g_lastInputBackend.store(kWuyaBackendExternal);
+			return;
+		}
+	}
+	g_lastInputBackend.store(kWuyaBackendNative);
 	SendKeyInput(key, false);
 }
 
 void KeyUp(const std::wstring& key) {
+	int mode = GetWuyaInputModeSafe();
+	if (mode != kWuyaModeNativeOnly) {
+		if (TryHkmKey(key, true)) {
+			g_lastInputBackend.store(kWuyaBackendExternal);
+			return;
+		}
+		if (mode == kWuyaModeExternalOnly) {
+			g_lastInputBackend.store(kWuyaBackendExternal);
+			return;
+		}
+	}
+	g_lastInputBackend.store(kWuyaBackendNative);
 	SendKeyInput(key, true);
 }
 
@@ -350,6 +518,19 @@ void KeyPress(const std::wstring& key, int times, long delay_after_ms) {
 }
 
 void MoveTo(HWND hwnd, int logicalX, int logicalY, int delay_after_ms) {
+	int mode = GetWuyaInputModeSafe();
+	if (mode != kWuyaModeNativeOnly) {
+		if (TryHkmMoveTo(hwnd, logicalX, logicalY, delay_after_ms)) {
+			g_lastInputBackend.store(kWuyaBackendExternal);
+			return;
+		}
+		if (mode == kWuyaModeExternalOnly) {
+			g_lastInputBackend.store(kWuyaBackendExternal);
+			return;
+		}
+	}
+	g_lastInputBackend.store(kWuyaBackendNative);
+
 	POINT physicalPoint;
 	if (!LogicalClientToPhysicalScreen(hwnd, logicalX, logicalY, physicalPoint)) return;
 
@@ -375,6 +556,19 @@ void MoveTo(HWND hwnd, int logicalX, int logicalY, int delay_after_ms) {
 }
 
 void LeftClick(HWND hwnd, int logicalX, int logicalY, int times, int clickDelayMs, int moveDelayMs) {
+	int mode = GetWuyaInputModeSafe();
+	if (mode != kWuyaModeNativeOnly) {
+		if (TryHkmLeftClick(hwnd, logicalX, logicalY, times, clickDelayMs, moveDelayMs)) {
+			g_lastInputBackend.store(kWuyaBackendExternal);
+			return;
+		}
+		if (mode == kWuyaModeExternalOnly) {
+			g_lastInputBackend.store(kWuyaBackendExternal);
+			return;
+		}
+	}
+	g_lastInputBackend.store(kWuyaBackendNative);
+
 	MoveTo(hwnd, logicalX, logicalY, moveDelayMs);
 
 	INPUT down = {};
@@ -394,7 +588,51 @@ void LeftClick(HWND hwnd, int logicalX, int logicalY, int times, int clickDelayM
 	}
 }
 
+void LeftClickCurrent(int times, int clickDelayMs) {
+	int mode = GetWuyaInputModeSafe();
+	if (mode != kWuyaModeNativeOnly) {
+		if (TryHkmLeftClickCurrent(times, clickDelayMs)) {
+			g_lastInputBackend.store(kWuyaBackendExternal);
+			return;
+		}
+		if (mode == kWuyaModeExternalOnly) {
+			g_lastInputBackend.store(kWuyaBackendExternal);
+			return;
+		}
+	}
+	g_lastInputBackend.store(kWuyaBackendNative);
+
+	INPUT down = {};
+	down.type = INPUT_MOUSE;
+	down.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+	INPUT up = {};
+	up.type = INPUT_MOUSE;
+	up.mi.dwFlags = MOUSEEVENTF_LEFTUP;
+
+	for (int i = 0; i < times; ++i) {
+		SendInput(1, &down, sizeof(INPUT));
+		std::this_thread::sleep_for(std::chrono::milliseconds(std::max(1, clickDelayMs / 2)));
+		SendInput(1, &up, sizeof(INPUT));
+		if (i + 1 < times) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(std::max(1, clickDelayMs / 2)));
+		}
+	}
+}
+
 void RightClick(int times, int clickDelayMs) {
+	int mode = GetWuyaInputModeSafe();
+	if (mode != kWuyaModeNativeOnly) {
+		if (TryHkmRightClick(times, clickDelayMs)) {
+			g_lastInputBackend.store(kWuyaBackendExternal);
+			return;
+		}
+		if (mode == kWuyaModeExternalOnly) {
+			g_lastInputBackend.store(kWuyaBackendExternal);
+			return;
+		}
+	}
+	g_lastInputBackend.store(kWuyaBackendNative);
+
 	INPUT down = {};
 	down.type = INPUT_MOUSE;
 	down.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
@@ -443,3 +681,14 @@ bool ActivateWindowLong(long hwnd_long) {
 }
 
 } // namespace SPUtils
+
+int GetWuyaInputBackend() {
+	return g_lastInputBackend.load();
+}
+
+int GetWuyaInputDeviceReady() {
+	auto& ctx = GetHkmContext();
+	if (ctx.dev) return 1;
+	DWORD devId = FindHkmDeviceId();
+	return (devId == HKM_FAIL) ? 0 : 1;
+}

@@ -5,6 +5,8 @@
 
 #include <windows.h>
 #include <afxstr.h>
+#include <string>
+#include <unordered_set>
 
 class sptool {
 public:
@@ -62,7 +64,15 @@ public:
 	CString EnumWindow(long parent, const TCHAR* title, const TCHAR* class_name, long filter);
 
 private:
+	bool EnsureCpContext();
+	void ResetCpContext();
+	bool EnsureCpPicLoaded(const std::wstring& path);
+
 	long m_lastError;
 	long m_exitThread;
 	long m_boundHwnd;
+	LPVOID m_cpData;
+	LPVOID m_cpPicTable;
+	long m_cpHwnd;
+	std::unordered_set<std::wstring> m_cpLoadedPics;
 };
