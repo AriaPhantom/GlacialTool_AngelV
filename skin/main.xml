@@ -1,0 +1,107 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Window caption="0,0,0,40" roundcorner="16,16" size="380,740" sizebox="6,6,6,6" mininfo="340,640" bkcolor="#FFF4F7FC" defaultfontcolor="#FF1B1F24" defaultdisabledcolor="#FF9AA2AE">
+  <Font id="0" name="Microsoft YaHei" size="12" bold="false" default="true" shared="true" />
+  <Font id="1" name="Microsoft YaHei" size="16" bold="true" shared="true" />
+  <Font id="2" name="Microsoft YaHei" size="12" bold="true" shared="true" />
+
+  <VerticalLayout name="backdrop" padding="16,14,16,16" childpadding="12,12" bkcolor="#FFF4F7FC" bkcolor2="#FFFFFFFF">
+    <HorizontalLayout name="titlebar" height="38" childpadding="10,0" valign="center">
+      <Label name="app_title" text="卡莲 控制台" font="1" textcolor="#FF1B1F24" />
+      <Control width="0" />
+      <Button name="minbtn" text="—" width="32" height="24" textcolor="#FF1B1F24" bkcolor="#FFF0F4FA" hotbkcolor="#FFE2E8F0" bordersize="1" bordercolor="#FFE2E8F0" borderround="8,8" />
+      <Button name="closebtn" text="×" width="32" height="24" textcolor="#FF1B1F24" bkcolor="#FFF0F4FA" hotbkcolor="#FFE2E8F0" bordersize="1" bordercolor="#FFE2E8F0" borderround="8,8" />
+    </HorizontalLayout>
+
+    <VerticalLayout name="panel_controls" padding="12,12,12,12" childpadding="8,8" bkcolor="#FFFFFFFF" bordersize="1" bordercolor="#FFE2E8F0" borderround="12,12">
+      <Label text="控制面板" font="2" textcolor="#FF1B1F24" />
+      <HorizontalLayout childpadding="8,0">
+        <Button name="btn_start_all" text="启动全部" width="150" height="32" textcolor="#FFFFFFFF" bkcolor="#FF3A7BFF" hotbkcolor="#FF2F6EEA" bordersize="0" borderround="10,10" />
+        <Button name="btn_soft" text="软停止/开始" width="150" height="32" bkcolor="#FFEAF2FF" hotbkcolor="#FFEEF3FF" bordercolor="#FFC7D8FF" textcolor="#FF1B1F24" pushedtextcolor="#FF0F1115" bordersize="1" borderround="10,10" />
+      </HorizontalLayout>
+      <HorizontalLayout childpadding="8,0">
+        <Button name="btn_stop_all" text="停止全部" width="150" height="32" textcolor="#FFFFFFFF" bkcolor="#FFE05858" hotbkcolor="#FFD84A4A" bordersize="0" borderround="10,10" />
+        <Button name="btn_pause_all" text="暂停全部" width="150" height="32" bkcolor="#FFEAF2FF" hotbkcolor="#FFEEF3FF" bordercolor="#FFC7D8FF" textcolor="#FF1B1F24" pushedtextcolor="#FF0F1115" bordersize="1" borderround="10,10" />
+      </HorizontalLayout>
+      <HorizontalLayout childpadding="8,0">
+        <Button name="btn_resume_all" text="恢复全部" width="150" height="32" bkcolor="#FFEAF2FF" hotbkcolor="#FFEEF3FF" bordercolor="#FFC7D8FF" textcolor="#FF1B1F24" pushedtextcolor="#FF0F1115" bordersize="1" borderround="10,10" />
+        <Button name="btn_close_all" text="关闭全部窗口" width="150" height="32" bkcolor="#FFF6F8FC" hotbkcolor="#FFEEF3FF" bordercolor="#FFE2E8F0" textcolor="#FF1B1F24" pushedtextcolor="#FF0F1115" bordersize="1" borderround="10,10" />
+      </HorizontalLayout>
+      <Label text="快捷键" textcolor="#FF5A6270" />
+      <Label text="Ctrl+L 软停/开始" textcolor="#FF5A6270" />
+      <Label text="Ctrl+P 暂停/恢复" textcolor="#FF5A6270" />
+    </VerticalLayout>
+
+    <VerticalLayout name="panel_info" padding="12,12,12,12" childpadding="6,6" bkcolor="#FFFFFFFF" bordersize="1" bordercolor="#FFE2E8F0" borderround="12,12">
+      <Label text="实时信息" font="2" textcolor="#FF1B1F24" />
+      <HorizontalLayout childpadding="8,0" valign="center">
+        <Label text="当前坐标" width="60" textcolor="#FF5A6270" />
+        <Label name="coord_label" text="（0,0）" textcolor="#FF1B1F24" />
+      </HorizontalLayout>
+      <Label name="tip_label" text="当前对象数量:0     版本:" textcolor="#FF5A6270" />
+    </VerticalLayout>
+
+    <VerticalLayout name="panel_options" padding="12,12,12,12" childpadding="8,8" bkcolor="#FFFFFFFF" bordersize="1" bordercolor="#FFE2E8F0" borderround="12,12">
+      <HorizontalLayout height="28" childpadding="8,0" valign="center">
+        <Label text="其他选项" font="2" textcolor="#FF1B1F24" />
+        <Control width="0" />
+        <HorizontalLayout childpadding="6,0">
+          <Option name="tab_common_btn" text="常用" group="option_tabs" selected="true" width="56" height="26" textcolor="#FF1B1F24" bkcolor="#FFEEF3FB" selectedbkcolor="#FF3A7BFF" selectedtextcolor="#FFFFFFFF" bordercolor="#FFD9E2F2" bordersize="1" borderround="13,13" />
+          <Option name="tab_detect_btn" text="检测" group="option_tabs" width="56" height="26" textcolor="#FF1B1F24" bkcolor="#FFEEF3FB" selectedbkcolor="#FF3A7BFF" selectedtextcolor="#FFFFFFFF" bordercolor="#FFD9E2F2" bordersize="1" borderround="13,13" />
+        </HorizontalLayout>
+      </HorizontalLayout>
+
+      <TabLayout name="option_tabs">
+        <VerticalLayout name="page_common" padding="0,4,0,0" childpadding="8,8">
+          <HorizontalLayout childpadding="8,0" valign="center">
+            <Label text="地图选择" width="60" textcolor="#FF5A6270" />
+            <Combo name="map_list" width="200" height="30" textpadding="8,0,28,0" textcolor="#FF1B1F24" bordersize="1" bordercolor="#FFE2E8F0" borderround="10,10" bkcolor="#FFF7F9FD" dropboxsize="220,160" />
+          </HorizontalLayout>
+          <CheckBox name="check_hunt" text="刷图" width="70" height="28" textpadding="12,0,0,0" textcolor="#FF1B1F24" bkcolor="#FFF7F9FD" hotbkcolor="#FFEEF3FF" selectedbkcolor="#FF3A7BFF" selectedtextcolor="#FFFFFFFF" bordersize="1" bordercolor="#FFE2E8F0" borderround="14,14" />
+          <HorizontalLayout childpadding="12,0">
+            <VerticalLayout width="150" childpadding="6,6">
+              <CheckBox name="check_exp_pot" text="秘药2H" height="28" textpadding="12,0,0,0" textcolor="#FF1B1F24" bkcolor="#FFF7F9FD" hotbkcolor="#FFEEF3FF" selectedbkcolor="#FF3A7BFF" selectedtextcolor="#FFFFFFFF" bordersize="1" bordercolor="#FFE2E8F0" borderround="14,14" />
+              <CheckBox name="check_exp_park" text="公园" height="28" textpadding="12,0,0,0" textcolor="#FF1B1F24" bkcolor="#FFF7F9FD" hotbkcolor="#FFEEF3FF" selectedbkcolor="#FF3A7BFF" selectedtextcolor="#FFFFFFFF" bordersize="1" bordercolor="#FFE2E8F0" borderround="14,14" />
+              <CheckBox name="check_mvp" text="MVP" height="28" textpadding="12,0,0,0" textcolor="#FF1B1F24" bkcolor="#FFF7F9FD" hotbkcolor="#FFEEF3FF" selectedbkcolor="#FF3A7BFF" selectedtextcolor="#FFFFFFFF" bordersize="1" bordercolor="#FFE2E8F0" borderround="14,14" />
+              <CheckBox name="check_auto_wealth" text="秘药30M" height="28" textpadding="12,0,0,0" textcolor="#FF1B1F24" bkcolor="#FFF7F9FD" hotbkcolor="#FFEEF3FF" selectedbkcolor="#FF3A7BFF" selectedtextcolor="#FFFFFFFF" bordersize="1" bordercolor="#FFE2E8F0" borderround="14,14" />
+            </VerticalLayout>
+            <VerticalLayout width="150" childpadding="6,6">
+              <CheckBox name="check_auto_oil" text="自动加油" height="28" textpadding="12,0,0,0" textcolor="#FF1B1F24" bkcolor="#FFF7F9FD" hotbkcolor="#FFEEF3FF" selectedbkcolor="#FF3A7BFF" selectedtextcolor="#FFFFFFFF" bordersize="1" bordercolor="#FFE2E8F0" borderround="14,14" />
+              <CheckBox name="check_bless" text="点火" height="28" textpadding="12,0,0,0" textcolor="#FF1B1F24" bkcolor="#FFF7F9FD" hotbkcolor="#FFEEF3FF" selectedbkcolor="#FF3A7BFF" selectedtextcolor="#FFFFFFFF" bordersize="1" bordercolor="#FFE2E8F0" borderround="14,14" />
+              <CheckBox name="check_exp15m" text="家族VB" height="28" textpadding="12,0,0,0" textcolor="#FF1B1F24" bkcolor="#FFF7F9FD" hotbkcolor="#FFEEF3FF" selectedbkcolor="#FF3A7BFF" selectedtextcolor="#FFFFFFFF" bordersize="1" bordercolor="#FFE2E8F0" borderround="14,14" />
+              <HorizontalLayout childpadding="8,0" valign="center">
+                <CheckBox name="check_exp30m" text="经验" width="70" height="28" textpadding="12,0,0,0" textcolor="#FF1B1F24" bkcolor="#FFF7F9FD" hotbkcolor="#FFEEF3FF" selectedbkcolor="#FF3A7BFF" selectedtextcolor="#FFFFFFFF" bordersize="1" bordercolor="#FFE2E8F0" borderround="14,14" />
+                <Combo name="exp_duration" width="70" height="30" textpadding="8,0,28,0" textcolor="#FF1B1F24" bordersize="1" bordercolor="#FFE2E8F0" borderround="10,10" bkcolor="#FFF7F9FD" dropboxsize="120,120" />
+              </HorizontalLayout>
+            </VerticalLayout>
+          </HorizontalLayout>
+        </VerticalLayout>
+
+        <VerticalLayout name="page_detect" padding="0,4,0,0" childpadding="8,8">
+          <HorizontalLayout childpadding="12,0">
+            <VerticalLayout width="150" childpadding="6,6">
+              <CheckBox name="check_rune" text="符文" height="28" textpadding="12,0,0,0" textcolor="#FF1B1F24" bkcolor="#FFF7F9FD" hotbkcolor="#FFEEF3FF" selectedbkcolor="#FF3A7BFF" selectedtextcolor="#FFFFFFFF" bordersize="1" bordercolor="#FFE2E8F0" borderround="14,14" />
+              <CheckBox name="check_huangmen" text="红黄门检测" height="28" textpadding="12,0,0,0" textcolor="#FF1B1F24" bkcolor="#FFF7F9FD" hotbkcolor="#FFEEF3FF" selectedbkcolor="#FF3A7BFF" selectedtextcolor="#FFFFFFFF" bordersize="1" bordercolor="#FFE2E8F0" borderround="14,14" />
+            </VerticalLayout>
+            <VerticalLayout width="150" childpadding="6,6">
+              <CheckBox name="check_friend" text="好友检测" height="28" textpadding="12,0,0,0" textcolor="#FF1B1F24" bkcolor="#FFF7F9FD" hotbkcolor="#FFEEF3FF" selectedbkcolor="#FF3A7BFF" selectedtextcolor="#FFFFFFFF" bordersize="1" bordercolor="#FFE2E8F0" borderround="14,14" />
+              <CheckBox name="check_white" text="白屋检测" height="28" textpadding="12,0,0,0" textcolor="#FF1B1F24" bkcolor="#FFF7F9FD" hotbkcolor="#FFEEF3FF" selectedbkcolor="#FF3A7BFF" selectedtextcolor="#FFFFFFFF" bordersize="1" bordercolor="#FFE2E8F0" borderround="14,14" />
+            </VerticalLayout>
+          </HorizontalLayout>
+        </VerticalLayout>
+      </TabLayout>
+    </VerticalLayout>
+
+    <VerticalLayout name="panel_status" padding="12,12,12,12" childpadding="8,8" bkcolor="#FFFFFFFF" bordersize="1" bordercolor="#FFE2E8F0" borderround="12,12">
+      <Label text="线程状态" font="2" textcolor="#FF1B1F24" />
+      <List name="status_list" height="140" header="visible" itemheight="28" itemtextcolor="#FF1B1F24" itemselectedtextcolor="#FF1B1F24" itemhottextcolor="#FF1B1F24" itemhotbkcolor="#FFEEF3FF" itemselectedbkcolor="#FFE4ECFF" bordersize="1" bordercolor="#FFE2E8F0" borderround="10,10" bkcolor="#FFFFFFFF">
+        <ListHeader height="28" bkcolor="#FFEEF2F9">
+          <ListHeaderItem text="主状态" width="160" textcolor="#FF3B4252" />
+          <ListHeaderItem text="副状态" width="160" textcolor="#FF3B4252" />
+        </ListHeader>
+      </List>
+    </VerticalLayout>
+  </VerticalLayout>
+</Window>
+
+
+

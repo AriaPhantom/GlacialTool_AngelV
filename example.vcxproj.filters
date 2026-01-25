@@ -51,6 +51,9 @@
     <ClCompile Include="MiaoSender.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="SPUtils.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="example.h">
@@ -102,6 +105,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="ProjVer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="SPUtils.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

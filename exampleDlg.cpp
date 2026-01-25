@@ -1,237 +1,847 @@
+
 #include "stdafx.h"
-#include "example.h"
 #include "exampleDlg.h"
+#include "example.h"
 #include "thread_control.h"
 #include "log.h"
 #include "boHandler.h"
+#include "resource.h"
+
+#include <QtCore/QEvent>
+#include <QtCore/QMetaObject>
+#include <QtCore/QSignalBlocker>
+#include <QtCore/QStringList>
+#include <QtCore/QThread>
+#include <QtCore/QPropertyAnimation>
+#include <QtCore/QParallelAnimationGroup>
+#include <QtCore/QEasingCurve>
+#include <QtWidgets/QGraphicsOpacityEffect>
+#include <QtGui/QCloseEvent>
+#include <QtGui/QFont>
+#include <QtGui/QGuiApplication>
+#include <QtGui/QKeyEvent>
+#include <QtGui/QCursor>
+#include <QtGui/QMouseEvent>
+#include <QtGui/QScreen>
+#include <QtWidgets/QButtonGroup>
+#include <QtWidgets/QCheckBox>
+#include <QtWidgets/QComboBox>
+#include <QtWidgets/QFrame>
+#include <QtWidgets/QHeaderView>
+#include <QtWidgets/QHBoxLayout>
+#include <QtWidgets/QLabel>
+#include <QtWidgets/QPushButton>
+#include <QtWidgets/QSizePolicy>
+#include <QtWidgets/QStackedWidget>
+#include <QtWidgets/QTableWidget>
+#include <QtWidgets/QToolButton>
+#include <QtWidgets/QVBoxLayout>
+#include <QtWidgets/QStyle>
+#include <QtWidgets/QGraphicsDropShadowEffect>
+#include <QtWidgets/QGraphicsBlurEffect>
+#include <QtGui/QPainter>
+#include <QtGui/QPainterPath>
+#include <QtGui/QBitmap>
+#include <QtGui/QRegion>
+
+#include <windowsx.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
+extern sptool* g_dm;
 
-extern sptool * g_dm;
+HWND g_main_hwnd = NULL;
+CexampleDlg* g_main_cwnd = NULL;
 
-
-HWND   g_main_hwnd = NULL;
-CexampleDlg * g_main_cwnd = NULL;
-
-void UpdateUI(long index,long action);
+void UpdateUI(long index, long action);
 void UpdateCoords(int* nums);
 
 int resumeCount = 0;
 
-int SplitString(LPCTSTR lpszStr, LPCTSTR lpszSplit, CStringArray& rArrString, BOOL bAllowNullString)
+namespace {
+const TCHAR kUiStateSection[] = _T("UiState");
+const int kOptionTabCommon = 0;
+const int kOptionTabDetect = 1;
+const int kTitleBarHeight = 36;
+const int kResizeBorder = 6;
+
+long NormalizeIndex(long index)
 {
-	rArrString.RemoveAll();
-	CString szStr = lpszStr;
-	szStr.TrimLeft();
-	szStr.TrimRight();
-
-	if (szStr.GetLength() == 0)
+	if (index >= MAX_HWND * 2)
 	{
-		return 0;
+		return index - MAX_HWND * 2;
 	}
-
-	CString szSplit = lpszSplit;
-
-	if (szSplit.GetLength() == 0)
+	if (index >= MAX_HWND)
 	{
-		rArrString.Add(szStr);
-		return 1;
+		return index - MAX_HWND;
 	}
-
-	CString s;
-	int n;
-
-	do
-	{
-		n = szStr.Find(szSplit);
-
-		if (n > 0)
-		{
-			rArrString.Add(szStr.Left(n));
-			szStr = szStr.Right(szStr.GetLength() - n - szSplit.GetLength());
-			szStr.TrimLeft();
-		}
-		else if (n == 0)
-		{
-			if (bAllowNullString)
-			{
-				rArrString.Add(_T(""));
-			}
-
-			szStr = szStr.Right(szStr.GetLength() - szSplit.GetLength());
-			szStr.TrimLeft();
-		}
-		else
-		{
-			if ((szStr.GetLength() > 0) || bAllowNullString)
-			{
-				rArrString.Add(szStr);
-			}
-
-			break;
-		}
-	}
-	while (1);
-
-	return (int)rArrString.GetSize();
+	return index;
 }
 
-CexampleDlg::CexampleDlg(CWnd* pParent /*=NULL*/)
-	: CDialog(CexampleDlg::IDD, pParent)
+QString ThreadStateToString(ThreadState state)
 {
-	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
-
-
-
+	switch (state)
+	{
+	case State_Inactive:
+		return QString::fromWCharArray(L"未启动");
+	case State_Starting:
+		return QString::fromWCharArray(L"正在启动..");
+	case State_Runing:
+		return QString::fromWCharArray(L"正在运行");
+	case State_Pausing:
+		return QString::fromWCharArray(L"正在暂停");
+	case State_Pause:
+		return QString::fromWCharArray(L"暂停");
+	case State_Resuming:
+		return QString::fromWCharArray(L"正在恢复");
+	case State_Stoping:
+		return QString::fromWCharArray(L"正在停止");
+	default:
+		Log(_T("未定义的线程状态:%d"), state);
+		return QString();
+	}
 }
 
-void CexampleDlg::DoDataExchange(CDataExchange* pDX)
+QString CStringToQString(const CString& value)
 {
-	CDialog::DoDataExchange(pDX);
-	DDX_Control(pDX, IDC_LIST_INFO, m_list);
-	DDX_Control(pDX, IDC_CHECKRUNE, autoRuneSolver);
-	DDX_Control(pDX, IDC_CHECKOTHERS, friendPlayerNotification);
-	DDX_Control(pDX, IDC_CHECKHUANGMEN, huangMen);
-	DDX_Control(pDX, IDC_CHECK4, expPot);
-	DDX_Control(pDX, IDC_CHECK5, EXP_PARK);
-
-	DDX_Control(pDX, IDC_RADIO1, hunt);
-	DDX_Control(pDX, IDC_COMBO1, mapList);
-	DDX_Control(pDX, IDC_CHECK_TAI, EXP_MVP);
-	DDX_Control(pDX, IDC_CHECK1, autoWealth);
-	DDX_Control(pDX, IDC_CHECK2, autoOil);
-	DDX_Control(pDX, IDC_CHECK6, bless);
-	DDX_Control(pDX, IDC_CHECK7, EXP15M);
-	DDX_Control(pDX, IDC_CHECK8, EXP30M);
-	DDX_Control(pDX, IDC_CHECK9, whiteDetect);
+#ifdef UNICODE
+	return QString::fromWCharArray(value.GetString());
+#else
+	return QString::fromLocal8Bit(value.GetString());
+#endif
 }
 
-BEGIN_MESSAGE_MAP(CexampleDlg, CDialog)
-	ON_WM_PAINT()
-	ON_WM_QUERYDRAGICON()
-	//}}AFX_MSG_MAP
-	ON_BN_CLICKED(IDC_BUTTON_StopAll, &CexampleDlg::OnBnClickedButtonStopall)
-	ON_WM_TIMER()
-	ON_BN_CLICKED(IDC_BUTTON_CloseAllWin, &CexampleDlg::OnBnClickedButtonCloseallwin)
-	ON_BN_CLICKED(IDC_BUTTON_StartAll, &CexampleDlg::OnBnClickedButtonStartall)
-	ON_BN_CLICKED(IDC_BUTTON_PauseAll, &CexampleDlg::OnBnClickedButtonPauseall)
-	ON_BN_CLICKED(IDC_BUTTON_ResumeAll, &CexampleDlg::OnBnClickedButtonResumeall)
-	ON_BN_CLICKED(IDC_BUTTON_SOFT, &CexampleDlg::OnBnClickedButtonSoft)
-	ON_MESSAGE(WM_HOTKEY, OnHotKey)
-	//ON_MESSAGE(WM_HOTKEY, OnHotKey2)
-END_MESSAGE_MAP()
-
-
-// CexampleDlg 消息处理程序
-
-BOOL CexampleDlg::OnInitDialog()
+QString TCharToQString(const TCHAR* value)
 {
-	CDialog::OnInitDialog();
+	return CStringToQString(CString(value));
+}
+}
 
-	SetIcon(m_hIcon, TRUE);			// 设置大图标
-	SetIcon(m_hIcon, FALSE);		// 设置小图标
+CexampleDlg::CexampleDlg(QWidget* parent)
+	: QWidget(parent)
+	, m_coordLabel(NULL)
+	, m_statusList(NULL)
+	, m_optionTabs(NULL)
+	, m_tabCommon(NULL)
+	, m_tabDetect(NULL)
+	, autoRuneSolver(NULL)
+	, friendPlayerNotification(NULL)
+	, huangMen(NULL)
+	, expPot(NULL)
+	, EXP_PARK(NULL)
+	, hunt(NULL)
+	, mapList(NULL)
+	, EXP_MVP(NULL)
+	, autoWealth(NULL)
+	, autoOil(NULL)
+	, bless(NULL)
+	, EXP15M(NULL)
+	, EXP30M(NULL)
+	, whiteDetect(NULL)
+	, m_titleBar(NULL)
+	, m_hwnd(NULL)
+	, m_bgLabel(NULL)
+{
+	InitUi();
+	InitCombos();
+	LoadUiState();
+	SyncTabSelection(-1);
 
-	g_main_hwnd = GetSafeHwnd();
+	setAttribute(Qt::WA_NativeWindow, true);
+	m_hwnd = reinterpret_cast<HWND>(winId());
+	g_main_hwnd = m_hwnd;
 	g_main_cwnd = this;
-
-	SetTimer(0,300,NULL);
-
-	// 初始化列表
-	m_list.InsertColumn(0,_T("窗口句柄"),LVCFMT_LEFT,70);
-	m_list.InsertColumn(1,_T("PID"),LVCFMT_LEFT,55);
-	m_list.InsertColumn(2,_T("主线程序号"),LVCFMT_LEFT,86);
-	m_list.InsertColumn(3,_T("副线程序号"),LVCFMT_LEFT,86);
-	m_list.InsertColumn(4,_T("主线程状态"),LVCFMT_LEFT,87);
-	m_list.InsertColumn(5,_T("副线程状态"),LVCFMT_LEFT,87);
-	m_list.InsertColumn(6,_T("任务状态"),LVCFMT_LEFT,84);
-	m_list.InsertColumn(7,_T("异常状态"),LVCFMT_LEFT,74);
-
-	m_list.SetExtendedStyle(m_list.GetExtendedStyle()|LVS_EX_FULLROWSELECT|LVS_EX_DOUBLEBUFFER);
-
-	autoRuneSolver.SetCheck(1);
-	friendPlayerNotification.SetCheck(1);
-	whiteDetect.SetCheck(1);
-	hunt.SetCheck(1);
-
-	EXP15M.SetCheck(0);
-	expPot.SetCheck(0);
-	autoWealth.SetCheck(0);
-	autoOil.SetCheck(0);
-
-	// 地图添加
-	mapList.AddString(_T("甲板上层1"));
-	mapList.AddString(_T("树3"));
-	mapList.SetCurSel(0);
-
-	RegisterHotKey(m_hWnd, IDC_BUTTON_SOFT, MOD_CONTROL,76);
-	RegisterHotKey(m_hWnd, IDC_BUTTON_PauseAll, MOD_CONTROL, 80);
-
-	return TRUE; 
+	RegisterHotKeys();
 }
 
-void CexampleDlg::OnPaint()
+CexampleDlg::~CexampleDlg()
 {
-	if (IsIconic())
+	SaveUiState();
+	UnregisterHotKeys();
+	g_main_hwnd = NULL;
+	g_main_cwnd = NULL;
+}
+
+void CexampleDlg::InitUi()
+{
+	setObjectName("AngelWindow");
+#ifdef NL
+	setWindowTitle(QString::fromWCharArray(L"Angi - NL"));
+#elif defined(Adele)
+	setWindowTitle(QString::fromWCharArray(L"Angi - Adele"));
+#elif defined(Angel)
+	setWindowTitle(QString::fromWCharArray(L"Angi - Angel"));
+#else
+	setWindowTitle(QString::fromWCharArray(L"Angi"));
+#endif
+	setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
+	setAttribute(Qt::WA_StyledBackground, true);
+	setAttribute(Qt::WA_TranslucentBackground, true);
+	setFixedSize(440, 760);
+
+	QScreen* targetScreen = QGuiApplication::screenAt(QCursor::pos());
+	if (!targetScreen)
 	{
-		CPaintDC dc(this); // 用于绘制的设备上下文
-
-		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
-
-		// 使图标在工作矩形中居中
-		int cxIcon = GetSystemMetrics(SM_CXICON);
-		int cyIcon = GetSystemMetrics(SM_CYICON);
-		CRect rect;
-		GetClientRect(&rect);
-		int x = (rect.Width() - cxIcon + 1) / 2;
-		int y = (rect.Height() - cyIcon + 1) / 2;
-
-		// 绘制图标
-		dc.DrawIcon(x, y, m_hIcon);
+		targetScreen = QGuiApplication::primaryScreen();
 	}
-	else
+	if (targetScreen)
 	{
-		CDialog::OnPaint();
-	}
-}
-
-
-HCURSOR CexampleDlg::OnQueryDragIcon()
-{
-	return static_cast<HCURSOR>(m_hIcon);
-}
-
-
-
-void CexampleDlg::CoordUpdate(int* nums)
-{
-	CString tips;
-	tips.Format(_T("（%d,%d)"), *nums, *(nums + 1));
-
-	GetDlgItem(IDC_UserCoo)->SetWindowText(tips);
+		QRect area = targetScreen->availableGeometry();
+		int x = area.right() - width() + 1;
+		int y = area.y() + (area.height() - height()) / 2;
+		move(x, y);
 	}
 
+	m_bgLabel = new QLabel(this);
+	m_bgLabel->setObjectName("BgLabel");
+	m_bgLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
+	m_bgLabel->lower();
 
+	QGraphicsBlurEffect* blur = new QGraphicsBlurEffect(m_bgLabel);
+	blur->setBlurRadius(25);
+	m_bgLabel->setGraphicsEffect(blur);
 
+	// Try multiple paths to find the asset in skin folder
+	QStringList paths;
+	paths << "skin/background.jpg" << "../skin/background.jpg" << "../../skin/background.jpg";
+	for (const QString& path : paths) {
+		if (m_originalBg.load(path)) break;
+	}
 
-void CexampleDlg::OnTimer(UINT_PTR nIDEvent)
+	if (m_originalBg.isNull()) {
+		Log(_T("Background asset not found in common paths."));
+	}
+
+	QWidget* overlay = new QWidget(m_bgLabel);
+	overlay->setObjectName("BgOverlay");
+	overlay->setStyleSheet("background-color: rgba(15, 23, 42, 140);");
+
+	QFont baseFont(QString::fromWCharArray(L"Microsoft YaHei UI"));
+	baseFont.setPointSize(10);
+	setFont(baseFont);
+
+	QFont titleFont(baseFont);
+	titleFont.setPointSize(16);
+	titleFont.setBold(true);
+
+	QFont sectionFont(baseFont);
+	sectionFont.setPointSize(12);
+	sectionFont.setBold(true);
+
+	const int kButtonHeight = 28;
+	const int kPillHeight = 24;
+	const int kInputHeight = 26;
+
+	QVBoxLayout* root = new QVBoxLayout(this);
+	root->setContentsMargins(14, 12, 14, 12);
+	root->setSpacing(8);
+
+	QWidget* titleBar = new QWidget(this);
+	titleBar->setObjectName("TitleBar");
+	titleBar->setFixedHeight(kTitleBarHeight);
+	titleBar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+	m_titleBar = titleBar;
+	QHBoxLayout* titleLayout = new QHBoxLayout(titleBar);
+	titleLayout->setContentsMargins(0, 0, 0, 0);
+	titleLayout->setSpacing(10);
+
+#ifdef NL
+	QLabel* appTitle = new QLabel(QString::fromWCharArray(L"Angi - NL"), titleBar);
+#elif defined(Adele)
+	QLabel* appTitle = new QLabel(QString::fromWCharArray(L"Angi - Adele"), titleBar);
+#elif defined(Angel)
+	QLabel* appTitle = new QLabel(QString::fromWCharArray(L"Angi - Angel"), titleBar);
+#else
+	QLabel* appTitle = new QLabel(QString::fromWCharArray(L"Angi"), titleBar);
+#endif
+	appTitle->setObjectName("AppTitle");
+	appTitle->setFont(titleFont);
+	titleBar->installEventFilter(this);
+	appTitle->installEventFilter(this);
+
+	QToolButton* minBtn = new QToolButton(titleBar);
+	minBtn->setObjectName("min_btn");
+	minBtn->setFixedSize(32, 24);
+	minBtn->setCursor(Qt::PointingHandCursor);
+	minBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
+	minBtn->setIcon(style()->standardIcon(QStyle::SP_TitleBarMinButton));
+	minBtn->setIconSize(QSize(12, 12));
+
+	QToolButton* closeBtn = new QToolButton(titleBar);
+	closeBtn->setObjectName("close_btn");
+	closeBtn->setFixedSize(32, 24);
+	closeBtn->setCursor(Qt::PointingHandCursor);
+	closeBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
+	closeBtn->setIcon(style()->standardIcon(QStyle::SP_TitleBarCloseButton));
+	closeBtn->setIconSize(QSize(12, 12));
+
+	connect(minBtn, &QToolButton::clicked, this, [this]() { showMinimized(); });
+	connect(closeBtn, &QToolButton::clicked, this, [this]() { close(); });
+
+	titleLayout->addWidget(appTitle);
+	titleLayout->addStretch();
+	titleLayout->addWidget(minBtn);
+	titleLayout->addWidget(closeBtn);
+
+	root->addWidget(titleBar);
+
+	auto createCard = [this]() {
+		QFrame* card = new QFrame(this);
+		card->setProperty("card", true);
+
+		QGraphicsDropShadowEffect* shadow = new QGraphicsDropShadowEffect(card);
+		shadow->setBlurRadius(20);
+		shadow->setColor(QColor(0, 0, 0, 80));
+		shadow->setOffset(0, 4);
+		card->setGraphicsEffect(shadow);
+		
+		card->installEventFilter(this);
+
+		return card;
+	};
+	QFrame* controlsCard = createCard();
+	QVBoxLayout* controlsLayout = new QVBoxLayout(controlsCard);
+	controlsLayout->setContentsMargins(8, 8, 8, 8);
+	controlsLayout->setSpacing(4);
+
+	QLabel* controlsTitle = new QLabel(QString::fromWCharArray(L"控制面板"), controlsCard);
+	controlsTitle->setFont(sectionFont);
+	controlsLayout->addWidget(controlsTitle);
+
+	QHBoxLayout* row1 = new QHBoxLayout();
+	row1->setSpacing(10);
+	QPushButton* startAll = new QPushButton(QString::fromWCharArray(L"启动全部"), controlsCard);
+	startAll->setProperty("variant", "primary");
+	startAll->setFixedHeight(kButtonHeight);
+	startAll->setMinimumWidth(100);
+	startAll->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+	startAll->setCursor(Qt::PointingHandCursor);
+	connect(startAll, &QPushButton::clicked, this, [this]() { OnBnClickedButtonStartall(); });
+
+	QPushButton* softBtn = new QPushButton(QString::fromWCharArray(L"软停止/开始"), controlsCard);
+	softBtn->setFixedHeight(kButtonHeight);
+	softBtn->setMinimumWidth(100);
+	softBtn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+	softBtn->setCursor(Qt::PointingHandCursor);
+	connect(softBtn, &QPushButton::clicked, this, [this]() { OnBnClickedButtonSoft(); });
+
+	row1->addWidget(startAll);
+	row1->addWidget(softBtn);
+	row1->setStretch(0, 1);
+	row1->setStretch(1, 1);
+	controlsLayout->addLayout(row1);
+
+	QHBoxLayout* row2 = new QHBoxLayout();
+	row2->setSpacing(10);
+	QPushButton* pauseAll = new QPushButton(QString::fromWCharArray(L"暂停全部"), controlsCard);
+	pauseAll->setFixedHeight(kButtonHeight);
+	pauseAll->setMinimumWidth(100);
+	pauseAll->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+	pauseAll->setCursor(Qt::PointingHandCursor);
+	connect(pauseAll, &QPushButton::clicked, this, [this]() { OnBnClickedButtonPauseall(); });
+
+	row2->addWidget(pauseAll);
+	QPushButton* resumeAll = new QPushButton(QString::fromWCharArray(L"恢复全部"), controlsCard);
+	resumeAll->setFixedHeight(kButtonHeight);
+	resumeAll->setMinimumWidth(100);
+	resumeAll->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+	resumeAll->setCursor(Qt::PointingHandCursor);
+	connect(resumeAll, &QPushButton::clicked, this, [this]() { OnBnClickedButtonResumeall(); });
+
+	row2->addWidget(resumeAll);
+	row2->setStretch(0, 1);
+	row2->setStretch(1, 1);
+	controlsLayout->addLayout(row2);
+
+	QHBoxLayout* row3 = new QHBoxLayout();
+	row3->setSpacing(10);
+	QPushButton* stopAll = new QPushButton(QString::fromWCharArray(L"停止全部"), controlsCard);
+	stopAll->setProperty("variant", "danger");
+	stopAll->setFixedHeight(kButtonHeight);
+	stopAll->setMinimumWidth(100);
+	stopAll->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+	stopAll->setCursor(Qt::PointingHandCursor);
+	connect(stopAll, &QPushButton::clicked, this, [this]() { OnBnClickedButtonStopall(); });
+
+	row3->addWidget(stopAll);
+	
+	QWidget* dummy = new QWidget(controlsCard);
+	dummy->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+	row3->addWidget(dummy);
+	
+	row3->setStretch(0, 1);
+	row3->setStretch(1, 1);
+	controlsLayout->addLayout(row3);
+
+	QLabel* hotkeyLine = new QLabel(QString::fromWCharArray(L"快捷键: Ctrl+L 软停/开始   Ctrl+P 暂停/恢复"), controlsCard);
+	hotkeyLine->setProperty("muted", true);
+	QFont hotkeyFont = baseFont;
+	hotkeyFont.setPointSize(9);
+	hotkeyLine->setFont(hotkeyFont);
+	controlsLayout->addWidget(hotkeyLine);
+
+	root->addWidget(controlsCard);
+
+	QFrame* infoCard = createCard();
+	QVBoxLayout* infoLayout = new QVBoxLayout(infoCard);
+	infoLayout->setContentsMargins(8, 8, 8, 8);
+	infoLayout->setSpacing(2);
+
+	QHBoxLayout* infoRow = new QHBoxLayout();
+	infoRow->setSpacing(8);
+	QLabel* infoTitle = new QLabel(QString::fromWCharArray(L"实时信息"), infoCard);
+	infoTitle->setFont(sectionFont);
+	infoRow->addWidget(infoTitle);
+	infoRow->addStretch();
+	infoLayout->addLayout(infoRow);
+
+	QHBoxLayout* coordRow = new QHBoxLayout();
+	coordRow->setSpacing(6);
+	QLabel* coordTitle = new QLabel(QString::fromWCharArray(L"当前坐标"), infoCard);
+	coordTitle->setProperty("muted", true);
+	m_coordLabel = new QLabel(QString::fromWCharArray(L"（0,0）"), infoCard);
+	coordRow->addWidget(coordTitle);
+	coordRow->addWidget(m_coordLabel);
+	coordRow->addStretch();
+	infoLayout->addLayout(coordRow);
+
+	root->addWidget(infoCard);
+
+	QFrame* statusCard = createCard();
+	QVBoxLayout* statusLayout = new QVBoxLayout(statusCard);
+	statusLayout->setContentsMargins(10, 10, 10, 10);
+	statusLayout->setSpacing(6);
+
+	QLabel* statusTitle = new QLabel(QString::fromWCharArray(L"线程状态"), statusCard);
+	statusTitle->setFont(sectionFont);
+	statusLayout->addWidget(statusTitle);
+
+	m_statusList = new QTableWidget(0, 3, statusCard);
+	m_statusList->setFixedHeight(64);
+	m_statusList->setHorizontalHeaderLabels(
+		QStringList() << QString::fromWCharArray(L"主线程状态")
+					  << QString::fromWCharArray(L"副线程状态")
+					  << QString::fromWCharArray(L"任务状态"));
+	m_statusList->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+	m_statusList->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+	m_statusList->horizontalHeader()->setHighlightSections(false);
+	m_statusList->verticalHeader()->setVisible(false);
+	m_statusList->verticalHeader()->setDefaultSectionSize(24);
+	m_statusList->setShowGrid(false);
+	m_statusList->setSelectionMode(QAbstractItemView::NoSelection);
+	m_statusList->setEditTriggers(QAbstractItemView::NoEditTriggers);
+	m_statusList->setFocusPolicy(Qt::NoFocus);
+	statusLayout->addWidget(m_statusList);
+
+	root->addWidget(statusCard);
+
+	QFrame* optionsCard = createCard();
+	QVBoxLayout* optionsLayout = new QVBoxLayout(optionsCard);
+	optionsLayout->setContentsMargins(8, 8, 8, 8);
+	optionsLayout->setSpacing(4);
+
+	QHBoxLayout* optionsHeader = new QHBoxLayout();
+	optionsHeader->setSpacing(6);
+	QLabel* optionsTitle = new QLabel(QString::fromWCharArray(L"其他选项"), optionsCard);
+	optionsTitle->setFont(sectionFont);
+
+	QWidget* tabGroupWidget = new QWidget(optionsCard);
+	QHBoxLayout* tabLayout = new QHBoxLayout(tabGroupWidget);
+	tabLayout->setContentsMargins(0, 0, 0, 0);
+	tabLayout->setSpacing(4);
+
+	m_tabCommon = new QToolButton(tabGroupWidget);
+	m_tabCommon->setProperty("tab", true);
+	m_tabCommon->setText(QString::fromWCharArray(L"常用"));
+	m_tabCommon->setCheckable(true);
+	m_tabCommon->setFixedSize(52, 24);
+	m_tabCommon->setCursor(Qt::PointingHandCursor);
+
+	m_tabDetect = new QToolButton(tabGroupWidget);
+	m_tabDetect->setProperty("tab", true);
+	m_tabDetect->setText(QString::fromWCharArray(L"检测"));
+	m_tabDetect->setCheckable(true);
+	m_tabDetect->setFixedSize(52, 24);
+	m_tabDetect->setCursor(Qt::PointingHandCursor);
+
+	tabLayout->addWidget(m_tabCommon);
+	tabLayout->addWidget(m_tabDetect);
+
+	QButtonGroup* tabGroup = new QButtonGroup(this);
+	tabGroup->setExclusive(true);
+	tabGroup->addButton(m_tabCommon, kOptionTabCommon);
+	tabGroup->addButton(m_tabDetect, kOptionTabDetect);
+	connect(tabGroup, QOverload<int, bool>::of(&QButtonGroup::idToggled), this,
+		[this](int id, bool checked) {
+			if (checked)
+			{
+				SyncTabSelection(id);
+			}
+		});
+
+	optionsHeader->addWidget(optionsTitle);
+	optionsHeader->addStretch();
+	optionsHeader->addWidget(tabGroupWidget);
+	optionsLayout->addLayout(optionsHeader);
+
+	m_optionTabs = new QStackedWidget(optionsCard);
+
+	QWidget* pageCommon = new QWidget(m_optionTabs);
+	QVBoxLayout* commonLayout = new QVBoxLayout(pageCommon);
+	commonLayout->setContentsMargins(0, 0, 0, 0);
+	commonLayout->setSpacing(4);
+
+	QHBoxLayout* mapRow = new QHBoxLayout();
+	mapRow->setSpacing(4);
+	QLabel* mapTitle = new QLabel(QString::fromWCharArray(L"地图选择"), pageCommon);
+	mapTitle->setFixedWidth(50);
+	mapTitle->setProperty("muted", true);
+
+	mapList = new QComboBox(pageCommon);
+	mapList->setFixedHeight(kInputHeight);
+	mapList->setMinimumWidth(170);
+	mapList->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+	hunt = new QToolButton(pageCommon);
+	hunt->setText(QString::fromWCharArray(L"刷图"));
+	hunt->setCheckable(true);
+	hunt->setFixedHeight(kPillHeight);
+	hunt->setMinimumWidth(76);
+	hunt->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+	hunt->setCursor(Qt::PointingHandCursor);
+	hunt->setProperty("pill", true);
+
+	mapRow->addWidget(mapTitle);
+	mapRow->addWidget(mapList, 1);
+	mapRow->addWidget(hunt);
+	commonLayout->addLayout(mapRow);
+
+	QWidget* commonGridWidget = new QWidget(pageCommon);
+	QGridLayout* commonGrid = new QGridLayout(commonGridWidget);
+	commonGrid->setContentsMargins(0, 0, 0, 0);
+	commonGrid->setHorizontalSpacing(12);
+	commonGrid->setVerticalSpacing(4);
+
+	auto createPill = [this, kPillHeight](const QString& text) {
+		QToolButton* btn = new QToolButton();
+		btn->setText(text);
+		btn->setCheckable(true);
+		btn->setFixedHeight(kPillHeight);
+		btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+		btn->setCursor(Qt::PointingHandCursor);
+		btn->setProperty("pill", true);
+		return btn;
+	};
+
+	expPot = createPill(QString::fromWCharArray(L"秘药2H"));
+	commonGrid->addWidget(expPot, 0, 0);
+
+	autoWealth = createPill(QString::fromWCharArray(L"秘药30M"));
+	commonGrid->addWidget(autoWealth, 0, 1);
+
+	EXP15M = createPill(QString::fromWCharArray(L"家族VB"));
+	commonGrid->addWidget(EXP15M, 1, 0);
+
+	EXP30M = createPill(QString::fromWCharArray(L"经验30M"));
+	commonGrid->addWidget(EXP30M, 1, 1);
+
+	EXP_PARK = createPill(QString::fromWCharArray(L"公园"));
+	commonGrid->addWidget(EXP_PARK, 2, 0);
+
+	EXP_MVP = createPill(QString::fromWCharArray(L"MVP"));
+	commonGrid->addWidget(EXP_MVP, 2, 1);
+
+	autoOil = createPill(QString::fromWCharArray(L"自动加油"));
+	commonGrid->addWidget(autoOil, 3, 0);
+
+	bless = createPill(QString::fromWCharArray(L"点火"));
+	commonGrid->addWidget(bless, 3, 1);
+
+	commonGrid->setColumnStretch(0, 1);
+	commonGrid->setColumnStretch(1, 1);
+	commonLayout->addWidget(commonGridWidget);
+	commonLayout->addStretch();
+
+	QWidget* pageDetect = new QWidget(m_optionTabs);
+	QVBoxLayout* detectLayout = new QVBoxLayout(pageDetect);
+	detectLayout->setContentsMargins(0, 0, 0, 0);
+	detectLayout->setSpacing(4);
+
+	QWidget* detectGridWidget = new QWidget(pageDetect);
+	QGridLayout* detectGrid = new QGridLayout(detectGridWidget);
+	detectGrid->setContentsMargins(0, 0, 0, 0);
+	detectGrid->setHorizontalSpacing(12);
+	detectGrid->setVerticalSpacing(4);
+
+	autoRuneSolver = createPill(QString::fromWCharArray(L"符文"));
+	detectGrid->addWidget(autoRuneSolver, 0, 0);
+
+	huangMen = createPill(QString::fromWCharArray(L"红黄门检测"));
+	detectGrid->addWidget(huangMen, 0, 1);
+
+	whiteDetect = createPill(QString::fromWCharArray(L"白屋检测"));
+	detectGrid->addWidget(whiteDetect, 1, 0);
+
+	friendPlayerNotification = createPill(QString::fromWCharArray(L"好友检测"));
+	detectGrid->addWidget(friendPlayerNotification, 1, 1);
+
+	detectGrid->setColumnStretch(0, 1);
+	detectGrid->setColumnStretch(1, 1);
+	detectLayout->addWidget(detectGridWidget);
+	detectLayout->addStretch();
+
+	m_optionTabs->addWidget(pageCommon);
+	m_optionTabs->addWidget(pageDetect);
+
+	optionsLayout->addWidget(m_optionTabs);
+	root->addWidget(optionsCard);
+	root->setStretchFactor(optionsCard, 1);
+	root->setStretchFactor(statusCard, 0);
+
+	const char kFluentQss[] =
+		"QWidget#AngelWindow {"
+		"  background-color: transparent;"
+		"  color: #F8FAFC;"
+		"}"
+		"QWidget#BgOverlay { background-color: rgba(15, 23, 42, 140); }"
+		"QLabel { color: #F8FAFC; }"
+		"QLabel#AppTitle { font-weight: bold; border: none; }"
+		"QLabel[muted=\"true\"] { color: #94A3B8; }"
+		"QFrame[card=\"true\"] {"
+		"  background-color: rgba(30, 41, 59, 80);"
+		"  border: 1px solid rgba(255, 255, 255, 0.08);"
+		"  border-radius: 12px;"
+		"}"
+		"QFrame[card=\"true\"]:hover {"
+		"  border-color: rgba(59, 130, 246, 0.3);"
+		"}"
+		"QPushButton {"
+		"  border-radius: 8px;"
+		"  padding: 6px 12px;"
+		"  text-align: center;"
+		"  border: 1px solid rgba(255, 255, 255, 0.1);"
+		"  background-color: rgba(51, 65, 85, 120);"
+		"  color: #F8FAFC;"
+		"  font-weight: 500;"
+		"}"
+		"QPushButton:hover { background-color: rgba(71, 85, 105, 150); border-color: rgba(255, 255, 255, 0.2); }"
+		"QPushButton:pressed { background-color: rgba(30, 41, 59, 200); }"
+		"QPushButton[variant=\"primary\"] {"
+		"  background-color: #3B82F6;"
+		"  border: 1px solid #3B82F6;"
+		"  color: #FFFFFF;"
+		"}"
+		"QPushButton[variant=\"primary\"]:hover { background-color: #2563EB; }"
+		"QPushButton[variant=\"primary\"]:pressed { background-color: #1D4ED8; }"
+		"QPushButton[variant=\"danger\"] {"
+		"  background-color: #EF4444;"
+		"  border: 1px solid #EF4444;"
+		"  color: #FFFFFF;"
+		"}"
+		"QPushButton[variant=\"danger\"]:hover { background-color: #DC2626; }"
+		"QPushButton[variant=\"danger\"]:pressed { background-color: #B91C1C; }"
+		"QToolButton#min_btn, QToolButton#close_btn {"
+		"  border-radius: 6px;"
+		"  border: 1px solid transparent;"
+		"  background-color: transparent;"
+		"  color: #94A3B8;"
+		"}"
+		"QToolButton#min_btn:hover { background-color: rgba(255, 255, 255, 0.1); color: #F8FAFC; }"
+		"QToolButton#close_btn:hover { background-color: #EF4444; color: #FFFFFF; }"
+		"QToolButton[tab=\"true\"] {"
+		"  border-radius: 6px;"
+		"  border: 1px solid rgba(255, 255, 255, 0.1);"
+		"  background-color: rgba(51, 65, 85, 100);"
+		"  color: #94A3B8;"
+		"  margin: 2px;"
+		"}"
+		"QToolButton[tab=\"true\"]:hover { background-color: rgba(71, 85, 105, 120); color: #F8FAFC; }"
+		"QToolButton[tab=\"true\"]:checked {"
+		"  background-color: #3B82F6;"
+		"  border-color: #3B82F6;"
+		"  color: #FFFFFF;"
+		"  font-weight: bold;"
+		"}"
+		"QCheckBox {"
+		"  border: 1px solid rgba(255, 255, 255, 0.08);"
+		"  border-radius: 8px;"
+		"  padding: 4px 10px;"
+		"  background-color: rgba(30, 41, 59, 100);"
+		"  color: #CBD5E1;"
+		"}"
+		"QCheckBox::indicator { width: 0px; height: 0px; }"
+		"QCheckBox:hover { background-color: rgba(51, 65, 85, 150); border-color: rgba(255, 255, 255, 0.15); }"
+		"QCheckBox:checked { background-color: rgba(59, 130, 246, 0.2); border-color: #3B82F6; color: #60A5FA; }"
+		"QToolButton[pill=\"true\"] {"
+		"  border: 1px solid rgba(255, 255, 255, 0.08);"
+		"  border-radius: 8px;"
+		"  padding: 4px 10px;"
+		"  background-color: rgba(30, 41, 59, 100);"
+		"  color: #CBD5E1;"
+		"  text-align: center;"
+		"}"
+		"QToolButton[pill=\"true\"]:hover { background-color: rgba(51, 65, 85, 150); border-color: rgba(255, 255, 255, 0.15); }"
+		"QToolButton[pill=\"true\"]:checked { background-color: rgba(59, 130, 246, 0.2); border-color: #3B82F6; color: #60A5FA; }"
+		"QComboBox {"
+		"  border: 1px solid rgba(255, 255, 255, 0.1);"
+		"  border-radius: 8px;"
+		"  padding: 4px 12px;"
+		"  background-color: rgba(30, 41, 59, 150);"
+		"  color: #F8FAFC;"
+		"}"
+		"QComboBox:hover { border-color: #3B82F6; }"
+		"QComboBox::drop-down {"
+		"  subcontrol-origin: padding;"
+		"  subcontrol-position: top right;"
+		"  width: 24px;"
+		"  border-left: 1px solid rgba(255, 255, 255, 0.1);"
+		"}"
+		"QComboBox QAbstractItemView {"
+		"  background-color: #1E293B;"
+		"  border: 1px solid #334155;"
+		"  selection-background-color: #3B82F6;"
+		"  selection-color: #FFFFFF;"
+		"  color: #F8FAFC;"
+		"  outline: none;"
+		"}"
+		"QTableWidget {"
+		"  background-color: rgba(30, 41, 59, 100);"
+		"  border: 1px solid rgba(255, 255, 255, 0.1);"
+		"  border-radius: 8px;"
+		"  gridline-color: rgba(255, 255, 255, 0.05);"
+		"  outline: none;"
+		"}"
+		"QTableWidget QHeaderView {"
+		"  background-color: transparent;"
+		"}"
+		"QHeaderView::section {"
+		"  background-color: rgba(51, 65, 85, 180);"
+		"  color: #94A3B8;"
+		"  padding: 6px;"
+		"  border: none;"
+		"  font-weight: bold;"
+		"}"
+		"QTableWidget::item {"
+		"  color: #CBD5E1;"
+		"  padding-left: 8px;"
+		"  border-bottom: 1px solid rgba(255, 255, 255, 0.05);"
+		"}"
+		"QScrollBar:vertical {"
+		"  border: none;"
+		"  background: transparent;"
+		"  width: 8px;"
+		"  margin: 0px;"
+		"}"
+		"QScrollBar::handle:vertical {"
+		"  background: rgba(255, 255, 255, 0.1);"
+		"  min-height: 20px;"
+		"  border-radius: 4px;"
+		"}"
+		"QScrollBar::handle:vertical:hover { background: rgba(255, 255, 255, 0.2); }";
+
+	setStyleSheet(kFluentQss);
+}
+
+void CexampleDlg::InitCombos()
 {
-	if (nIDEvent == 0)
+	if (mapList != NULL)
 	{
-		CString tips;
-		tips.Format(_T("当前对象数量:%d     插件版本:%s"),g_dm->GetDmCount(),g_dm->Ver());
-
-		GetDlgItem(IDC_EDIT_TIP)->SetWindowText(tips);
+		mapList->clear();
+		mapList->addItem(QString::fromWCharArray(L"甲板上层1"));
+		mapList->addItem(QString::fromWCharArray(L"树3"));
 	}
-	CDialog::OnTimer(nIDEvent);
 }
 
-long CexampleDlg::GetListIndex(long index)
+void CexampleDlg::LoadUiState()
 {
-	long item_count = m_list.GetItemCount();
-	if (item_count == 0)
+	CWinApp* app = AfxGetApp();
+	if (app == NULL)
+	{
+		return;
+	}
+
+	if (autoRuneSolver) autoRuneSolver->setChecked(app->GetProfileInt(kUiStateSection, _T("AutoRune"), 1) != 0);
+	if (friendPlayerNotification) friendPlayerNotification->setChecked(app->GetProfileInt(kUiStateSection, _T("FriendDetect"), 1) != 0);
+	if (huangMen) huangMen->setChecked(app->GetProfileInt(kUiStateSection, _T("HuangMenDetect"), 0) != 0);
+	if (whiteDetect) whiteDetect->setChecked(app->GetProfileInt(kUiStateSection, _T("WhiteDetect"), 1) != 0);
+	if (expPot) expPot->setChecked(app->GetProfileInt(kUiStateSection, _T("ExpPot"), 0) != 0);
+	if (EXP_PARK) EXP_PARK->setChecked(app->GetProfileInt(kUiStateSection, _T("ExpPark"), 0) != 0);
+	if (EXP_MVP) EXP_MVP->setChecked(app->GetProfileInt(kUiStateSection, _T("ExpMvp"), 0) != 0);
+	if (autoWealth) autoWealth->setChecked(app->GetProfileInt(kUiStateSection, _T("AutoWealth"), 0) != 0);
+	if (autoOil) autoOil->setChecked(app->GetProfileInt(kUiStateSection, _T("AutoOil"), 0) != 0);
+	if (bless) bless->setChecked(app->GetProfileInt(kUiStateSection, _T("Bless"), 0) != 0);
+	if (EXP15M) EXP15M->setChecked(app->GetProfileInt(kUiStateSection, _T("Exp15m"), 0) != 0);
+	if (EXP30M) EXP30M->setChecked(app->GetProfileInt(kUiStateSection, _T("Exp30m"), 0) != 0);
+	if (hunt) hunt->setChecked(app->GetProfileInt(kUiStateSection, _T("Hunt"), 1) != 0);
+
+	if (mapList)
+	{
+		int mapSel = app->GetProfileInt(kUiStateSection, _T("MapSel"), 0);
+		if (mapSel < 0 || mapSel >= mapList->count())
+		{
+			mapSel = 0;
+		}
+		mapList->setCurrentIndex(mapSel);
+	}
+
+	if (m_optionTabs)
+	{
+		int tabSel = app->GetProfileInt(kUiStateSection, _T("OptionTabSel"), kOptionTabCommon);
+		if (tabSel < 0 || tabSel >= m_optionTabs->count())
+		{
+			tabSel = kOptionTabCommon;
+		}
+		SyncTabSelection(tabSel);
+	}
+}
+void CexampleDlg::SaveUiState()
+{
+	CWinApp* app = AfxGetApp();
+	if (app == NULL)
+	{
+		return;
+	}
+
+	if (autoRuneSolver) app->WriteProfileInt(kUiStateSection, _T("AutoRune"), autoRuneSolver->isChecked());
+	if (friendPlayerNotification) app->WriteProfileInt(kUiStateSection, _T("FriendDetect"), friendPlayerNotification->isChecked());
+	if (huangMen) app->WriteProfileInt(kUiStateSection, _T("HuangMenDetect"), huangMen->isChecked());
+	if (whiteDetect) app->WriteProfileInt(kUiStateSection, _T("WhiteDetect"), whiteDetect->isChecked());
+	if (expPot) app->WriteProfileInt(kUiStateSection, _T("ExpPot"), expPot->isChecked());
+	if (EXP_PARK) app->WriteProfileInt(kUiStateSection, _T("ExpPark"), EXP_PARK->isChecked());
+	if (EXP_MVP) app->WriteProfileInt(kUiStateSection, _T("ExpMvp"), EXP_MVP->isChecked());
+	if (autoWealth) app->WriteProfileInt(kUiStateSection, _T("AutoWealth"), autoWealth->isChecked());
+	if (autoOil) app->WriteProfileInt(kUiStateSection, _T("AutoOil"), autoOil->isChecked());
+	if (bless) app->WriteProfileInt(kUiStateSection, _T("Bless"), bless->isChecked());
+	if (EXP15M) app->WriteProfileInt(kUiStateSection, _T("Exp15m"), EXP15M->isChecked());
+	if (EXP30M) app->WriteProfileInt(kUiStateSection, _T("Exp30m"), EXP30M->isChecked());
+	if (hunt) app->WriteProfileInt(kUiStateSection, _T("Hunt"), hunt->isChecked());
+
+	if (mapList)
+	{
+		int mapSel = mapList->currentIndex();
+		if (mapSel < 0)
+		{
+			mapSel = 0;
+		}
+		app->WriteProfileInt(kUiStateSection, _T("MapSel"), mapSel);
+	}
+
+	if (m_optionTabs)
+	{
+		int tabSel = m_optionTabs->currentIndex();
+		if (tabSel < 0)
+		{
+			tabSel = kOptionTabCommon;
+		}
+		app->WriteProfileInt(kUiStateSection, _T("OptionTabSel"), tabSel);
+	}
+}
+
+int CexampleDlg::FindListIndex(long index) const
+{
+	if (m_statusList == NULL)
 	{
 		return -1;
 	}
@@ -241,147 +851,196 @@ long CexampleDlg::GetListIndex(long index)
 		return -1;
 	}
 
-	if (index >= MAX_HWND * 2)
+	long normalized = NormalizeIndex(index);
+	int rowCount = m_statusList->rowCount();
+	for (int i = 0; i < rowCount; ++i)
 	{
-		index = index - MAX_HWND * 2;
-	}
-	else if (index >= MAX_HWND) {
-		index = index - MAX_HWND;
-	}
-
-	for (int i = 0;i < item_count;++i)
-	{
-		long index_tmp = _tstoi(m_list.GetItemText(i,2));
-
-		if (index == index_tmp)
+		QTableWidgetItem* item = m_statusList->item(i, 0);
+		if (item != NULL && item->data(Qt::UserRole).toLongLong() == normalized)
 		{
 			return i;
 		}
 	}
+
 	return -1;
 }
 
-
-CString CexampleDlg::ThreadStateToString(ThreadState state)
+void CexampleDlg::SyncTabSelection(int tabIndex)
 {
-	CString ret;
-
-	switch (state)
+	if (m_optionTabs == NULL)
 	{
-	case State_Inactive:
-		ret = _T("未启动");
-		break;
-	case State_Starting:
-		ret = _T("正在启动..");
-		break;
-	case State_Runing:
-		ret = _T("正在运行");
-		break;
-	case State_Pausing:
-		ret = _T("正在暂停");
-		break;
-	case State_Pause:
-		ret = _T("暂停");
-		break;
-	case State_Resuming:
-		ret = _T("正在恢复");
-		break;
-	case State_Stoping:
-		ret = _T("正在停止");
-		break;
-	default:
-		Log(_T("未定义的线程状态:%d"),state);
-		break;
+		return;
 	}
 
+	if (tabIndex < 0)
+	{
+		if (m_tabDetect && m_tabDetect->isChecked())
+		{
+			tabIndex = kOptionTabDetect;
+		}
+		else
+		{
+			tabIndex = kOptionTabCommon;
+		}
+	}
 
-	return ret;
+	QSignalBlocker blockCommon(m_tabCommon);
+	QSignalBlocker blockDetect(m_tabDetect);
+	m_optionTabs->setCurrentIndex(tabIndex);
+	if (m_tabCommon) m_tabCommon->setChecked(tabIndex == kOptionTabCommon);
+	if (m_tabDetect) m_tabDetect->setChecked(tabIndex == kOptionTabDetect);
 }
 
-void CexampleDlg::UpdateList(long index,long action)
+void CexampleDlg::RegisterHotKeys()
 {
-	if (action == UI_ADD)
+	if (m_hwnd == NULL)
 	{
-		long list_index = m_list.InsertItem(m_list.GetItemCount(), _T(""));
+		return;
+	}
 
-		CString tmp;
+	RegisterHotKey(m_hwnd, IDC_BUTTON_SOFT, MOD_CONTROL, 76);
+	RegisterHotKey(m_hwnd, IDC_BUTTON_PauseAll, MOD_CONTROL, 80);
+}
 
-		tmp.Format(_T("%d"),g_info[index].hwnd);
-		m_list.SetItemText(list_index, 0, tmp);
+void CexampleDlg::UnregisterHotKeys()
+{
+	if (m_hwnd == NULL)
+	{
+		return;
+	}
 
-		tmp.Format(_T("%d"),g_info[index].pid);
-		m_list.SetItemText(list_index, 1, tmp);
+	UnregisterHotKey(m_hwnd, IDC_BUTTON_SOFT);
+	UnregisterHotKey(m_hwnd, IDC_BUTTON_PauseAll);
+}
 
-		tmp.Format(_T("%d"),index);
-		m_list.SetItemText(list_index, 2, tmp);
+void CexampleDlg::closeEvent(QCloseEvent* event)
+{
+	SaveUiState();
+	OnBnClickedButtonStopall();
+	OnBnClickedButtonCloseallwin();
+	UnregisterHotKeys();
+	QWidget::closeEvent(event);
+}
+
+void CexampleDlg::keyPressEvent(QKeyEvent* event)
+{
+	if (event && event->key() == Qt::Key_Escape)
+	{
+		event->accept();
+		return;
+	}
+
+	QWidget::keyPressEvent(event);
+}
+
+void CexampleDlg::mousePressEvent(QMouseEvent* event)
+{
+	if (event && event->button() == Qt::LeftButton && m_titleBar != NULL)
+	{
+		QPoint pos = event->pos();
+		if (m_titleBar->geometry().contains(pos))
+		{
+			QWidget* child = childAt(pos);
+			if (child && (child->objectName() == "min_btn" || child->objectName() == "close_btn"))
+			{
+				QWidget::mousePressEvent(event);
+				return;
+			}
+			if (m_hwnd != NULL)
+			{
+				ReleaseCapture();
+				SendMessage(m_hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+				event->accept();
+				return;
+			}
+		}
+	}
+
+	QWidget::mousePressEvent(event);
+}
+
+bool CexampleDlg::eventFilter(QObject* obj, QEvent* event)
+{
+	if (event && event->type() == QEvent::MouseButtonPress &&
+		(obj == m_titleBar || (obj && obj->objectName() == "AppTitle")))
+	{
+		QMouseEvent* mouseEvent = static_cast<QMouseEvent*>(event);
+		if (mouseEvent->button() == Qt::LeftButton && m_hwnd != NULL)
+		{
+			ReleaseCapture();
+			SendMessage(m_hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+			return true;
+		}
+	}
+
+	if (obj && obj->property("card").toBool())
+	{
+		QFrame* card = qobject_cast<QFrame*>(obj);
+		QGraphicsDropShadowEffect* shadow = card ? qobject_cast<QGraphicsDropShadowEffect*>(card->graphicsEffect()) : nullptr;
 		
-		tmp.Format(_T("%d"),index+MAX_HWND);
-		m_list.SetItemText(list_index, 3, tmp);
-
-		UpdateUI(index,UI_UPDATE);
-		return;
-	}
-	else if (action == UI_DELETE)
-	{
-		long list_index = GetListIndex(index);
-
-		if (list_index == -1)
+		if (shadow)
 		{
-			return;
+			if (event->type() == QEvent::Enter)
+			{
+				QPropertyAnimation* anim = new QPropertyAnimation(shadow, "blurRadius");
+				anim->setDuration(200);
+				anim->setEndValue(35);
+				anim->setEasingCurve(QEasingCurve::OutCubic);
+				anim->start(QAbstractAnimation::DeleteWhenStopped);
+
+				QPropertyAnimation* offsetAnim = new QPropertyAnimation(shadow, "offset");
+				offsetAnim->setDuration(200);
+				offsetAnim->setEndValue(QPointF(0, 8));
+				offsetAnim->setEasingCurve(QEasingCurve::OutCubic);
+				offsetAnim->start(QAbstractAnimation::DeleteWhenStopped);
+			}
+			else if (event->type() == QEvent::Leave)
+			{
+				QPropertyAnimation* anim = new QPropertyAnimation(shadow, "blurRadius");
+				anim->setDuration(200);
+				anim->setEndValue(20);
+				anim->setEasingCurve(QEasingCurve::OutCubic);
+				anim->start(QAbstractAnimation::DeleteWhenStopped);
+
+				QPropertyAnimation* offsetAnim = new QPropertyAnimation(shadow, "offset");
+				offsetAnim->setDuration(200);
+				offsetAnim->setEndValue(QPointF(0, 4));
+				offsetAnim->setEasingCurve(QEasingCurve::OutCubic);
+				offsetAnim->start(QAbstractAnimation::DeleteWhenStopped);
+			}
 		}
-
-		m_list.DeleteItem(list_index);
-		m_list.Invalidate();
-		m_list.UpdateWindow();
-		return;
 	}
-	else if (action == UI_UPDATE)
-	{
-		long list_index = GetListIndex(index);
 
-		if (list_index == -1)
-		{
-			return;
-		}
-
-		// 先更新主
-		m_list.SetItemText(list_index, 4, ThreadStateToString(g_info[index].thread_state));
-		m_list.SetItemText(list_index, 6, g_info[index].task_state);
-		// 再更新副
-		m_list.SetItemText(list_index, 5, ThreadStateToString(g_info[index+MAX_HWND].thread_state));
-		m_list.SetItemText(list_index, 7, g_info[index+MAX_HWND].excep_state);
-		m_list.Invalidate();
-		m_list.UpdateWindow();
-		return;
-	}
+	return QWidget::eventFilter(obj, event);
 }
 
-LRESULT CexampleDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
+bool CexampleDlg::nativeEvent(const QByteArray& eventType, void* message, long* result)
 {
-	if (message == WM_NOTIFY_UI)
+	MSG* msg = static_cast<MSG*>(message);
+	if (msg == NULL)
 	{
-		long list_index = GetListIndex((long)lParam);
+		return QWidget::nativeEvent(eventType, message, result);
+	}
+
+	if (msg->message == WM_NOTIFY_UI)
+	{
+		long notify_code = (long)msg->wParam;
+		long index = (long)msg->lParam;
+		long list_index = FindListIndex(index);
 
 		if (list_index >= 0)
 		{
-			long notify_code = (long)wParam;
-			long index = (long)lParam;
-
-			if (index >= MAX_HWND)
-			{
-				index = index - MAX_HWND;
-			}
-
-			switch(notify_code)
+			long normalized = NormalizeIndex(index);
+			switch (notify_code)
 			{
 			case NOTIFY_UPDATE:
-				UpdateUI(index,UI_UPDATE);
+				UpdateList(normalized, UI_UPDATE);
 				break;
 			case NOTIFY_STOP:
-				ThreadStop(index);
+				ThreadStop(normalized);
 				break;
 			case NOTIFY_RESTART:
-				ThreadRestart(index);
+				ThreadRestart(normalized);
 				break;
 			default:
 				break;
@@ -389,117 +1048,482 @@ LRESULT CexampleDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		else
 		{
-			Log(_T("索引找不到 序号:%d"),lParam);
+			Log(_T("索引找不到 序号:%d"), msg->lParam);
+		}
+
+		if (result)
+		{
+			*result = 0;
+		}
+		return true;
+	}
+
+	if (msg->message == WM_HOTKEY)
+	{
+		OnHotKey(msg->wParam, msg->lParam);
+		if (result)
+		{
+			*result = 0;
+		}
+		return true;
+	}
+
+	if (msg->message == WM_NCHITTEST)
+	{
+		RECT rect = {};
+		GetWindowRect(m_hwnd, &rect);
+		int x = GET_X_LPARAM(msg->lParam);
+		int y = GET_Y_LPARAM(msg->lParam);
+
+		bool left = x >= rect.left && x < rect.left + kResizeBorder;
+		bool right = x <= rect.right && x > rect.right - kResizeBorder;
+		bool top = y >= rect.top && y < rect.top + kResizeBorder;
+		bool bottom = y <= rect.bottom && y > rect.bottom - kResizeBorder;
+
+		if (left && top)
+		{
+			if (result) *result = HTTOPLEFT;
+			return true;
+		}
+		if (right && top)
+		{
+			if (result) *result = HTTOPRIGHT;
+			return true;
+		}
+		if (left && bottom)
+		{
+			if (result) *result = HTBOTTOMLEFT;
+			return true;
+		}
+		if (right && bottom)
+		{
+			if (result) *result = HTBOTTOMRIGHT;
+			return true;
+		}
+		if (left)
+		{
+			if (result) *result = HTLEFT;
+			return true;
+		}
+		if (right)
+		{
+			if (result) *result = HTRIGHT;
+			return true;
+		}
+		if (top)
+		{
+			if (result) *result = HTTOP;
+			return true;
+		}
+		if (bottom)
+		{
+			if (result) *result = HTBOTTOM;
+			return true;
+		}
+
+		QPoint localPos = mapFromGlobal(QPoint(x, y));
+		QRect titleRect = m_titleBar ? m_titleBar->geometry() : QRect(0, 0, width(), kTitleBarHeight);
+		if (titleRect.contains(localPos))
+		{
+			QWidget* child = childAt(localPos);
+			if (child && (child->objectName() == "min_btn" || child->objectName() == "close_btn"))
+			{
+				return QWidget::nativeEvent(eventType, message, result);
+			}
+			if (result)
+			{
+				*result = HTCAPTION;
+			}
+			return true;
 		}
 	}
-	else if (message == WM_CLOSE)
-	{
-		OnBnClickedButtonStopall();
-		OnBnClickedButtonCloseallwin();
-	}
 
-	return CDialog::WindowProc(message,wParam,lParam);
+	return QWidget::nativeEvent(eventType, message, result);
 }
 
-
-void UpdateUI(long index,long action)
+void CexampleDlg::resizeEvent(QResizeEvent* event)
 {
-	g_main_cwnd->UpdateList(index,action);
+	if (m_bgLabel && !m_originalBg.isNull()) {
+		m_bgLabel->setGeometry(rect());
+		
+		QSize widgetSize = rect().size();
+		QSize imageSize = m_originalBg.size();
+		
+		double widgetAspect = (double)widgetSize.width() / widgetSize.height();
+		double imageAspect = (double)imageSize.width() / imageSize.height();
+		
+		QSize scaledSize;
+		if (imageAspect > widgetAspect) {
+			scaledSize = imageSize * ((double)widgetSize.height() / imageSize.height());
+		} else {
+			scaledSize = imageSize * ((double)widgetSize.width() / imageSize.width());
+		}
+		
+		QPixmap scaled = m_originalBg.scaled(scaledSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+		
+		int x = (scaled.width() - widgetSize.width()) / 2;
+		int y = (scaled.height() - widgetSize.height()) / 2;
+		m_bgLabel->setPixmap(scaled.copy(x, y, widgetSize.width(), widgetSize.height()));
+
+		if (QWidget* overlay = m_bgLabel->findChild<QWidget*>("BgOverlay")) {
+			overlay->setGeometry(m_bgLabel->rect());
+		}
+	}
+
+	// Rounded Corners
+	QPainterPath path;
+	path.addRoundedRect(rect(), 16, 16);
+	QRegion region(path.toFillPolygon().toPolygon());
+	setMask(region);
+
+	QWidget::resizeEvent(event);
+}
+void CexampleDlg::UpdateList(long index, long action)
+{
+	if (m_statusList == NULL)
+	{
+		return;
+	}
+
+	if (action == UI_ADD)
+	{
+		long normalized = NormalizeIndex(index);
+		int row = m_statusList->rowCount();
+		m_statusList->insertRow(row);
+
+		QTableWidgetItem* mainItem = new QTableWidgetItem();
+		mainItem->setData(Qt::UserRole, normalized);
+		mainItem->setFlags(Qt::ItemIsEnabled);
+		m_statusList->setItem(row, 0, mainItem);
+
+		QTableWidgetItem* subItem = new QTableWidgetItem();
+		subItem->setData(Qt::UserRole, normalized);
+		subItem->setFlags(Qt::ItemIsEnabled);
+		m_statusList->setItem(row, 1, subItem);
+
+		QTableWidgetItem* taskItem = new QTableWidgetItem();
+		taskItem->setData(Qt::UserRole, normalized);
+		taskItem->setFlags(Qt::ItemIsEnabled);
+		m_statusList->setItem(row, 2, taskItem);
+
+		UpdateList(normalized, UI_UPDATE);
+		return;
+	}
+	else if (action == UI_DELETE)
+	{
+		int row = FindListIndex(index);
+		if (row < 0)
+		{
+			return;
+		}
+
+		m_statusList->removeRow(row);
+		return;
+	}
+	else if (action == UI_UPDATE)
+	{
+		int row = FindListIndex(index);
+		if (row < 0)
+		{
+			return;
+		}
+
+		QTableWidgetItem* mainItem = m_statusList->item(row, 0);
+		QTableWidgetItem* subItem = m_statusList->item(row, 1);
+		QTableWidgetItem* taskItem = m_statusList->item(row, 2);
+		if (mainItem == NULL || subItem == NULL || taskItem == NULL)
+		{
+			return;
+		}
+
+		QString mainStatusText = ThreadStateToString(g_info[index].thread_state);
+		QWidget* statusWidget = m_statusList->cellWidget(row, 0);
+		if (!statusWidget)
+		{
+			statusWidget = new QWidget();
+			QHBoxLayout* layout = new QHBoxLayout(statusWidget);
+			layout->setContentsMargins(8, 0, 0, 0);
+			layout->setSpacing(8);
+			
+			QLabel* dot = new QLabel();
+			dot->setObjectName("StatusDot");
+			dot->setFixedSize(8, 8);
+			
+			QLabel* label = new QLabel(mainStatusText);
+			label->setObjectName("StatusText");
+			
+			layout->addWidget(dot);
+			layout->addWidget(label);
+			layout->addStretch();
+			
+			m_statusList->setCellWidget(row, 0, statusWidget);
+		}
+
+		QLabel* dot = statusWidget->findChild<QLabel*>("StatusDot");
+		QLabel* label = statusWidget->findChild<QLabel*>("StatusText");
+		if (dot && label)
+		{
+			label->setText(mainStatusText);
+			ThreadState state = g_info[index].thread_state;
+			if (state == State_Runing)
+			{
+				dot->setStyleSheet("background-color: #10B981; border-radius: 4px;");
+				QGraphicsOpacityEffect* opacity = qobject_cast<QGraphicsOpacityEffect*>(dot->graphicsEffect());
+				if (!opacity)
+				{
+					opacity = new QGraphicsOpacityEffect(dot);
+					dot->setGraphicsEffect(opacity);
+				}
+				
+				QPropertyAnimation* anim = dot->findChild<QPropertyAnimation*>("PulseAnim");
+				if (!anim)
+				{
+					anim = new QPropertyAnimation(opacity, "opacity", dot);
+					anim->setObjectName("PulseAnim");
+					anim->setDuration(1200);
+					anim->setStartValue(1.0);
+					anim->setKeyValueAt(0.5, 0.3);
+					anim->setEndValue(1.0);
+					anim->setLoopCount(-1);
+					anim->start();
+				}
+			}
+			else if (state == State_Starting || state == State_Resuming)
+			{
+				dot->setStyleSheet("background-color: #3B82F6; border-radius: 4px;");
+			}
+			else if (state == State_Pausing || state == State_Pause)
+			{
+				dot->setStyleSheet("background-color: #F59E0B; border-radius: 4px;");
+			}
+			else
+			{
+				dot->setStyleSheet("background-color: #64748B; border-radius: 4px;");
+			}
+		}
+
+		subItem->setText(ThreadStateToString(g_info[index + MAX_HWND].thread_state));
+		taskItem->setText(TCharToQString(g_info[index].task_state));
+		return;
+	}
+}
+
+void CexampleDlg::CoordUpdate(int x, int y)
+{
+	if (m_coordLabel == NULL)
+	{
+		return;
+	}
+
+	QString tips = QString::fromWCharArray(L"（%1,%2）").arg(x).arg(y);
+	m_coordLabel->setText(tips);
+}
+
+void UpdateUI(long index, long action)
+{
+	if (g_main_cwnd == NULL)
+	{
+		return;
+	}
+
+	if (QThread::currentThread() == g_main_cwnd->thread())
+	{
+		g_main_cwnd->UpdateList(index, action);
+		return;
+	}
+
+	long safeIndex = index;
+	long safeAction = action;
+	QMetaObject::invokeMethod(g_main_cwnd, [safeIndex, safeAction]() {
+		if (g_main_cwnd)
+		{
+			g_main_cwnd->UpdateList(safeIndex, safeAction);
+		}
+	}, Qt::QueuedConnection);
 }
 
 void UpdateCoords(int* nums)
 {
-	g_main_cwnd->CoordUpdate(nums);
+	if (g_main_cwnd == NULL || nums == NULL)
+	{
+		return;
+	}
+
+	int x = nums[0];
+	int y = nums[1];
+
+	if (QThread::currentThread() == g_main_cwnd->thread())
+	{
+		g_main_cwnd->CoordUpdate(x, y);
+		return;
+	}
+
+	QMetaObject::invokeMethod(g_main_cwnd, [x, y]() {
+		if (g_main_cwnd)
+		{
+			g_main_cwnd->CoordUpdate(x, y);
+		}
+	}, Qt::QueuedConnection);
 }
 
-int GetautoRuneSolver() {
-	return g_main_cwnd->autoRuneSolver.GetCheck();
+int CexampleDlg::GetautoRuneSolver()
+{
+	return autoRuneSolver ? autoRuneSolver->isChecked() : 0;
 }
 
-int GetfriendPlayerNotification() {
-	return g_main_cwnd->friendPlayerNotification.GetCheck();
+int CexampleDlg::GetfriendPlayerNotification()
+{
+	return friendPlayerNotification ? friendPlayerNotification->isChecked() : 0;
 }
 
-int GethuangMen() {
-	return g_main_cwnd->huangMen.GetCheck();
+int CexampleDlg::GethuangMen()
+{
+	return huangMen ? huangMen->isChecked() : 0;
 }
 
-int GetexpPot() {
-	return g_main_cwnd->expPot.GetCheck();
+int CexampleDlg::GetexpPot()
+{
+	return expPot ? expPot->isChecked() : 0;
 }
 
-int GetEXP_PARK() {
-	return g_main_cwnd->EXP_PARK.GetCheck();
+int CexampleDlg::GetEXP_PARK()
+{
+	return EXP_PARK ? EXP_PARK->isChecked() : 0;
 }
 
-int Gethunt() {
-	return g_main_cwnd->hunt.GetCheck();
+int CexampleDlg::Gethunt()
+{
+	return hunt ? hunt->isChecked() : 0;
 }
 
-int Getmap() {
-	return g_main_cwnd->mapList.GetCurSel();
+int CexampleDlg::Getmap()
+{
+	return mapList ? mapList->currentIndex() : 0;
 }
 
-int Getkuxing() {
-	return g_main_cwnd->EXP_MVP.GetCheck();
+int CexampleDlg::Getkuxing()
+{
+	return EXP_MVP ? EXP_MVP->isChecked() : 0;
 }
 
-int GetautoWealth() {
-	return g_main_cwnd->autoWealth.GetCheck();
+int CexampleDlg::GetautoWealth()
+{
+	return autoWealth ? autoWealth->isChecked() : 0;
 }
 
-int GetautoOil() {
-	return g_main_cwnd->autoOil.GetCheck();
+int CexampleDlg::GetautoOil()
+{
+	return autoOil ? autoOil->isChecked() : 0;
 }
 
-int Getignite() {
-	return g_main_cwnd->bless.GetCheck();
+int CexampleDlg::Getignite()
+{
+	return bless ? bless->isChecked() : 0;
 }
 
-int GetExp10() {
-	return g_main_cwnd->EXP15M.GetCheck();
+int CexampleDlg::GetExp10()
+{
+	return EXP15M ? EXP15M->isChecked() : 0;
 }
 
-int GetExp30() {
-	return g_main_cwnd->EXP30M.GetCheck();
+int CexampleDlg::GetExp30()
+{
+	return EXP30M ? EXP30M->isChecked() : 0;
 }
 
-int GetWhiteDetect() {
-	return g_main_cwnd->whiteDetect.GetCheck();
+int CexampleDlg::GetWhiteDetect()
+{
+	return whiteDetect ? whiteDetect->isChecked() : 0;
+}
+
+int GetautoRuneSolver()
+{
+	return g_main_cwnd ? g_main_cwnd->GetautoRuneSolver() : 0;
+}
+
+int GetfriendPlayerNotification()
+{
+	return g_main_cwnd ? g_main_cwnd->GetfriendPlayerNotification() : 0;
+}
+
+int GethuangMen()
+{
+	return g_main_cwnd ? g_main_cwnd->GethuangMen() : 0;
+}
+
+int GetexpPot()
+{
+	return g_main_cwnd ? g_main_cwnd->GetexpPot() : 0;
+}
+
+int GetEXP_PARK()
+{
+	return g_main_cwnd ? g_main_cwnd->GetEXP_PARK() : 0;
+}
+
+int Gethunt()
+{
+	return g_main_cwnd ? g_main_cwnd->Gethunt() : 0;
+}
+
+int Getmap()
+{
+	return g_main_cwnd ? g_main_cwnd->Getmap() : 0;
+}
+
+int Getkuxing()
+{
+	return g_main_cwnd ? g_main_cwnd->Getkuxing() : 0;
+}
+
+int GetautoWealth()
+{
+	return g_main_cwnd ? g_main_cwnd->GetautoWealth() : 0;
+}
+
+int GetautoOil()
+{
+	return g_main_cwnd ? g_main_cwnd->GetautoOil() : 0;
+}
+
+int Getignite()
+{
+	return g_main_cwnd ? g_main_cwnd->Getignite() : 0;
+}
+
+int GetExp10()
+{
+	return g_main_cwnd ? g_main_cwnd->GetExp10() : 0;
+}
+
+int GetExp30()
+{
+	return g_main_cwnd ? g_main_cwnd->GetExp30() : 0;
+}
+
+int GetWhiteDetect()
+{
+	return g_main_cwnd ? g_main_cwnd->GetWhiteDetect() : 0;
 }
 
 void CexampleDlg::OnBnClickedButtonCloseallwin()
 {
-	
+
 }
 
 void CexampleDlg::OnBnClickedButtonStartall()
 {
-	CString hwnds = g_dm->EnumWindowByProcess("MapleStory.exe", NULL, "MapleStoryClass", 1 + 8 + 16);
+	CString hwnds = g_dm->EnumWindowByProcess(_T("MapleStory.exe"), NULL, _T("MapleStoryClass"), 1 + 8 + 16);
 	if (hwnds.GetLength() == 0)
 	{
-		hwnds = g_dm->EnumWindow(0, "MapleStory", "MapleStoryClass", 1 + 8);
+		hwnds = g_dm->EnumWindow(0, _T("MapleStory"), _T("MapleStoryClass"), 1 + 8);
 	}
 	if (hwnds.GetLength() == 0)
 	{
-		::MessageBox(NULL, _T("枚举窗口失败，DM未找到"), _T("错误"), MB_OK);
+		::MessageBox(NULL, _T("枚举窗口失败，未找到目标窗口"), _T("错误"), MB_OK);
 		return;
 	}
 
-	//CStringArray hwnd_array;
-	//long count = SplitString(hwnds,_T(","),hwnd_array,FALSE);
-
-	//for (int i = 0;i < count;++i)
-	//{
-	//	long hwnd = _tstoi(hwnd_array[i]);
-	//	hwnd = g_dm->GetWindow(hwnd,1);
-	//	if (!ThreadStart(hwnd))
-	//	{
-	//		g_dm->TerminateProcess(g_dm->GetWindowProcessId(hwnd));
-	//	}
-	//	
-	//}
-	
 	long hwnd = _tstoi(hwnds);
 	if (!ThreadStart(hwnd))
 	{
@@ -510,11 +1534,14 @@ void CexampleDlg::OnBnClickedButtonStartall()
 	detectionStart();
 }
 
-
 void CexampleDlg::OnBnClickedButtonStopall()
 {
-	long item_count = m_list.GetItemCount();
+	if (m_statusList == NULL)
+	{
+		return;
+	}
 
+	int item_count = m_statusList->rowCount();
 	if (item_count == 0)
 	{
 		Log(_T("没有窗口"));
@@ -523,37 +1550,56 @@ void CexampleDlg::OnBnClickedButtonStopall()
 
 	subSoftPause();
 
-	// 先全部设置结束标记,这样可加快结束的速度
-	for (int i = 0;i < item_count;++i)
+	for (int i = 0; i < item_count; ++i)
 	{
-		long index = _tstoi(m_list.GetItemText(i,2));
+		QTableWidgetItem* item = m_statusList->item(i, 0);
+		if (item == NULL)
+		{
+			continue;
+		}
+		long index = (long)item->data(Qt::UserRole).toLongLong();
 		ThreadSetExitState(index);
 	}
 
-	// 这里我们从最后一个开始，因为结束时，会删除表项
-	long list_index = item_count - 1;
+	int list_index = item_count - 1;
 	while (list_index >= 0)
 	{
-		long index = _tstoi(m_list.GetItemText(list_index,2));
+		QTableWidgetItem* item = m_statusList->item(list_index, 0);
+		if (item == NULL)
+		{
+			--list_index;
+			continue;
+		}
+		long index = (long)item->data(Qt::UserRole).toLongLong();
 		ThreadStop(index);
 		--list_index;
 	}
 }
+
 void CexampleDlg::OnBnClickedButtonPauseall()
 {
-	long item_count = m_list.GetItemCount();
+	if (m_statusList == NULL)
+	{
+		return;
+	}
 
+	int item_count = m_statusList->rowCount();
 	if (item_count == 0)
 	{
 		Log(_T("没有窗口"));
 		return;
 	}
 
-
-	long list_index = item_count - 1;
+	int list_index = item_count - 1;
 	while (list_index >= 0)
 	{
-		long index = _tstoi(m_list.GetItemText(list_index,2));
+		QTableWidgetItem* item = m_statusList->item(list_index, 0);
+		if (item == NULL)
+		{
+			--list_index;
+			continue;
+		}
+		long index = (long)item->data(Qt::UserRole).toLongLong();
 		ThreadPause(index);
 		--list_index;
 	}
@@ -561,19 +1607,28 @@ void CexampleDlg::OnBnClickedButtonPauseall()
 
 void CexampleDlg::OnBnClickedButtonResumeall()
 {
-	long item_count = m_list.GetItemCount();
+	if (m_statusList == NULL)
+	{
+		return;
+	}
 
+	int item_count = m_statusList->rowCount();
 	if (item_count == 0)
 	{
 		Log(_T("没有窗口"));
 		return;
 	}
 
-
-	long list_index = item_count - 1;
+	int list_index = item_count - 1;
 	while (list_index >= 0)
 	{
-		long index = _tstoi(m_list.GetItemText(list_index,2));
+		QTableWidgetItem* item = m_statusList->item(list_index, 0);
+		if (item == NULL)
+		{
+			--list_index;
+			continue;
+		}
+		long index = (long)item->data(Qt::UserRole).toLongLong();
 		ThreadResume(index);
 		--list_index;
 	}
@@ -588,30 +1643,27 @@ void CexampleDlg::OnBnClickedButtonSoft()
 
 LRESULT CexampleDlg::OnHotKey(WPARAM wParam, LPARAM lParam)
 {
-	UINT Mod = (UINT)LOWORD(lParam); // key-modifier flags 
-	UINT uVirtKey = (UINT)HIWORD(lParam); // virtual-key code 
-	//判断响应了什么热键 
-	if (MOD_CONTROL == Mod && 76 == uVirtKey)
+	UINT mod = (UINT)LOWORD(lParam);
+	UINT uVirtKey = (UINT)HIWORD(lParam);
+	if (MOD_CONTROL == mod && 76 == uVirtKey)
 	{
 		CexampleDlg::OnBnClickedButtonSoft();
 	}
-	else if (MOD_CONTROL == Mod && 80 == uVirtKey)
+	else if (MOD_CONTROL == mod && 80 == uVirtKey)
 	{
-		if (resumeCount % 2 == 0) {
+		if (resumeCount % 2 == 0)
+		{
 			Log(_T("暂停所有"));
 			CexampleDlg::OnBnClickedButtonPauseall();
 		}
-		else {
+		else
+		{
 			Log(_T("恢复所有"));
 			CexampleDlg::OnBnClickedButtonResumeall();
 		}
 		resumeCount++;
-
 	}
-	//else if (MOD_CONTROL == Mod && 79 == uVirtKey)
-	//{
-	//	Log(_T("恢复所有"));
-	//	CexampleDlg::OnBnClickedButtonResumeall();
-	//}
+
 	return 0;
 }
+

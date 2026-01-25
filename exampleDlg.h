@@ -1,70 +1,94 @@
-// exampleDlg.h : 头文件
-//
-
 #pragma once
-#include "afxcmn.h"
-#include "thread_control.h"
 
-// CexampleDlg 对话框
-class CexampleDlg : public CDialog
+#include <QtWidgets/QWidget>
+#include <windows.h>
+
+class QLabel;
+class QTableWidget;
+class QStackedWidget;
+class QToolButton;
+class QCheckBox;
+class QComboBox;
+class QCloseEvent;
+class QKeyEvent;
+class QMouseEvent;
+class QEvent;
+class QObject;
+class QByteArray;
+
+class CexampleDlg : public QWidget
 {
-// 构造
 public:
-	CexampleDlg(CWnd* pParent = NULL);	// 标准构造函数
+    explicit CexampleDlg(QWidget* parent = nullptr);
+    ~CexampleDlg() override;
 
-// 对话框数据
-	enum { IDD = IDD_EXAMPLE_DIALOG };
+    void UpdateList(long index, long action);
+    void CoordUpdate(int x, int y);
 
-	void UpdateList(long index,long action);
+    void OnBnClickedButtonCloseallwin();
+    void OnBnClickedButtonStartall();
+    void OnBnClickedButtonStopall();
+    void OnBnClickedButtonPauseall();
+    void OnBnClickedButtonResumeall();
+    void OnBnClickedButtonSoft();
+    LRESULT OnHotKey(WPARAM wParam, LPARAM lParam);
+
+    int GetautoRuneSolver();
+    int GetfriendPlayerNotification();
+    int GethuangMen();
+    int GetexpPot();
+    int GetEXP_PARK();
+    int Gethunt();
+    int Getmap();
+    int Getkuxing();
+    int GetautoWealth();
+    int GetautoOil();
+    int Getignite();
+    int GetExp10();
+    int GetExp30();
+    int GetWhiteDetect();
 
 protected:
-	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支持
+    void closeEvent(QCloseEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
+    bool eventFilter(QObject* obj, QEvent* event) override;
+    bool nativeEvent(const QByteArray& eventType, void* message, long* result) override;
+    void resizeEvent(QResizeEvent* event) override;
 
+private:
+    void InitUi();
+    void InitCombos();
+    void LoadUiState();
+    void SaveUiState();
+    int FindListIndex(long index) const;
+    void SyncTabSelection(int tabIndex);
+    void RegisterHotKeys();
+    void UnregisterHotKeys();
 
-	CString ThreadStateToString(ThreadState state);
+    QLabel* m_coordLabel;
+    QTableWidget* m_statusList;
+    QStackedWidget* m_optionTabs;
+    QToolButton* m_tabCommon;
+    QToolButton* m_tabDetect;
 
-// 实现
-protected:
-	HICON m_hIcon;
+    QToolButton* autoRuneSolver;
+    QToolButton* friendPlayerNotification;
+    QToolButton* huangMen;
+    QToolButton* expPot;
+    QToolButton* EXP_PARK;
+    QToolButton* hunt;
+    QComboBox* mapList;
+    QToolButton* EXP_MVP;
+    QToolButton* autoWealth;
+    QToolButton* autoOil;
+    QToolButton* bless;
+    QToolButton* EXP15M;
+    QToolButton* EXP30M;
+    QToolButton* whiteDetect;
 
-	long GetListIndex(long index);
-
-	virtual LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam);
-
-	// 生成的消息映射函数
-	virtual BOOL OnInitDialog();
-	afx_msg void OnPaint();
-	afx_msg HCURSOR OnQueryDragIcon();
-	DECLARE_MESSAGE_MAP()
-public:
-	afx_msg void OnBnClickedButtonCloseallwin();
-
-	afx_msg void OnBnClickedButtonStartall();
-	afx_msg void OnBnClickedButtonStopall();
-	afx_msg void OnBnClickedButtonPauseall();
-	afx_msg void OnBnClickedButtonResumeall();
-	
-	afx_msg void OnTimer(UINT_PTR nIDEvent);
-	afx_msg void CoordUpdate(int* nums);
-	CListCtrl m_list;
-		
-	CButton autoRuneSolver;
-	CButton friendPlayerNotification;
-	CButton huangMen;
-	CButton expPot;
-	CButton EXP_PARK;
-	CButton hunt;
-	CComboBox mapList;
-	afx_msg void OnBnClickedButtonSoft();
-
-	afx_msg LRESULT OnHotKey(WPARAM wParam, LPARAM lParam);
-
-	CButton EXP_MVP;
-	CButton autoWealth;
-	CButton autoOil;
-	CButton bless;
-	CButton EXP15M;
-	CButton EXP30M;
-	CButton whiteDetect;
+    QWidget* m_titleBar;
+    HWND m_hwnd;
+    QLabel* m_bgLabel;
+    QPixmap m_originalBg;
 };
-
