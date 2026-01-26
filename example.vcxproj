@@ -128,7 +128,7 @@
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
       <AdditionalLibraryDirectories>$(ProjectDir)third_party\wyhkm\x86;$(ProjectDir)third_party\wycp\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>wyhkm.lib;wycp.lib;libcrypto.lib;libssl.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wyhkm.lib;wycp.lib;libcrypto.lib;libssl.lib;Advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -158,7 +158,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <AdditionalLibraryDirectories>$(ProjectDir)third_party\wyhkm\x64;$(ProjectDir)third_party\wycp\x64;F:\vcpkg\installed\x64-windows\lib;F:\vcpkg\installed\x64-windows\lib\manual-link</AdditionalLibraryDirectories>
-      <AdditionalDependencies>wyhkm.lib;wycp.lib;User32.lib;cpr.lib;libcurl.lib;opencv_core4.lib;opencv_imgproc4.lib;opencv_imgcodecs4.lib;Qt5Widgetsd.lib;Qt5Guid.lib;Qt5Cored.lib;Dwmapi.lib;Gdiplus.lib;Imm32.lib;Comctl32.lib;UxTheme.lib;Msimg32.lib</AdditionalDependencies>
+      <AdditionalDependencies>wyhkm.lib;wycp.lib;User32.lib;Advapi32.lib;cpr.lib;libcurl.lib;opencv_core4.lib;opencv_imgproc4.lib;opencv_imgcodecs4.lib;Qt5Widgetsd.lib;Qt5Guid.lib;Qt5Cored.lib;Dwmapi.lib;Gdiplus.lib;Imm32.lib;Comctl32.lib;UxTheme.lib;Msimg32.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>Qt5AxServer.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
@@ -193,7 +193,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <TargetMachine>MachineX86</TargetMachine>
       <AdditionalLibraryDirectories>$(ProjectDir)third_party\wyhkm\x86;$(ProjectDir)third_party\wycp\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>wyhkm.lib;wycp.lib;libcrypto.lib;libssl.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wyhkm.lib;wycp.lib;libcrypto.lib;libssl.lib;Advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -223,7 +223,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <AdditionalLibraryDirectories>$(ProjectDir)third_party\wyhkm\x64;$(ProjectDir)third_party\wycp\x64;F:\vcpkg\installed\x64-windows\lib;F:\vcpkg\installed\x64-windows\lib\manual-link</AdditionalLibraryDirectories>
-      <AdditionalDependencies>wyhkm.lib;wycp.lib;User32.lib;cpr.lib;libcurl.lib;opencv_core4.lib;opencv_imgproc4.lib;opencv_imgcodecs4.lib;Qt5Widgets.lib;Qt5Gui.lib;Qt5Core.lib;Dwmapi.lib;Gdiplus.lib;Imm32.lib;Comctl32.lib;UxTheme.lib;Msimg32.lib</AdditionalDependencies>
+      <AdditionalDependencies>wyhkm.lib;wycp.lib;User32.lib;Advapi32.lib;cpr.lib;libcurl.lib;opencv_core4.lib;opencv_imgproc4.lib;opencv_imgcodecs4.lib;Qt5Widgets.lib;Qt5Gui.lib;Qt5Core.lib;Dwmapi.lib;Gdiplus.lib;Imm32.lib;Comctl32.lib;UxTheme.lib;Msimg32.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>Qt5AxServer.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
@@ -238,6 +238,7 @@
     <ClCompile Include="lodepng.cpp" />
     <ClCompile Include="log.cpp" />
     <ClCompile Include="MiaoSender.cpp" />
+    <ClCompile Include="StartupVerify.cpp" />
     <ClCompile Include="obj.cpp" />
     <ClCompile Include="runeData.cpp" />
     <ClCompile Include="script.cpp" />
@@ -267,6 +268,7 @@
     <ClInclude Include="runeData.h" />
     <ClInclude Include="script.h" />
     <ClInclude Include="SPUtils.h" />
+    <ClInclude Include="StartupVerify.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="thread_control.h" />
   </ItemGroup>

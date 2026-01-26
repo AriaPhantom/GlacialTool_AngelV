@@ -4,6 +4,7 @@
 #include "log.h"
 #include "thread_control.h"
 #include "obj.h"
+#include "StartupVerify.h"
 
 #include <QtWidgets/QApplication>
 #include <QtGui/QFont>
@@ -83,6 +84,12 @@ BOOL CexampleApp::InitInstance()
 	// 初始化
 	LogInit();
 	ThreadInit();
+
+	if (!VerifyStartup(nullptr))
+	{
+		AfxMessageBox(_T("Startup verification failed. Please contact admin."));
+		return FALSE;
+	}
 
 	// 创建对象,此对象必须全局保持
 	g_dm = new sptool;
