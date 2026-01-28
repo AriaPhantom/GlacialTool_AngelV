@@ -48,13 +48,13 @@
     <ClCompile Include="lodepng.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="MiaoSender.cpp">
+    <ClCompile Include="..\GlacialTool_Common\MiaoSender.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="StartupVerify.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="SPUtils.cpp">
+    <ClCompile Include="..\GlacialTool_Common\SPUtils.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -95,7 +95,7 @@
     <ClInclude Include="lodepng.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="MiaoSender.h">
+    <ClInclude Include="..\GlacialTool_Common\MiaoSender.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="KyStting.h">
@@ -110,7 +110,7 @@
     <ClInclude Include="ProjVer.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="SPUtils.h">
+    <ClInclude Include="..\GlacialTool_Common\SPUtils.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="StartupVerify.h">
