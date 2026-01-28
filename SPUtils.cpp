@@ -14,6 +14,7 @@
 #include <cwctype>
 #include <map>
 #include <mutex>
+#include <set>
 #include <sstream>
 #include <thread>
 #include <vector>
@@ -136,6 +137,20 @@ bool SendHkmRightClick() {
 	return HKMRightClick(ctx.dev) != FALSE;
 }
 
+bool ReleaseHkmKeyboard() {
+	auto& ctx = GetHkmContext();
+	std::lock_guard<std::mutex> lock(ctx.mutex);
+	if (!EnsureHkmDeviceLocked(ctx)) return false;
+	return HKMReleaseKeyboard(ctx.dev) != FALSE;
+}
+
+bool ReleaseHkmMouse() {
+	auto& ctx = GetHkmContext();
+	std::lock_guard<std::mutex> lock(ctx.mutex);
+	if (!EnsureHkmDeviceLocked(ctx)) return false;
+	return HKMReleaseMouse(ctx.dev) != FALSE;
+}
+
 constexpr int kWuyaModeExternalOnly = 0;
 constexpr int kWuyaModePreferExternal = 1;
 constexpr int kWuyaModeNativeOnly = 2;
@@ -144,6 +159,8 @@ constexpr int kWuyaBackendExternal = 1;
 constexpr int kWuyaBackendNative = 2;
 
 std::atomic<int> g_lastInputBackend{kWuyaBackendNone};
+std::mutex g_keyStateMutex;
+std::set<std::wstring> g_pressedKeys;
 
 int GetWuyaInputModeSafe() {
 	int mode = GetWuyaInputMode();
@@ -177,6 +194,30 @@ bool IsExtendedKey(WORD vkCode) {
 
 WORD VirtualKeyToScanCode(WORD virtualKeyCode) {
 	return MapVirtualKey(virtualKeyCode, MAPVK_VK_TO_VSC);
+}
+
+void SendVirtualKeyUp(WORD virtualKeyCode) {
+	WORD scanCode = VirtualKeyToScanCode(virtualKeyCode);
+	if (scanCode == 0) return;
+	INPUT input = {};
+	input.type = INPUT_KEYBOARD;
+	input.ki.wScan = scanCode;
+	input.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
+	if (IsExtendedKey(virtualKeyCode)) {
+		input.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
+	}
+	SendInput(1, &input, sizeof(INPUT));
+}
+
+void ReleaseNativeMouseButtons() {
+	INPUT inputs[3] = {};
+	inputs[0].type = INPUT_MOUSE;
+	inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+	inputs[1].type = INPUT_MOUSE;
+	inputs[1].mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+	inputs[2].type = INPUT_MOUSE;
+	inputs[2].mi.dwFlags = MOUSEEVENTF_MIDDLEUP;
+	SendInput(3, inputs, sizeof(INPUT));
 }
 
 WORD GetVirtualKeyCode(const std::wstring& key) {
@@ -477,6 +518,10 @@ void CapturePng(HWND hwnd, long logic_x1, long logic_y1, long logic_x2, long log
 }
 
 void KeyDown(const std::wstring& key) {
+	{
+		std::lock_guard<std::mutex> lock(g_keyStateMutex);
+		g_pressedKeys.insert(key);
+	}
 	int mode = GetWuyaInputModeSafe();
 	if (mode != kWuyaModeNativeOnly) {
 		if (TryHkmKey(key, false)) {
@@ -493,6 +538,10 @@ void KeyDown(const std::wstring& key) {
 }
 
 void KeyUp(const std::wstring& key) {
+	{
+		std::lock_guard<std::mutex> lock(g_keyStateMutex);
+		g_pressedKeys.erase(key);
+	}
 	int mode = GetWuyaInputModeSafe();
 	if (mode != kWuyaModeNativeOnly) {
 		if (TryHkmKey(key, true)) {
@@ -515,6 +564,49 @@ void KeyPress(const std::wstring& key, int times, long delay_after_ms) {
 		KeyUp(key);
 	}
 	if (delay_after_ms > 0) Sleep(delay_after_ms);
+}
+
+void ReleaseAllKeys() {
+	std::vector<std::wstring> keys;
+	{
+		std::lock_guard<std::mutex> lock(g_keyStateMutex);
+		keys.assign(g_pressedKeys.begin(), g_pressedKeys.end());
+		g_pressedKeys.clear();
+	}
+
+	int mode = GetWuyaInputModeSafe();
+	int lastBackend = g_lastInputBackend.load();
+	if (mode != kWuyaModeNativeOnly || lastBackend == kWuyaBackendExternal) {
+		ReleaseHkmKeyboard();
+		ReleaseHkmMouse();
+	}
+
+	for (const auto& key : keys) {
+		KeyUp(key);
+	}
+
+	ReleaseNativeMouseButtons();
+	if (!keys.empty()) {
+		return;
+	}
+
+	static const WORD kReleaseKeys[] = {
+		VK_SHIFT, VK_CONTROL, VK_MENU,
+		VK_LSHIFT, VK_RSHIFT, VK_LCONTROL, VK_RCONTROL, VK_LMENU, VK_RMENU,
+		VK_SPACE, VK_TAB, VK_ESCAPE, VK_RETURN, VK_BACK,
+		VK_LEFT, VK_RIGHT, VK_UP, VK_DOWN,
+		VK_HOME, VK_END, VK_PRIOR, VK_NEXT,
+		VK_INSERT, VK_DELETE, VK_CAPITAL
+	};
+	for (WORD vk : kReleaseKeys) {
+		SendVirtualKeyUp(vk);
+	}
+	for (WORD vk = 'A'; vk <= 'Z'; ++vk) {
+		SendVirtualKeyUp(vk);
+	}
+	for (WORD vk = '0'; vk <= '9'; ++vk) {
+		SendVirtualKeyUp(vk);
+	}
 }
 
 void MoveTo(HWND hwnd, int logicalX, int logicalY, int delay_after_ms) {

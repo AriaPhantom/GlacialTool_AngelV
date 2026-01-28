@@ -2,6 +2,7 @@
 #include "thread_control.h"
 #include "log.h"
 #include "script.h"
+#include "SPUtils.h"
 
 extern sptool* g_dm;
 extern HWND   g_main_hwnd;
@@ -132,6 +133,8 @@ void ThreadPause(long index)
 		return;
 	}
 
+	SPUtils::ReleaseAllKeys();
+
 	// Ö÷
 	if (g_info[index].thread_state == State_Runing || g_info[index].thread_state == State_Resuming)
 	{
@@ -162,6 +165,7 @@ void ThreadResume(long index)
 		return;
 	}
 
+
 	// Ö÷
 	if (g_info[index].thread_state == State_Pause || g_info[index].thread_state == State_Pausing)
 	{
@@ -191,6 +195,7 @@ void ThreadSetExitState(long index)
 	{
 		return;
 	}
+
 
 	// Ö÷
 	g_info[index].is_stop = TRUE;
@@ -308,7 +313,9 @@ void   ThreadStop(long index)
 		return;
 	}
 
-	ThreadInternalStop(index);
+	
+
+ThreadInternalStop(index);
 
 	ThreadReset(index);
 	ThreadReset(index + MAX_HWND);

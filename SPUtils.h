@@ -25,6 +25,7 @@ void CapturePng(HWND hwnd, long logic_x1, long logic_y1, long logic_x2, long log
 void KeyDown(const std::wstring& key);
 void KeyUp(const std::wstring& key);
 void KeyPress(const std::wstring& key, int times = 1, long delay_after_ms = 0);
+void ReleaseAllKeys();
 
 // Mouse (coords are logic coords relative to window client).
 void MoveTo(HWND hwnd, int logicalX, int logicalY, int delay_after_ms = 0);

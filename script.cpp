@@ -4,6 +4,7 @@
 #include "log.h"
 #include "gMonitor.h"
 #include "boHandler.h"
+#include "SPUtils.h"
 
 
 void DoWork(long index);
@@ -29,7 +30,9 @@ void ScriptDelay(long index,long time)
 		g_info[index].thread_state = State_Pause;
 		ThreadNotifyUI_Post(NOTIFY_UPDATE,index);
 
-		// 如果你想要在暂停时让用户可以操作,那么可以调用EnableBind,但是不要去调用LockInput,LockInput不是用来解除后台的,具体参考LockInput的说明
+		
+		SPUtils::ReleaseAllKeys();
+// 如果你想要在暂停时让用户可以操作,那么可以调用EnableBind,但是不要去调用LockInput,LockInput不是用来解除后台的,具体参考LockInput的说明
 		if (g_info[index].dm)
 		{
 			
