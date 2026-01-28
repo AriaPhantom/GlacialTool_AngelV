@@ -13239,7 +13239,7 @@ void CexampleDlg::InitUi()
 	wuyaGrid->setHorizontalSpacing(6);
 	wuyaGrid->setVerticalSpacing(2);
 
-	QLabel* wuyaImageTitle = new QLabel(QString::fromWCharArray(L"无涯识图"), infoCard);
+	QLabel* wuyaImageTitle = new QLabel(QString::fromWCharArray(L"外置识图"), infoCard);
 	wuyaImageTitle->setFixedWidth(56);
 	wuyaImageTitle->setProperty("muted", true);
 
@@ -13247,7 +13247,7 @@ void CexampleDlg::InitUi()
 	m_wuyaImageBackendValue = new QLabel(QString::fromWCharArray(L"后端: -"), infoCard);
 	m_wuyaImageReadyValue = new QLabel(QString::fromWCharArray(L"上下文: -"), infoCard);
 
-	QLabel* wuyaInputTitle = new QLabel(QString::fromWCharArray(L"无涯键鼠"), infoCard);
+	QLabel* wuyaInputTitle = new QLabel(QString::fromWCharArray(L"外置键鼠"), infoCard);
 	wuyaInputTitle->setFixedWidth(56);
 	wuyaInputTitle->setProperty("muted", true);
 
