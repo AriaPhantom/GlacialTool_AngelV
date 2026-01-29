@@ -162,7 +162,7 @@
       <IgnoreSpecificDefaultLibraries>Qt5AxServer.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /E /I /Y &quot;$(ProjectDir)skin&quot; &quot;$(OutDir)skin&quot; &amp; if not exist &quot;$(OutDir)platforms&quot; mkdir &quot;$(OutDir)platforms&quot; &amp; xcopy /Y &quot;F:\vcpkg\installed\x64-windows\debug\plugins\platforms\qwindowsd.dll&quot; &quot;$(OutDir)platforms\\&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wyhkm\\x64\\wyhkm.dll&quot; &quot;$(OutDir)wyhkm.dll&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wycp\\x64\\wycp.dll&quot; &quot;$(OutDir)wycp.dll&quot;</Command>
+      <Command>xcopy /E /I /Y &quot;$(ProjectDir)skin&quot; &quot;$(OutDir)skin&quot; &amp; if not exist &quot;$(OutDir)platforms&quot; mkdir &quot;$(OutDir)platforms&quot; &amp; xcopy /Y &quot;F:\vcpkg\installed\x64-windows\debug\plugins\platforms\qwindowsd.dll&quot; &quot;$(OutDir)platforms\\&quot; &amp; if not exist &quot;$(OutDir)imageformats&quot; mkdir &quot;$(OutDir)imageformats&quot; &amp; xcopy /Y &quot;F:\vcpkg\installed\x64-windows\debug\plugins\imageformats\qjpegd.dll&quot; &quot;$(OutDir)imageformats\\&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wyhkm\\x64\\wyhkm.dll&quot; &quot;$(OutDir)wyhkm.dll&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wycp\\x64\\wycp.dll&quot; &quot;$(OutDir)wycp.dll&quot;</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -227,7 +227,7 @@
       <IgnoreSpecificDefaultLibraries>Qt5AxServer.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /E /I /Y &quot;$(ProjectDir)skin&quot; &quot;$(OutDir)skin&quot; &amp; if not exist &quot;$(OutDir)platforms&quot; mkdir &quot;$(OutDir)platforms&quot; &amp; xcopy /Y &quot;F:\vcpkg\installed\x64-windows\plugins\platforms\qwindows.dll&quot; &quot;$(OutDir)platforms\\&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wyhkm\\x64\\wyhkm.dll&quot; &quot;$(OutDir)wyhkm.dll&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wycp\\x64\\wycp.dll&quot; &quot;$(OutDir)wycp.dll&quot;</Command>
+      <Command>xcopy /E /I /Y &quot;$(ProjectDir)skin&quot; &quot;$(OutDir)skin&quot; &amp; if not exist &quot;$(OutDir)platforms&quot; mkdir &quot;$(OutDir)platforms&quot; &amp; xcopy /Y &quot;F:\vcpkg\installed\x64-windows\plugins\platforms\qwindows.dll&quot; &quot;$(OutDir)platforms\\&quot; &amp; if not exist &quot;$(OutDir)imageformats&quot; mkdir &quot;$(OutDir)imageformats&quot; &amp; xcopy /Y &quot;F:\vcpkg\installed\x64-windows\plugins\imageformats\qjpeg.dll&quot; &quot;$(OutDir)imageformats\\&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wyhkm\\x64\\wyhkm.dll&quot; &quot;$(OutDir)wyhkm.dll&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wycp\\x64\\wycp.dll&quot; &quot;$(OutDir)wycp.dll&quot;</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
