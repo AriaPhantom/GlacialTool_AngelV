@@ -26,7 +26,7 @@ bool calculateIntersection(cv::Point2f o1, cv::Point2f p1, cv::Point2f o2, cv::P
 // 计算多边形的中心
 cv::Point2f calculatePolygonCenter(const vector<cv::Point>& polygon) {
     cv::Moments m = cv::moments(polygon);
-    return cv::Point2f(m.m10 / m.m00, m.m01 / m.m00);
+    return cv::Point2f(static_cast<float>(m.m10 / m.m00), static_cast<float>(m.m01 / m.m00));
 }
 
 // 检测箭头方向的函数
@@ -125,11 +125,11 @@ vector<string> getArrowDirections(int blurKernelSize, const cv::Mat& image) {
 
             // 计算两条最长边的交点
             cv::Point2f intersection;
-            if (calculateIntersection(cv::Point2f(longestLine1[0], longestLine1[1]), cv::Point2f(longestLine1[2], longestLine1[3]),
-                cv::Point2f(longestLine2[0], longestLine2[1]), cv::Point2f(longestLine2[2], longestLine2[3]), intersection)) {
+            if (calculateIntersection(cv::Point2f(static_cast<float>(longestLine1[0]), static_cast<float>(longestLine1[1])), cv::Point2f(static_cast<float>(longestLine1[2]), static_cast<float>(longestLine1[3])),
+                cv::Point2f(static_cast<float>(longestLine2[0]), static_cast<float>(longestLine2[1])), cv::Point2f(static_cast<float>(longestLine2[2]), static_cast<float>(longestLine2[3])), intersection)) {
 
                 // 检查交点到多边形中心的距离
-                float distanceToCenter = cv::norm(intersection - polyCenter);
+                double distanceToCenter = cv::norm(intersection - polyCenter);
 
                 // 如果距离大于17像素，则舍弃此多边形
                 if (distanceToCenter > 17) {

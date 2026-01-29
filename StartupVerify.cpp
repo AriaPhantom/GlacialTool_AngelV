@@ -99,11 +99,16 @@ std::string GetOsVersionString()
 	auto rtl_get_version = reinterpret_cast<RtlGetVersionPtr>(
 		GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlGetVersion"));
 
-	if (rtl_get_version) {
-		rtl_get_version(&info);
+	if (rtl_get_version && rtl_get_version(&info) == 0) {
+		// ok
 	}
 	else {
-		GetVersionExW(reinterpret_cast<OSVERSIONINFOW*>(&info));
+		using GetVersionExWPtr = BOOL(WINAPI*)(LPOSVERSIONINFOW);
+		auto get_version_ex = reinterpret_cast<GetVersionExWPtr>(
+			GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "GetVersionExW"));
+		if (get_version_ex) {
+			get_version_ex(reinterpret_cast<OSVERSIONINFOW*>(&info));
+		}
 	}
 
 	std::ostringstream ss;

@@ -17,7 +17,7 @@ gMonitor gMonitorInstance = gMonitor();
 MiaoSender miaoSenderInstance = MiaoSender();
 int rune_fail_time = 0;
 int guild_skill_count = 0;
-unsigned long oilTimeOut = 0;
+long oilTimeOut = 0;
 
 long buffTimeOut_buff_±∏”√1 = 0;
 
@@ -809,7 +809,7 @@ CString findArrowDirection(std::vector<unsigned char> image, long x, long y, uns
 	for (int i = 0; i < 20; i++)
 	{	
 		// rightPixel
-		if (x + i < width) {
+		if (x + i < static_cast<long>(width)) {
 
 			long red = (long)image[y * width * 4 + (x + i) * 4];
 			long green = (long)image[y * width * 4 + (x + i) * 4 + 1];
@@ -845,7 +845,7 @@ CString findArrowDirection(std::vector<unsigned char> image, long x, long y, uns
 		}
 
 		// downPixel
-		if (y + i < height) {
+		if (y + i < static_cast<long>(height)) {
 
 			long red = (long)image[(y + i) * width * 4 + x * 4];
 			long green = (long)image[(y + i) * width * 4 + x * 4 + 1];
@@ -876,9 +876,9 @@ runeData* solveRune() {
 	//decode
 	unsigned error = lodepng::decode(image, width, height, filename);
 
-	for (long currentX = 0; currentX < width; currentX++)
+	for (long currentX = 0; currentX < static_cast<long>(width); currentX++)
 	{
-		for (long currentY = 0; currentY < height; currentY++)
+		for (long currentY = 0; currentY < static_cast<long>(height); currentY++)
 		{
 			addable = true;
 			// CString rgbPixel = dm->GetColor(currentX, currentY);
