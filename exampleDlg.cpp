@@ -3848,7 +3848,6 @@ void UpdateCoords(int* nums);
 
 
 
-int resumeCount = 0;
 
 
 
@@ -111952,134 +111951,34 @@ LRESULT CexampleDlg::OnHotKey(WPARAM wParam, LPARAM lParam)
 
 
 
-		if (resumeCount % 2 == 0)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+				bool should_resume = false;
+		if (m_statusList != NULL)
 		{
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+			int item_count = m_statusList->rowCount();
+			for (int i = 0; i < item_count; ++i)
+			{
+				QTableWidgetItem* item = m_statusList->item(i, 0);
+				if (item == NULL)
+				{
+					continue;
+				}
+				long index = (long)item->data(Qt::UserRole).toLongLong();
+				if (index < 0 || index >= MAX_HWND)
+				{
+					continue;
+				}
+				ThreadState main_state = g_info[index].thread_state;
+				ThreadState sub_state = g_info[index + MAX_HWND].thread_state;
+				if (main_state == State_Pause || main_state == State_Pausing ||
+					sub_state == State_Pause || sub_state == State_Pausing)
+				{
+					should_resume = true;
+					break;
+				}
+			}
+		}
+		if (should_resume)
+		{
 			Log(_T("暂停所有"));
 
 
@@ -112401,198 +112300,13 @@ LRESULT CexampleDlg::OnHotKey(WPARAM wParam, LPARAM lParam)
 
 
 			Log(_T("恢复所有"));
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 			CexampleDlg::OnBnClickedButtonResumeall();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 		}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-		resumeCount++;
+		else
+		{
+			Log(_T("暂停所有"));
+			CexampleDlg::OnBnClickedButtonPauseall();
+		}
 
 
 
