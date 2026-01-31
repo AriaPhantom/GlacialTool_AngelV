@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <cwctype>
 #include <mutex>
 #include <string>
@@ -60,6 +61,62 @@ std::vector<std::wstring> SplitPicNames(const std::wstring& input) {
 		start = pos + 1;
 	}
 	return out;
+}
+
+using GetDpiForSystemFn = UINT(WINAPI*)();
+using GetDpiForWindowFn = UINT(WINAPI*)(HWND);
+
+UINT GetSystemDpi() {
+	HMODULE user32 = GetModuleHandleW(L"user32.dll");
+	if (user32) {
+		auto fn = reinterpret_cast<GetDpiForSystemFn>(GetProcAddress(user32, "GetDpiForSystem"));
+		if (fn) return fn();
+	}
+	HDC hdc = GetDC(nullptr);
+	UINT dpi = 96;
+	if (hdc) {
+		int raw = GetDeviceCaps(hdc, LOGPIXELSX);
+		if (raw > 0) dpi = static_cast<UINT>(raw);
+		ReleaseDC(nullptr, hdc);
+	}
+	return dpi;
+}
+
+UINT GetWindowDpi(HWND hwnd) {
+	HMODULE user32 = GetModuleHandleW(L"user32.dll");
+	if (user32) {
+		auto fn = reinterpret_cast<GetDpiForWindowFn>(GetProcAddress(user32, "GetDpiForWindow"));
+		if (fn) return fn(hwnd);
+	}
+	return GetSystemDpi();
+}
+
+bool GetClientTopLeftAndScale(HWND hwnd, POINT& outTopLeft, double& outScale) {
+	if (hwnd == nullptr || !IsWindow(hwnd)) return false;
+	outScale = static_cast<double>(GetWindowDpi(hwnd)) / 96.0;
+	POINT topLeft = { 0, 0 };
+	if (!ClientToScreen(hwnd, &topLeft)) return false;
+	outTopLeft = topLeft;
+	return true;
+}
+
+bool LogicalClientToPhysicalScreen(HWND hwnd, long logicalX, long logicalY, POINT& outPoint) {
+	POINT topLeft = {};
+	double scale = 1.0;
+	if (!GetClientTopLeftAndScale(hwnd, topLeft, scale)) return false;
+	outPoint.x = topLeft.x + static_cast<long>(std::lround(static_cast<double>(logicalX) * scale));
+	outPoint.y = topLeft.y + static_cast<long>(std::lround(static_cast<double>(logicalY) * scale));
+	return true;
+}
+
+bool PhysicalScreenToLogicalClient(HWND hwnd, long physicalX, long physicalY, POINT& outPoint) {
+	POINT topLeft = {};
+	double scale = 1.0;
+	if (!GetClientTopLeftAndScale(hwnd, topLeft, scale)) return false;
+	if (scale <= 0.0) scale = 1.0;
+	outPoint.x = static_cast<long>(std::lround(static_cast<double>(physicalX - topLeft.x) / scale));
+	outPoint.y = static_cast<long>(std::lround(static_cast<double>(physicalY - topLeft.y) / scale));
+	return true;
 }
 
 constexpr int kWuyaModeExternalOnly = 0;
@@ -183,7 +240,7 @@ bool sptool::EnsureCpContext() {
 
 	std::call_once(g_cpDpiOnce, []() { CPDisableDpi(); });
 
-	m_cpData = CPOpen(hwnd);
+	m_cpData = CPOpen(nullptr);
 	if (!m_cpData) return false;
 
 	m_cpPicTable = CPCreatePicTable();
@@ -194,7 +251,7 @@ bool sptool::EnsureCpContext() {
 	}
 
 	m_cpHwnd = m_boundHwnd;
-	CPSetMode(m_cpData, MCPMI_POS, MCPCM_VIRTUAL);
+	CPSetMode(m_cpData, MCPMI_POS, MCPCM_PHYSICAL);
 	CPSetMode(m_cpData, MCPMI_GETPIXEL, MCPGPM_STANDARD);
 	CPSetMode(m_cpData, MCPMI_FUN, MCPFM_UNICODE);
 	g_cpContextReady.store(1);
@@ -364,6 +421,16 @@ long sptool::FindPic(long x1, long y1, long x2, long y2, const TCHAR* pic_name, 
 			}
 		}
 
+		POINT physLT = {};
+		POINT physRB = {};
+		if (LogicalClientToPhysicalScreen(hwnd, left, top, physLT) &&
+			LogicalClientToPhysicalScreen(hwnd, right, bottom, physRB)) {
+			left = physLT.x;
+			top = physLT.y;
+			right = physRB.x;
+			bottom = physRB.y;
+		}
+
 		float simValue = static_cast<float>(std::max(0.0, std::min(1.0, sim)));
 		CPSetFPSimilar(m_cpData, simValue);
 
@@ -374,6 +441,13 @@ long sptool::FindPic(long x1, long y1, long x2, long y2, const TCHAR* pic_name, 
 			long outy = -1;
 			if (CPFindPic(m_cpData, left, top, right, bottom, m_cpPicTable, name.c_str(), 0, &outx, &outy)) {
 				g_lastImageBackend.store(kWuyaBackendExternal);
+				long rawx = outx;
+				long rawy = outy;
+				POINT logical = {};
+				if (PhysicalScreenToLogicalClient(hwnd, rawx, rawy, logical)) {
+					outx = logical.x;
+					outy = logical.y;
+				}
 				if (x) *x = outx;
 				if (y) *y = outy;
 				return 1;
@@ -403,7 +477,14 @@ CString sptool::GetColor(long x, long y) {
 	int mode = GetWuyaImageModeSafe();
 	if (mode != kWuyaModeNativeOnly && EnsureCpContext()) {
 		g_lastImageBackend.store(kWuyaBackendExternal);
-		COLORREF color = CPGetColor(m_cpData, x, y);
+		long queryX = x;
+		long queryY = y;
+		POINT phys = {};
+		if (LogicalClientToPhysicalScreen(hwnd, x, y, phys)) {
+			queryX = phys.x;
+			queryY = phys.y;
+		}
+		COLORREF color = CPGetColor(m_cpData, queryX, queryY);
 		if (color != CLR_NOTRP) {
 			g_lastImageBackend.store(kWuyaBackendExternal);
 			int r = GetRValue(color);
