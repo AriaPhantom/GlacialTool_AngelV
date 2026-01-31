@@ -620,7 +620,7 @@ void goUp(long index, long distance, long wait) {
 	}
 }
 
-void goDown(long index, long distance, long downoverride) {
+void goDown(long index, long distance, long downoverride, bool rune) {
 	keyDown(index, "down");
 	holdKey(index, JUMP_KEY, 12 * distance, 133);
 	keyUp(index, "down");
@@ -640,6 +640,9 @@ void goTo(long index, long targetX, long targetY, long rangeFromCoords, bool isR
 	int* currentPlayerLocation = gMonitorInstance.getPlayerCoords();
 	sptool* dm = g_info[index].dm;
 	long startTime = dm->GetTime();
+	long lastX = *currentPlayerLocation;
+	long lastXMoveTime = startTime;
+	long lastStuckJumpTime = 0;
 	//CString tips;
 	//tips.Format(_T("获取的坐标:(%d,%d)"), *currentPlayerLocation, *(currentPlayerLocation+1));
 	//Log(tips);
@@ -657,7 +660,7 @@ void goTo(long index, long targetX, long targetY, long rangeFromCoords, bool isR
 					goToDirection(index, _T("left"), xDistance, isRune);
 				}
 
-				if (dm->GetTime() > 6000 + startTime && gMonitorInstance.status) {
+				if (dm->GetTime() > 3000 + startTime && gMonitorInstance.status) {
 					checkChatPop(index);
 				}
 
@@ -668,6 +671,22 @@ void goTo(long index, long targetX, long targetY, long rangeFromCoords, bool isR
 
 				currentPlayerLocation = gMonitorInstance.getPlayerCoords();
 				xDistance = targetX - *currentPlayerLocation;
+				long now = dm->GetTime();
+				if (abs(xDistance) > 2) {
+					if (*currentPlayerLocation == lastX) {
+						if (now - lastXMoveTime > 800 && now - lastStuckJumpTime > 1500) {
+							rightJump(index);
+							lastStuckJumpTime = now;
+							lastXMoveTime = now;
+							currentPlayerLocation = gMonitorInstance.getPlayerCoords();
+							xDistance = targetX - *currentPlayerLocation;
+						}
+					}
+					else {
+						lastX = *currentPlayerLocation;
+						lastXMoveTime = now;
+					}
+				}
 			}
 
 			int yTrial = 0;
@@ -678,10 +697,10 @@ void goTo(long index, long targetX, long targetY, long rangeFromCoords, bool isR
 					goUp(index, yDistance, upoverride);
 				}
 				else {
-					goDown(index, abs(yDistance), downoverride);
+					goDown(index, abs(yDistance), downoverride, isRune);
 				}
 
-				if (dm->GetTime() > 6000 + startTime && gMonitorInstance.status) {
+				if (dm->GetTime() > 3000 + startTime && gMonitorInstance.status) {
 					checkChatPop(index);
 				}
 

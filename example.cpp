@@ -24,6 +24,24 @@ CexampleApp::CexampleApp()
 
 CexampleApp theApp;
 
+static CString GetSettingsIniPath()
+{
+	TCHAR pathBuf[MAX_PATH] = {};
+	GetModuleFileName(NULL, pathBuf, MAX_PATH);
+	CString path(pathBuf);
+	int pos = path.ReverseFind(_T('\\'));
+	if (pos >= 0)
+	{
+		path = path.Left(pos + 1);
+	}
+	else
+	{
+		path.Empty();
+	}
+	path += _T("settings.ini");
+	return path;
+}
+
 // 全局的dm对象
 sptool* g_dm = NULL;
 
@@ -78,8 +96,16 @@ BOOL CexampleApp::InitInstance()
 	CWinApp::InitInstance();
 
 	AfxEnableControlContainer();
-
-	SetRegistryKey(_T("应用程序向导生成的本地应用程序"));
+	if (m_pszProfileName)
+	{
+		free((void*)m_pszProfileName);
+	}
+	m_pszProfileName = _tcsdup(GetSettingsIniPath());
+	if (m_pszRegistryKey)
+	{
+		free((void*)m_pszRegistryKey);
+		m_pszRegistryKey = NULL;
+	}
 
 	// 初始化
 	LogInit();
