@@ -64,6 +64,7 @@ extern int GethuangMen();
 extern int GetautoWealth();
 extern int GetExp10();
 extern int GetExp30();
+extern long GetExpBuffDuration();
 extern int GetexpPot();
 extern int GetautoOil();
 extern int Getignite();
@@ -1420,7 +1421,7 @@ void CheckUseBuff(long index) {
 		holdKey(index, 经验exp30, randomUniform(700, 820), 333);
 		//ScriptDelay(index,300);
 		OKDetector(index);
-		buffTimeOut_buff_经验exp30 = dm->GetTime() + BUFF_TIME_经验exp30;
+		buffTimeOut_buff_经验exp30 = dm->GetTime() + GetExpBuffDuration();
 	}
 
 

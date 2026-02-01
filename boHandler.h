@@ -121,8 +121,8 @@ void detectWhiteIcon();
 #define BUFF_TIME_蜘蛛 238000  // 
 #define BUFF_TIME_米特拉 238000  // 
 
-#define BUFF_TIME_经验秘药2h 7210000  // 
-#define BUFF_TIME_经验秘药30 1810000  // 
+#define BUFF_TIME_经验秘药2h 7208000  // 
+#define BUFF_TIME_经验秘药30 1808000  // 
 #define BUFF_TIME_经验exp30 1808000  // 
 #define BUFF_TIME_经验exp20 1208000  // 
 #define BUFF_TIME_经验exp10 908000  // 

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <QtWidgets/QWidget>
 #include <windows.h>
@@ -45,7 +45,8 @@ public:
     int GetautoOil();
     int Getignite();
     int GetExp10();
-    int GetExp30();
+        long GetExpBuffDuration();
+int GetExp30();
     int GetWhiteDetect();
     int GetWuyaImageMode();
     int GetWuyaInputMode();
@@ -85,7 +86,8 @@ private:
     QToolButton* friendPlayerNotification;
     QToolButton* huangMen;
     QToolButton* expPot;
-    QToolButton* EXP_PARK;
+        QComboBox* expPotDurationDropdown;
+QToolButton* EXP_PARK;
     QToolButton* hunt;
     QComboBox* mapList;
     QToolButton* EXP_MVP;
@@ -94,7 +96,8 @@ private:
     QToolButton* bless;
     QToolButton* EXP15M;
     QToolButton* EXP30M;
-    QToolButton* whiteDetect;
+        QComboBox* expDurationDropdown;
+QToolButton* whiteDetect;
     QComboBox* wyImageMode;
     QComboBox* wyInputMode;
 
