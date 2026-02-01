@@ -34995,7 +34995,7 @@ void CexampleDlg::InitUi()
 	commonGrid->addWidget(expPotDurationDropdown, 0, 1);
 	commonGrid->addWidget(EXP30M, 0, 2);
 	commonGrid->addWidget(expDurationDropdown, 0, 3);
-	commonGrid->addWidget(EXP15M, 3, 0);
+	commonGrid->addWidget(EXP15M, 3, 0, 1, 2);
 
 
 
@@ -35187,7 +35187,7 @@ void CexampleDlg::InitUi()
 
 
 
-	commonGrid->addWidget(EXP_PARK, 1, 0);
+	commonGrid->addWidget(EXP_PARK, 1, 0, 1, 2);
 
 
 
@@ -35379,7 +35379,7 @@ void CexampleDlg::InitUi()
 
 
 
-	commonGrid->addWidget(EXP_MVP, 1, 1);
+	commonGrid->addWidget(EXP_MVP, 1, 2, 1, 2);
 
 
 
@@ -35571,7 +35571,7 @@ void CexampleDlg::InitUi()
 
 
 
-	commonGrid->addWidget(autoOil, 2, 0);
+	commonGrid->addWidget(autoOil, 2, 0, 1, 2);
 
 
 
@@ -35763,7 +35763,7 @@ void CexampleDlg::InitUi()
 
 
 
-	commonGrid->addWidget(bless, 2, 1);
+	commonGrid->addWidget(bless, 2, 2, 1, 2);
 
 
 
