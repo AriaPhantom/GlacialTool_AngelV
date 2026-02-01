@@ -432,6 +432,8 @@ long sptool::FindPic(long x1, long y1, long x2, long y2, const TCHAR* pic_name, 
 		}
 
 		float simValue = static_cast<float>(std::max(0.0, std::min(1.0, sim)));
+		constexpr float kExternalSimBias = 0.03f;
+		if (simValue < 0.999f) simValue = std::min(1.0f, simValue + kExternalSimBias);
 		CPSetFPSimilar(m_cpData, simValue);
 
 		auto names = SplitPicNames(ToWString(pic_name));
