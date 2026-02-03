@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -38,24 +38,18 @@
     <CharacterSet>MultiByte</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
+<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v142</PlatformToolset>
+    <UseOfMfc>Dynamic</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>Dynamic</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
-    <UseOfMfc>Dynamic</UseOfMfc>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
-    <UseOfMfc>Dynamic</UseOfMfc>
-    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -87,7 +81,8 @@
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
     <LinkIncremental>true</LinkIncremental>
-  </PropertyGroup>
+      <RunPostBuildEvent>Always</RunPostBuildEvent>
+</PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
     <IntDir>$(Configuration)\</IntDir>
@@ -99,7 +94,8 @@
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
-  </PropertyGroup>
+      <RunPostBuildEvent>Always</RunPostBuildEvent>
+</PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Midl>
       <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -162,7 +158,7 @@
       <IgnoreSpecificDefaultLibraries>Qt5AxServer.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /E /I /Y &quot;$(ProjectDir)skin&quot; &quot;$(OutDir)skin&quot; &amp; if not exist &quot;$(OutDir)platforms&quot; mkdir &quot;$(OutDir)platforms&quot; &amp; xcopy /Y &quot;F:\vcpkg\installed\x64-windows\debug\plugins\platforms\qwindowsd.dll&quot; &quot;$(OutDir)platforms\\&quot; &amp; if not exist &quot;$(OutDir)imageformats&quot; mkdir &quot;$(OutDir)imageformats&quot; &amp; xcopy /Y &quot;F:\vcpkg\installed\x64-windows\debug\plugins\imageformats\qjpegd.dll&quot; &quot;$(OutDir)imageformats\\&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wyhkm\\x64\\wyhkm.dll&quot; &quot;$(OutDir)wyhkm.dll&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wycp\\x64\\wycp.dll&quot; &quot;$(OutDir)wycp.dll&quot;</Command>
+      <Command>powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)copy_vcpkg_deps.ps1" -OutDir "$(OutDir)" &amp; xcopy /E /I /Y &quot;$(ProjectDir)skin&quot; &quot;$(OutDir)skin&quot; &amp; if not exist &quot;$(OutDir)platforms&quot; mkdir &quot;$(OutDir)platforms&quot; &amp; xcopy /Y &quot;F:\vcpkg\installed\x64-windows\debug\plugins\platforms\qwindowsd.dll&quot; &quot;$(OutDir)platforms\\&quot; &amp; if not exist &quot;$(OutDir)imageformats&quot; mkdir &quot;$(OutDir)imageformats&quot; &amp; xcopy /Y &quot;F:\vcpkg\installed\x64-windows\debug\plugins\imageformats\qjpegd.dll&quot; &quot;$(OutDir)imageformats\\&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wyhkm\\x64\\wyhkm.dll&quot; &quot;$(OutDir)wyhkm.dll&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wycp\\x64\\wycp.dll&quot; &quot;$(OutDir)wycp.dll&quot;</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -227,7 +223,7 @@
       <IgnoreSpecificDefaultLibraries>Qt5AxServer.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /E /I /Y &quot;$(ProjectDir)skin&quot; &quot;$(OutDir)skin&quot; &amp; if not exist &quot;$(OutDir)platforms&quot; mkdir &quot;$(OutDir)platforms&quot; &amp; xcopy /Y &quot;F:\vcpkg\installed\x64-windows\plugins\platforms\qwindows.dll&quot; &quot;$(OutDir)platforms\\&quot; &amp; if not exist &quot;$(OutDir)imageformats&quot; mkdir &quot;$(OutDir)imageformats&quot; &amp; xcopy /Y &quot;F:\vcpkg\installed\x64-windows\plugins\imageformats\qjpeg.dll&quot; &quot;$(OutDir)imageformats\\&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wyhkm\\x64\\wyhkm.dll&quot; &quot;$(OutDir)wyhkm.dll&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wycp\\x64\\wycp.dll&quot; &quot;$(OutDir)wycp.dll&quot;</Command>
+      <Command>powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)copy_vcpkg_deps.ps1" -OutDir "$(OutDir)" &amp; xcopy /E /I /Y &quot;$(ProjectDir)skin&quot; &quot;$(OutDir)skin&quot; &amp; if not exist &quot;$(OutDir)platforms&quot; mkdir &quot;$(OutDir)platforms&quot; &amp; xcopy /Y &quot;F:\vcpkg\installed\x64-windows\plugins\platforms\qwindows.dll&quot; &quot;$(OutDir)platforms\\&quot; &amp; if not exist &quot;$(OutDir)imageformats&quot; mkdir &quot;$(OutDir)imageformats&quot; &amp; xcopy /Y &quot;F:\vcpkg\installed\x64-windows\plugins\imageformats\qjpeg.dll&quot; &quot;$(OutDir)imageformats\\&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wyhkm\\x64\\wyhkm.dll&quot; &quot;$(OutDir)wyhkm.dll&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wycp\\x64\\wycp.dll&quot; &quot;$(OutDir)wycp.dll&quot;</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
