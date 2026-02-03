@@ -98,13 +98,13 @@
 </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Midl>
-      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;GT_LEGACY_NO_INPUT=1;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <ValidateAllParameters>false</ValidateAllParameters>
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;WIN32;_WINDOWS;_WIN32_WINNT=0x0A00;WINVER=0x0A00;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;GT_LEGACY_NO_INPUT=1;WIN32;_WINDOWS;_WIN32_WINNT=0x0A00;WINVER=0x0A00;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -115,7 +115,7 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;GT_LEGACY_NO_INPUT=1;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0804</Culture>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\GlacialTool_Common;$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
@@ -129,13 +129,13 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Midl>
-      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;GT_LEGACY_NO_INPUT=1;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <ValidateAllParameters>false</ValidateAllParameters>
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;_WINDOWS;_WIN32_WINNT=0x0A00;WINVER=0x0A00;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;GT_LEGACY_NO_INPUT=1;_WINDOWS;_WIN32_WINNT=0x0A00;WINVER=0x0A00;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -146,7 +146,7 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;GT_LEGACY_NO_INPUT=1;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0804</Culture>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\GlacialTool_Common;$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
@@ -163,12 +163,12 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Midl>
-      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;GT_LEGACY_NO_INPUT=1;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <ValidateAllParameters>false</ValidateAllParameters>
     </Midl>
     <ClCompile>
-      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;WIN32;_WINDOWS;_WIN32_WINNT=0x0A00;WINVER=0x0A00;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;GT_LEGACY_NO_INPUT=1;WIN32;_WINDOWS;_WIN32_WINNT=0x0A00;WINVER=0x0A00;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -178,7 +178,7 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;GT_LEGACY_NO_INPUT=1;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0804</Culture>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\GlacialTool_Common;$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
@@ -194,12 +194,12 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Midl>
-      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;GT_LEGACY_NO_INPUT=1;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <ValidateAllParameters>false</ValidateAllParameters>
     </Midl>
     <ClCompile>
-      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;_WINDOWS;_WIN32_WINNT=0x0A00;WINVER=0x0A00;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;GT_LEGACY_NO_INPUT=1;_WINDOWS;_WIN32_WINNT=0x0A00;WINVER=0x0A00;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -209,7 +209,7 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GT_WITH_WUYA_INPUT=1;GT_LEGACY_NO_INPUT=1;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0804</Culture>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\GlacialTool_Common;$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
@@ -238,7 +238,9 @@
     <ClCompile Include="obj.cpp" />
     <ClCompile Include="runeData.cpp" />
     <ClCompile Include="script.cpp" />
-    <ClCompile Include="..\GlacialTool_Common\SPUtils.cpp" />
+    <ClCompile Include="AutoLogin.cpp" />
+    
+    <ClCompile Include="..\GlacialTool_Common\SPUtils_legacy.cpp" /><ClCompile Include="..\GlacialTool_Common\SPUtils.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -263,7 +265,9 @@
     <ClInclude Include="RuAdvancing.h" />
     <ClInclude Include="runeData.h" />
     <ClInclude Include="script.h" />
-    <ClInclude Include="..\GlacialTool_Common\SPUtils.h" />
+    <ClInclude Include="AutoLogin.h" />
+    
+    <ClInclude Include="..\GlacialTool_Common\SPUtils_legacy.h" /><ClInclude Include="..\GlacialTool_Common\SPUtils.h" />
     <ClInclude Include="StartupVerify.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="thread_control.h" />

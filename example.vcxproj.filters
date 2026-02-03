@@ -27,6 +27,10 @@
     <ClCompile Include="obj.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    
+    <ClCompile Include="AutoLogin.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="script.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -54,6 +58,10 @@
     <ClCompile Include="StartupVerify.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    
+    <ClCompile Include="..\GlacialTool_Common\SPUtils_legacy.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="..\GlacialTool_Common\SPUtils.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -72,6 +80,10 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Resource.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    
+    <ClInclude Include="AutoLogin.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="script.h">
@@ -108,6 +120,10 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="ProjVer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    
+    <ClInclude Include="..\GlacialTool_Common\SPUtils_legacy.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\GlacialTool_Common\SPUtils.h">

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "boHandler.h"
+#include "AutoLogin.h"
 #include "obj.h"
 #include "thread_control.h"
 #include "gMonitor.h"
@@ -288,43 +289,55 @@ void gMonitorCheck(long index, long count)
 
 	// °×ÎÝ¼ì²â
 	if (GetWhiteDetect() && count % 3 == 0) {
-		long whiteTopLeftX = 0;
-		long whiteTopLeftY = 0;
-
-		long whiteBottomRightX = whiteTopLeftX + 300;
-		long whiteBottomRightY = 500;
-
-		findPicRet = dm->FindPic(whiteTopLeftX, whiteTopLeftY, whiteBottomRightX, whiteBottomRightY, whiteIcon, _T("000000"), 0.9, 0, &x, &y);
-		//CString tips;
-		//tips.Format(_T("°×ÎÝ×ø±ê:(%d,%d)"), x,y);
-		//Log(tips);
-		if (x > 0 && y > 0) {
-			gMonitorInstance.setWhiteTimer(0);
+		long loginPendingMs = AutoLogin_GetLoginPendingMs(index);
+		if (loginPendingMs > 0 && loginPendingMs < 600000)
+		{
+		    long whiteTopLeftX = 0;
+		    long whiteTopLeftY = 0;
+		    long whiteBottomRightX = whiteTopLeftX + 300;
+		    long whiteBottomRightY = 500;
+		    findPicRet = dm->FindPic(whiteTopLeftX, whiteTopLeftY, whiteBottomRightX, whiteBottomRightY, whiteIcon, _T("000000"), 0.9, 0, &x, &y);
+		    if (x > 0 && y > 0)
+		    {
+		        gMonitorInstance.setWhiteTimer(0);
+		        AutoLogin_ClearLoginPending(index);
+		    }
 		}
-		else if (1) {
-
-			if (gMonitorInstance.getWhiteTimer() == 0) {
-				gMonitorInstance.setWhiteTimer(dm->GetTime());
-			}
-			else {
-				if (dm->GetTime() - 1000 > gMonitorInstance.getWhiteTimer()) {
-					Log(_T("in white"));
-					miaoSenderInstance.setWhite(1);
-					string s = "C:\\sptool\\WhitePic";
-					long a = dm->GetTime() % 10000;
-					string s_type = ".png";
-					string filePath = s + to_string(a) + s_type;
-					const char* cstr = filePath.c_str();
-
-					dm->CapturePng(0, 0, 2000, 1200, _T(cstr));
+		if (loginPendingMs <= 0 || loginPendingMs >= 600000)
+		{
+				long whiteTopLeftX = 0;
+				long whiteTopLeftY = 0;
+				long whiteBottomRightX = whiteTopLeftX + 300;
+				long whiteBottomRightY = 500;
+				findPicRet = dm->FindPic(whiteTopLeftX, whiteTopLeftY, whiteBottomRightX, whiteBottomRightY, whiteIcon, _T("000000"), 0.9, 0, &x, &y);
+				//CString tips;
+				//tips.Format(_T("°×ÎÝ×ø±ê:(%d,%d)"), x,y);
+				//Log(tips);
+				if (x > 0 && y > 0) {
+					gMonitorInstance.setWhiteTimer(0);
 				}
-
-				if (dm->GetTime() - WHITE_NOTIFICATION > gMonitorInstance.getWhiteTimer()) {
-					subSoftPause();
+				else if (1) {
+					if (gMonitorInstance.getWhiteTimer() == 0) {
+						gMonitorInstance.setWhiteTimer(dm->GetTime());
+					}
+					else {
+						if (dm->GetTime() - 1000 > gMonitorInstance.getWhiteTimer()) {
+							Log(_T("in white"));
+							miaoSenderInstance.setWhite(1);
+							string s = "C:\\sptool\\WhitePic";
+							long a = dm->GetTime() % 10000;
+							string s_type = ".png";
+							string filePath = s + to_string(a) + s_type;
+							const char* cstr = filePath.c_str();
+							dm->CapturePng(0, 0, 2000, 1200, _T(cstr));
+						}
+						if (dm->GetTime() - WHITE_NOTIFICATION > gMonitorInstance.getWhiteTimer()) {
+							subSoftPause();
+						}
+					}
 				}
-			}
 		}
-	}
+}
 
 
 	// »ÆÃÅ¼ì²â
@@ -1162,6 +1175,7 @@ void startBo(long index) {
 	dm->CapturePng(0, 0, mapleWindowWidth, mapleWindowHeight, _T("C:\\sptool\\MyPic.png"));
 
 	while (1) {
+        if (AutoLogin_IsActive(index)) { ScriptDelay(index, 200); continue; }
 		if (gMonitorInstance.status == 1) {
 			currentTime = dm->GetTime();
 			dm->SetWindowState(g_info[index].hwnd, 12);

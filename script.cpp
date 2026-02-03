@@ -4,6 +4,7 @@
 #include "log.h"
 #include "gMonitor.h"
 #include "boHandler.h"
+#include "AutoLogin.h"
 #include "SPUtils.h"
 
 
@@ -273,7 +274,9 @@ unsigned WINAPI SubThread(PVOID pParam)
 	{
 		// 检测一些异常,比如突然弹出的对话框，目标窗口被关闭或者掉线等突发情况
 		// 比如检测到掉线，可考虑通知UI,然后重新运行
-		gMonitorCheck(index, count);
+		AutoLogin_CheckAndTrigger(index);
+        if (AutoLogin_IsActive(index)) { ScriptDelay(index, 200); continue; }
+gMonitorCheck(index, count);
 		ScriptDelay(index,10);
 		count++;
 		if (count > 20) { count = 0; }

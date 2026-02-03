@@ -1,6 +1,7 @@
-﻿#pragma once
+#pragma once
 
 #include <QtWidgets/QWidget>
+#include <string>
 #include <windows.h>
 
 class QLabel;
@@ -15,6 +16,8 @@ class QMouseEvent;
 class QEvent;
 class QObject;
 class QByteArray;
+
+class QLineEdit;
 
 class CexampleDlg : public QWidget
 {
@@ -48,6 +51,11 @@ public:
         long GetExpBuffDuration();
 int GetExp30();
     int GetWhiteDetect();
+    int GetAutoLogin();
+    std::wstring GetAutoLoginKeys();
+    int GetAutoLoginDelay();
+    int GetAutoLoginChannel();
+    int GetAutoLoginMode();
     int GetWuyaImageMode();
     int GetWuyaInputMode();
 
@@ -69,6 +77,8 @@ private:
     void SyncTabSelection(int tabIndex);
     void RegisterHotKeys();
     void UnregisterHotKeys();
+    void SaveAutoLoginPreset(int presetIndex);
+    void LoadAutoLoginPreset(int presetIndex);
 
     QLabel* m_coordLabel;
     QLabel* m_wuyaImageModeValue;
@@ -98,11 +108,20 @@ QToolButton* EXP_PARK;
     QToolButton* EXP30M;
         QComboBox* expDurationDropdown;
 QToolButton* whiteDetect;
+    QToolButton* autoLogin;
+    QLineEdit* autoLoginKeys;
+    QLineEdit* autoLoginDelay;
+    QComboBox* autoLoginPreset;
+    QComboBox* autoLoginChannel;
+    QComboBox* autoLoginMode;
     QComboBox* wyImageMode;
     QComboBox* wyInputMode;
+    int m_autoLoginPresetIndex;
 
     QWidget* m_titleBar;
     HWND m_hwnd;
     QLabel* m_bgLabel;
     QPixmap m_originalBg;
 };
+
+
