@@ -689,6 +689,7 @@ bool RunAutoLoginOnce(long mainIndex) {
 
 void AutoLoginThread(long mainIndex) {
 	SPUtils::ReleaseAllKeys();
+	gMonitorInstance.setRuneCoords(-1, -1);
 	g_loginNeedRestart[mainIndex].store(false);
 
 	bool success = false;
