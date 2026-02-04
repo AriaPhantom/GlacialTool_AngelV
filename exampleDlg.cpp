@@ -37493,7 +37493,7 @@ void CexampleDlg::InitUi()
 
 
 
-	detectGrid->addWidget(whiteDetect, 1, 0);
+	detectGrid->addWidget(whiteDetect, 0, 2);
 
 
 
@@ -37685,10 +37685,10 @@ void CexampleDlg::InitUi()
 
 
 
-	detectGrid->addWidget(friendPlayerNotification, 1, 1);
+	detectGrid->addWidget(friendPlayerNotification, 0, 3);
 
 	autoLogin = createPill(QString::fromWCharArray(L"×Ô¶¯µÇÂ¼"));
-	detectGrid->addWidget(autoLogin, 2, 0);
+	detectGrid->addWidget(autoLogin, 1, 0);
 
 	QWidget* autoLoginChannelWidget = new QWidget(pageDetect);
 	QHBoxLayout* autoLoginChannelRow = new QHBoxLayout(autoLoginChannelWidget);
@@ -37707,7 +37707,7 @@ void CexampleDlg::InitUi()
 	autoLoginChannelRow->addWidget(autoLoginChannelLabel);
 	autoLoginChannelRow->addWidget(autoLoginChannel);
 	autoLoginChannelRow->addStretch();
-	detectGrid->addWidget(autoLoginChannelWidget, 2, 1);
+	detectGrid->addWidget(autoLoginChannelWidget, 1, 1, 1, 2);
 
 
 
@@ -39799,70 +39799,9 @@ void CexampleDlg::InitUi()
 
 
 	detectGrid->setColumnStretch(0, 1);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	detectGrid->setColumnStretch(1, 1);
+	detectGrid->setColumnStretch(2, 1);
+	detectGrid->setColumnStretch(3, 1);
 
 
 
