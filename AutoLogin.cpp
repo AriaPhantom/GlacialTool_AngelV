@@ -626,11 +626,16 @@ bool FinalizeLogin(long mainIndex, const std::chrono::steady_clock::time_point& 
 		std::this_thread::sleep_for(std::chrono::milliseconds(300));
 	}
 
-	for (int i = 0; i < 4; ++i) {
+	bool settingFound = FindIconInWindow(mainIndex, kSettingIconPath, 0.88, x, y);
+	const auto settingSearchEnd = std::chrono::steady_clock::now() + std::chrono::seconds(20);
+	while (!settingFound && std::chrono::steady_clock::now() < settingSearchEnd) {
+		if (std::chrono::steady_clock::now() > deadline) return false;
 		press(mainIndex, L"esc", 1, 100);
-		std::this_thread::sleep_for(std::chrono::milliseconds(500));
+		settingFound = WaitForIcon(mainIndex, kSettingIconPath, 1200, 0.88, x, y, deadline);
+		if (!settingFound) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(350));
+		}
 	}
-	bool settingFound = WaitForIcon(mainIndex, kSettingIconPath, 20000, 0.9, x, y, deadline);
 	if (settingFound) {
 		press(mainIndex, L"esc", 1, 100);
 		std::this_thread::sleep_for(std::chrono::milliseconds(300));
