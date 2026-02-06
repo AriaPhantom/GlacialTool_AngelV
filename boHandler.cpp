@@ -636,7 +636,7 @@ void goUp(long index, long distance, long wait) {
 
 void goDown(long index, long distance, long downoverride, bool rune) {
 	keyDown(index, "down");
-	holdKey(index, JUMP_KEY, 12 * distance, 133);
+	holdKey(index, JUMP_KEY, 12 * distance, 66);
 	keyUp(index, "down");
 	ScriptDelay(index, max((long)0, downoverride - 12 * distance));
 }
