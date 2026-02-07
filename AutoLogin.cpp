@@ -722,7 +722,7 @@ bool RunAutoLoginOnce(long mainIndex) {
 }
 
 void AutoLoginThread(long mainIndex) {
-	SPUtils::ReleaseAllKeys();
+	SPUtils::ReleaseAllKeysFastKeyboardOnly();
 	gMonitorInstance.setRuneCoords(-1, -1);
 	g_loginNeedRestart[mainIndex].store(false);
 
@@ -740,7 +740,7 @@ void AutoLoginThread(long mainIndex) {
 		SetTaskState(mainIndex, _T("AUTO LOGIN OK"));
 		g_loginPendingSinceMs[mainIndex].store(0);
 		if (g_loginNeedRestart[mainIndex].load()) {
-			SPUtils::ReleaseAllKeys();
+			SPUtils::ReleaseAllKeysFastKeyboardOnly();
 			ThreadRestart(mainIndex);
 			g_loginNeedRestart[mainIndex].store(false);
 		}
