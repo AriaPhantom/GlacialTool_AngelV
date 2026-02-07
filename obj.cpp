@@ -208,6 +208,7 @@ sptool::sptool()
 	: m_lastError(0),
 	  m_exitThread(0),
 	  m_boundHwnd(0),
+	  m_boundPid(0),
 	  m_cpData(nullptr),
 	  m_cpPicTable(nullptr),
 	  m_cpHwnd(0) {}
@@ -336,6 +337,9 @@ long sptool::BindWindowEx(long hwnd, const TCHAR* /*display*/, const TCHAR* /*mo
 		return 0;
 	}
 	m_boundHwnd = hwnd;
+	DWORD pid = 0;
+	GetWindowThreadProcessId(h, &pid);
+	m_boundPid = static_cast<long>(pid);
 	ResetCpContext();
 	SPUtils::ActivateWindowLong(hwnd);
 	return 1;
@@ -343,6 +347,7 @@ long sptool::BindWindowEx(long hwnd, const TCHAR* /*display*/, const TCHAR* /*mo
 
 long sptool::UnBindWindow() {
 	m_boundHwnd = 0;
+	m_boundPid = 0;
 	ResetCpContext();
 	return 1;
 }
@@ -380,6 +385,7 @@ long sptool::TerminateProcess(long pid) {
 long sptool::ForceUnBindWindow(long hwnd) {
 	if (m_boundHwnd != 0 && m_boundHwnd == hwnd) {
 		m_boundHwnd = 0;
+		m_boundPid = 0;
 	}
 	return 1;
 }
@@ -559,6 +565,9 @@ long sptool::LeftClick() {
 long sptool::RightClick() {
 	HWND hwnd = LongToHwnd(m_boundHwnd);
 	if (hwnd == nullptr || !IsWindow(hwnd)) return 0;
+	DWORD pid = 0;
+	GetWindowThreadProcessId(hwnd, &pid);
+	if (m_boundPid == 0 || pid == 0 || static_cast<long>(pid) != m_boundPid) return 0;
 	SPUtils::ActivateWindowLong(m_boundHwnd);
 	if (GetForegroundWindow() != hwnd) return 0;
 	SPUtils::RightClick(1, 30);

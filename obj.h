@@ -71,6 +71,7 @@ private:
 	long m_lastError;
 	long m_exitThread;
 	long m_boundHwnd;
+	long m_boundPid;
 	LPVOID m_cpData;
 	LPVOID m_cpPicTable;
 	long m_cpHwnd;

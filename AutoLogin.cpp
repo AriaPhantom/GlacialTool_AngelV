@@ -541,7 +541,7 @@ bool TryQuickLoginUntilWhite(long mainIndex, const std::chrono::steady_clock::ti
 	if (GetAutoLoginMode() != 1) return false;
 
 	const auto start = std::chrono::steady_clock::now();
-	while (std::chrono::steady_clock::now() - start < std::chrono::seconds(30)) {
+	while (std::chrono::steady_clock::now() - start < std::chrono::seconds(120)) {
 		if (std::chrono::steady_clock::now() > deadline) return false;
 
 		long wx = -1, wy = -1;
