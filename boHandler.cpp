@@ -1212,6 +1212,9 @@ void startBo(long index) {
 }
 
 void clickRune(long index) {
+	(void)index;
+	return;
+
 	sptool* dm = g_info[index].dm;
 
 	// Ã°ÏÕ´°¿ÚÐÅÏ¢

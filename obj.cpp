@@ -563,15 +563,7 @@ long sptool::LeftClick() {
 }
 
 long sptool::RightClick() {
-	HWND hwnd = LongToHwnd(m_boundHwnd);
-	if (hwnd == nullptr || !IsWindow(hwnd)) return 0;
-	DWORD pid = 0;
-	GetWindowThreadProcessId(hwnd, &pid);
-	if (m_boundPid == 0 || pid == 0 || static_cast<long>(pid) != m_boundPid) return 0;
-	SPUtils::ActivateWindowLong(m_boundHwnd);
-	if (GetForegroundWindow() != hwnd) return 0;
-	SPUtils::RightClick(1, 30);
-	return 1;
+	return 0;
 }
 
 CString sptool::EnumWindowByProcess(const TCHAR* process_name, const TCHAR* title, const TCHAR* class_name, long /*filter*/) {
