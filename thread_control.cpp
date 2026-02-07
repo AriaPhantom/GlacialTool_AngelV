@@ -133,7 +133,7 @@ void ThreadPause(long index)
 		return;
 	}
 
-	SPUtils::ReleaseAllKeys();
+	SPUtils::ReleaseAllKeysFast();
 
 	// Ö÷
 	if (g_info[index].thread_state == State_Runing || g_info[index].thread_state == State_Resuming)

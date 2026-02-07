@@ -710,12 +710,12 @@ void AutoLoginThread(long mainIndex) {
 		gMonitorInstance.whiteIconUpdate = 1;
 		SetTaskState(mainIndex, _T("AUTO LOGIN OK"));
 		g_loginPendingSinceMs[mainIndex].store(0);
-		subSoftStart();
 		if (g_loginNeedRestart[mainIndex].load()) {
 			SPUtils::ReleaseAllKeys();
 			ThreadRestart(mainIndex);
 			g_loginNeedRestart[mainIndex].store(false);
 		}
+		subSoftStart();
 	} else {
 		SetTaskState(mainIndex, _T("AUTO LOGIN FAIL"));
 	}

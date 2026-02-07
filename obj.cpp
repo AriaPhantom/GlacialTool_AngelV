@@ -557,6 +557,10 @@ long sptool::LeftClick() {
 }
 
 long sptool::RightClick() {
+	HWND hwnd = LongToHwnd(m_boundHwnd);
+	if (hwnd == nullptr || !IsWindow(hwnd)) return 0;
+	SPUtils::ActivateWindowLong(m_boundHwnd);
+	if (GetForegroundWindow() != hwnd) return 0;
 	SPUtils::RightClick(1, 30);
 	return 1;
 }
