@@ -68,13 +68,21 @@ void press(long index, const wchar_t* key, int times, long delay) {
 namespace {
 
 const wchar_t* kLoginIconPath = L"C:\\sptool\\login.bmp";
-const wchar_t* kScaniaIconPath = L"C:\\sptool\\scania.png";
-const wchar_t* kPlayIconPath = L"C:\\sptool\\play.png";
-const wchar_t* kOkLoginIconPath = L"C:\\sptool\\okLogin.png";
-const wchar_t* kSettingIconPath = L"C:\\sptool\\setting.png";
+const wchar_t* kLoginIconFallbackPath = L"C:\\sptool\\login.png";
+const wchar_t* kScaniaIconPath = L"C:\\sptool\\scania.bmp";
+const wchar_t* kScaniaIconFallbackPath = L"C:\\sptool\\scania.png";
+const wchar_t* kPlayIconPath = L"C:\\sptool\\play.bmp";
+const wchar_t* kPlayIconFallbackPath = L"C:\\sptool\\play.png";
+const wchar_t* kOkLoginIconPath = L"C:\\sptool\\okLogin.bmp";
+const wchar_t* kOkLoginIconFallbackPath = L"C:\\sptool\\okLogin.png";
+const wchar_t* kSettingIconPath = L"C:\\sptool\\setting.bmp";
+const wchar_t* kSettingIconFallbackPath = L"C:\\sptool\\setting.png";
 const wchar_t* kBigScaniaIconPath = L"C:\\sptool\\BigScania.bmp";
-const wchar_t* kQuickLoginIconPath = L"C:\\sptool\\QuickLogin.png";
-const wchar_t* kStuckIconPath = L"C:\\sptool\\Stuck.png";
+const wchar_t* kBigScaniaIconFallbackPath = L"C:\\sptool\\BigScania.png";
+const wchar_t* kQuickLoginIconPath = L"C:\\sptool\\QuickLogin.bmp";
+const wchar_t* kQuickLoginIconFallbackPath = L"C:\\sptool\\QuickLogin.png";
+const wchar_t* kStuckIconPath = L"C:\\sptool\\Stuck.bmp";
+const wchar_t* kStuckIconFallbackPath = L"C:\\sptool\\Stuck.png";
 const double kQuickLoginSim = 0.985;
 
 const wchar_t* kLaunchCommand = L"nxl://launch/10100";
@@ -512,6 +520,16 @@ bool FindIconInWindow(long mainIndex, const std::wstring& iconPath, double sim, 
 	return findPicWithOpenCV(mainIndex, 0, 0, static_cast<int>(width), static_cast<int>(height), iconPath, sim, outx, outy);
 }
 
+bool FindIconInWindowBmpFirst(long mainIndex, const wchar_t* bmpPath, const wchar_t* pngPath, double sim, long& outx, long& outy) {
+	if (bmpPath && FileExists(bmpPath)) {
+		if (FindIconInWindow(mainIndex, bmpPath, sim, outx, outy)) return true;
+	}
+	if (pngPath && FileExists(pngPath)) {
+		if (FindIconInWindow(mainIndex, pngPath, sim, outx, outy)) return true;
+	}
+	return false;
+}
+
 bool WaitForIcon(long mainIndex, const std::wstring& iconPath, int timeoutMs, double sim,
 	long& outx, long& outy, const std::chrono::steady_clock::time_point& deadline) {
 	auto start = std::chrono::steady_clock::now();
@@ -523,9 +541,20 @@ bool WaitForIcon(long mainIndex, const std::wstring& iconPath, int timeoutMs, do
 	return false;
 }
 
+bool WaitForIconBmpFirst(long mainIndex, const wchar_t* bmpPath, const wchar_t* pngPath, int timeoutMs, double sim,
+	long& outx, long& outy, const std::chrono::steady_clock::time_point& deadline) {
+	auto start = std::chrono::steady_clock::now();
+	while (std::chrono::steady_clock::now() - start < std::chrono::milliseconds(timeoutMs)) {
+		if (std::chrono::steady_clock::now() > deadline) return false;
+		if (FindIconInWindowBmpFirst(mainIndex, bmpPath, pngPath, sim, outx, outy)) return true;
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
+	}
+	return false;
+}
+
 bool TryQuickLoginClick(long mainIndex) {
 	long x = -1, y = -1;
-	if (!FindIconInWindow(mainIndex, kQuickLoginIconPath, kQuickLoginSim, x, y)) {
+	if (!FindIconInWindowBmpFirst(mainIndex, kQuickLoginIconPath, kQuickLoginIconFallbackPath, kQuickLoginSim, x, y)) {
 		return false;
 	}
 
@@ -557,7 +586,7 @@ bool TryQuickLoginUntilWhite(long mainIndex, const std::chrono::steady_clock::ti
 
 bool SelectChannel(long mainIndex, const std::chrono::steady_clock::time_point& deadline) {
 	long x0 = -1, y0 = -1;
-	if (!WaitForIcon(mainIndex, kBigScaniaIconPath, 20000, 0.9, x0, y0, deadline)) {
+	if (!WaitForIconBmpFirst(mainIndex, kBigScaniaIconPath, kBigScaniaIconFallbackPath, 20000, 0.9, x0, y0, deadline)) {
 		return false;
 	}
 
@@ -577,9 +606,9 @@ bool SelectChannel(long mainIndex, const std::chrono::steady_clock::time_point& 
 
 bool HandleLoginPrompts(long mainIndex, const std::chrono::steady_clock::time_point& deadline) {
 	long x = -1, y = -1;
-	if (!WaitForIcon(mainIndex, kLoginIconPath, 60000, 0.9, x, y, deadline)) {
+	if (!WaitForIconBmpFirst(mainIndex, kLoginIconPath, kLoginIconFallbackPath, 60000, 0.9, x, y, deadline)) {
 		// Fallback: already at character select or in game.
-		if (FindIconInWindow(mainIndex, kPlayIconPath, 0.9, x, y)) return true;
+		if (FindIconInWindowBmpFirst(mainIndex, kPlayIconPath, kPlayIconFallbackPath, 0.9, x, y)) return true;
 		if (FindIconInWindow(mainIndex, whiteIcon, 0.9, x, y)) return true;
 		return false;
 	}
@@ -591,7 +620,7 @@ bool HandleLoginPrompts(long mainIndex, const std::chrono::steady_clock::time_po
 	}
 
 	long scx = -1, scy = -1;
-	if (WaitForIcon(mainIndex, kScaniaIconPath, 20000, 0.9, scx, scy, deadline)) {
+	if (WaitForIconBmpFirst(mainIndex, kScaniaIconPath, kScaniaIconFallbackPath, 20000, 0.9, scx, scy, deadline)) {
 		HWND hwnd = reinterpret_cast<HWND>(static_cast<LONG_PTR>(g_info[mainIndex].hwnd));
 		if (hwnd && IsWindow(hwnd)) {
 			SPUtils::LeftClick(hwnd, static_cast<int>(scx), static_cast<int>(scy), 2, 150, 100);
@@ -602,12 +631,12 @@ bool HandleLoginPrompts(long mainIndex, const std::chrono::steady_clock::time_po
 		std::this_thread::sleep_for(std::chrono::seconds(3));
 	}
 
-	if (FindIconInWindow(mainIndex, kOkLoginIconPath, 0.9, x, y)) {
+	if (FindIconInWindowBmpFirst(mainIndex, kOkLoginIconPath, kOkLoginIconFallbackPath, 0.9, x, y)) {
 		return false;
 	}
 
 	long playX = -1, playY = -1;
-	if (!WaitForIcon(mainIndex, kPlayIconPath, 45000, 0.9, playX, playY, deadline)) {
+	if (!WaitForIconBmpFirst(mainIndex, kPlayIconPath, kPlayIconFallbackPath, 45000, 0.9, playX, playY, deadline)) {
 		return false;
 	}
 
@@ -626,12 +655,12 @@ bool FinalizeLogin(long mainIndex, const std::chrono::steady_clock::time_point& 
 		std::this_thread::sleep_for(std::chrono::milliseconds(300));
 	}
 
-	bool settingFound = FindIconInWindow(mainIndex, kSettingIconPath, 0.88, x, y);
+	bool settingFound = FindIconInWindowBmpFirst(mainIndex, kSettingIconPath, kSettingIconFallbackPath, 0.88, x, y);
 	const auto settingSearchEnd = std::chrono::steady_clock::now() + std::chrono::seconds(20);
 	while (!settingFound && std::chrono::steady_clock::now() < settingSearchEnd) {
 		if (std::chrono::steady_clock::now() > deadline) return false;
 		press(mainIndex, L"esc", 1, 100);
-		settingFound = WaitForIcon(mainIndex, kSettingIconPath, 1200, 0.88, x, y, deadline);
+		settingFound = WaitForIconBmpFirst(mainIndex, kSettingIconPath, kSettingIconFallbackPath, 1200, 0.88, x, y, deadline);
 		if (!settingFound) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(350));
 		}
@@ -737,13 +766,13 @@ void TriggerAutoLogin(long mainIndex) {
 
 bool IsOnLoginScreen(long mainIndex) {
 	long x = -1, y = -1;
-	if (!FindIconInWindow(mainIndex, kLoginIconPath, 0.9, x, y)) return false;
+	if (!FindIconInWindowBmpFirst(mainIndex, kLoginIconPath, kLoginIconFallbackPath, 0.9, x, y)) return false;
 	return x > 0 && y > 0;
 }
 
 bool IsStuckScreen(long mainIndex) {
 	long x = -1, y = -1;
-	if (!FindIconInWindow(mainIndex, kStuckIconPath, 0.9, x, y)) return false;
+	if (!FindIconInWindowBmpFirst(mainIndex, kStuckIconPath, kStuckIconFallbackPath, 0.9, x, y)) return false;
 	return x > 0 && y > 0;
 }
 
