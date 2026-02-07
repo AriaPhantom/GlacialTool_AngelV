@@ -535,16 +535,31 @@ long sptool::LockInput(long /*flags*/) {
 }
 
 long sptool::KeyDownChar(const TCHAR* key) {
+	HWND hwnd = LongToHwnd(m_boundHwnd);
+	if (hwnd == nullptr || !IsWindow(hwnd)) return 0;
+	DWORD pid = 0;
+	GetWindowThreadProcessId(hwnd, &pid);
+	if (m_boundPid == 0 || pid == 0 || static_cast<long>(pid) != m_boundPid) return 0;
 	SPUtils::KeyDown(ToWString(key));
 	return 1;
 }
 
 long sptool::KeyUpChar(const TCHAR* key) {
+	HWND hwnd = LongToHwnd(m_boundHwnd);
+	if (hwnd == nullptr || !IsWindow(hwnd)) return 0;
+	DWORD pid = 0;
+	GetWindowThreadProcessId(hwnd, &pid);
+	if (m_boundPid == 0 || pid == 0 || static_cast<long>(pid) != m_boundPid) return 0;
 	SPUtils::KeyUp(ToWString(key));
 	return 1;
 }
 
 long sptool::KeyPressChar(const TCHAR* key) {
+	HWND hwnd = LongToHwnd(m_boundHwnd);
+	if (hwnd == nullptr || !IsWindow(hwnd)) return 0;
+	DWORD pid = 0;
+	GetWindowThreadProcessId(hwnd, &pid);
+	if (m_boundPid == 0 || pid == 0 || static_cast<long>(pid) != m_boundPid) return 0;
 	SPUtils::KeyPress(ToWString(key), 1, 0);
 	return 1;
 }
