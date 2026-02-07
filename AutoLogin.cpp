@@ -92,6 +92,7 @@ std::atomic<long> g_lastCheckMs[MAX_HWND];
 std::atomic<long> g_loginPendingSinceMs[MAX_HWND];
 std::atomic<bool> g_loginNeedRestart[MAX_HWND];
 std::atomic<bool> g_forceRelaunch[MAX_HWND];
+std::atomic<unsigned long long> g_disconnectWatcherGeneration[MAX_HWND];
 
 bool ContainsIgnoreCase(const std::wstring& value, const std::wstring& needle) {
 	if (value.empty() || needle.empty()) return false;
@@ -836,4 +837,40 @@ void AutoLogin_CheckAndTrigger(long index) {
 	}
 }
 
+void DisconnectWatcherLoop(long mainIndex, unsigned long long generation) {
+	while (true) {
+		if (mainIndex < 0 || mainIndex >= MAX_HWND) {
+			break;
+		}
+		if (g_disconnectWatcherGeneration[mainIndex].load() != generation) {
+			break;
+		}
+		if (g_info[mainIndex].is_stop) {
+			break;
+		}
 
+		AutoLogin_CheckAndTrigger(mainIndex);
+		if (AutoLogin_IsActive(mainIndex)) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(200));
+		}
+		else {
+			std::this_thread::sleep_for(std::chrono::milliseconds(20));
+		}
+	}
+}
+
+void AutoLogin_StartDisconnectWatcher(long index) {
+	long mainIndex = NormalizeMainIndex(index);
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
+
+	unsigned long long generation = g_disconnectWatcherGeneration[mainIndex].fetch_add(1) + 1;
+	std::thread([mainIndex, generation]() {
+		DisconnectWatcherLoop(mainIndex, generation);
+	}).detach();
+}
+
+void AutoLogin_StopDisconnectWatcher(long index) {
+	long mainIndex = NormalizeMainIndex(index);
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
+	g_disconnectWatcherGeneration[mainIndex].fetch_add(1);
+}

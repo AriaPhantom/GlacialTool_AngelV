@@ -2,6 +2,7 @@
 #include "thread_control.h"
 #include "log.h"
 #include "script.h"
+#include "AutoLogin.h"
 #include "SPUtils.h"
 
 extern sptool* g_dm;
@@ -200,6 +201,7 @@ void ThreadSetExitState(long index)
 	// 主
 	g_info[index].is_stop = TRUE;
 	g_info[index].thread_state = State_Stoping;
+	AutoLogin_StopDisconnectWatcher(index);
 
 	// 副
 	g_info[index+MAX_HWND].is_stop = TRUE;
@@ -342,7 +344,7 @@ BOOL   ThreadRestart(long index)
 	// 先结束
 	ThreadInternalStop(index);
 
-	// 再启动
+	AutoLogin_StopDisconnectWatcher(index);
 	g_info[index].handle = NULL;
 	g_info[index].is_pause = FALSE;
 	g_info[index].is_stop = FALSE;
