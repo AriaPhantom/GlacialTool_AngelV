@@ -104,7 +104,7 @@ void startMiao(long index) {
 		currentTime = dm->GetTime();
 		if (miaoSenderInstance.send_boss > 0) {
 			if (currentTime - miaoSenderInstance.cooldown_boss >= 10000) {
-				send_status = sendMiaoCode(miaoSenderInstance.MiaoCode_boss);
+				send_status = sendMiaoCodeByType(miaoSenderInstance.MiaoCode_boss, "boss", "boss alert");
 				if (send_status == 200) {
 					miaoSenderInstance.send_boss--;
 					miaoSenderInstance.cooldown_boss = dm->GetTime();
@@ -114,7 +114,7 @@ void startMiao(long index) {
 		}
 		if (miaoSenderInstance.send_others > 0) {
 			if (currentTime - miaoSenderInstance.cooldown_others >= 10000) {
-				send_status = sendMiaoCode(miaoSenderInstance.MiaoCode_others);
+				send_status = sendMiaoCodeByType(miaoSenderInstance.MiaoCode_others, "others", "others alert");
 				if (send_status == 200) {
 					miaoSenderInstance.send_others--;
 					miaoSenderInstance.cooldown_others = dm->GetTime();
@@ -124,7 +124,7 @@ void startMiao(long index) {
 		}
 		if (miaoSenderInstance.send_white > 0) {
 			if (currentTime - miaoSenderInstance.cooldown_white >= 10000) {
-				send_status = sendMiaoCode(miaoSenderInstance.MiaoCode_white);
+				send_status = sendMiaoCodeByType(miaoSenderInstance.MiaoCode_white, "white", "white alert");
 				if (send_status == 200) {
 					miaoSenderInstance.send_white--;
 					miaoSenderInstance.cooldown_white = dm->GetTime();
@@ -134,7 +134,7 @@ void startMiao(long index) {
 		}
 		if (miaoSenderInstance.send_huangmen > 0) {
 			if (currentTime - miaoSenderInstance.cooldown_huangmen >= 10000) {
-				send_status = sendMiaoCode(miaoSenderInstance.Miaocode_huangmen);
+				send_status = sendMiaoCodeByType(miaoSenderInstance.Miaocode_huangmen, "huangmen", "huangmen alert");
 				if (send_status == 200) {
 					miaoSenderInstance.send_huangmen--;
 					miaoSenderInstance.cooldown_huangmen = dm->GetTime();
