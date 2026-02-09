@@ -1,2 +1,2 @@
-#pragma once 
-#define NL 
+#pragma once
+#define NL

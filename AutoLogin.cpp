@@ -599,7 +599,7 @@ bool SelectChannel(long mainIndex, const std::chrono::steady_clock::time_point& 
 
 	HWND hwnd = reinterpret_cast<HWND>(static_cast<LONG_PTR>(g_info[mainIndex].hwnd));
 	if (hwnd && IsWindow(hwnd)) {
-		SPUtils::LeftClick(hwnd, static_cast<int>(clickX), static_cast<int>(clickY), 1, 120, 80);
+		SPUtils::LeftClick(hwnd, static_cast<int>(clickX), static_cast<int>(clickY), 2, 120, 80);
 	}
 	std::this_thread::sleep_for(std::chrono::milliseconds(300));
 	return true;
@@ -628,7 +628,7 @@ bool HandleLoginPrompts(long mainIndex, const std::chrono::steady_clock::time_po
 		}
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 		SelectChannel(mainIndex, deadline);
-		press(mainIndex, L"enter", 1, 100);
+		press(mainIndex, L"enter", 2, 320);
 		std::this_thread::sleep_for(std::chrono::seconds(3));
 	}
 
@@ -641,7 +641,13 @@ bool HandleLoginPrompts(long mainIndex, const std::chrono::steady_clock::time_po
 		return false;
 	}
 
-	press(mainIndex, L"enter", 1, 100);
+	HWND hwnd = reinterpret_cast<HWND>(static_cast<LONG_PTR>(g_info[mainIndex].hwnd));
+	if (hwnd && IsWindow(hwnd)) {
+		SPUtils::LeftClick(hwnd, static_cast<int>(playX), static_cast<int>(playY), 1, 120, 80);
+	}
+	std::this_thread::sleep_for(std::chrono::milliseconds(300));
+
+	press(mainIndex, L"enter", 3, 300);
 	std::this_thread::sleep_for(std::chrono::seconds(8));
 	return true;
 }
