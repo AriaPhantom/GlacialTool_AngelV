@@ -50,7 +50,14 @@
 
 #define 轮 _T("f9")
 
-#define 来人喵码 std::string("tXDmHG4")
-#define 白屋喵码 std::string("tfDib9C")
-#define 精英Boss喵码 std::string("t5yr9m9")
-#define 符文或黄门喵码 std::string("tCmnnDK")
+#ifdef NL
+#define 来人喵码 std::string("mp_5yCvpfgA")
+#define 白屋喵码 std::string("mp_Tg_WZxxE")
+#define 精英Boss喵码 std::string("mp_RStJwCz3")
+#define 符文或黄门喵码 std::string("mp_RStJwCz3")
+#else
+#define 来人喵码 std::string("mp_EjB1g1EF")
+#define 白屋喵码 std::string("mp_hcuabQG7")
+#define 精英Boss喵码 std::string("mp_dSqiFiKB")
+#define 符文或黄门喵码 std::string("mp_dSqiFiKB")
+#endif
