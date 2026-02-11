@@ -555,6 +555,26 @@ bool WaitForIconBmpFirst(long mainIndex, const wchar_t* bmpPath, const wchar_t* 
 	return false;
 }
 
+bool WaitForPlayOrWhite(long mainIndex, int timeoutMs, long& outx, long& outy, bool& playFound, bool& whiteFound,
+	const std::chrono::steady_clock::time_point& deadline) {
+	playFound = false;
+	whiteFound = false;
+	auto start = std::chrono::steady_clock::now();
+	while (std::chrono::steady_clock::now() - start < std::chrono::milliseconds(timeoutMs)) {
+		if (std::chrono::steady_clock::now() > deadline) return false;
+		if (FindIconInWindowBmpFirst(mainIndex, kPlayIconPath, kPlayIconFallbackPath, 0.9, outx, outy)) {
+			playFound = true;
+			return true;
+		}
+		if (FindIconInWindow(mainIndex, whiteIcon, 0.9, outx, outy)) {
+			whiteFound = true;
+			return true;
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(150));
+	}
+	return true;
+}
+
 bool TryQuickLoginClick(long mainIndex) {
 	long x = -1, y = -1;
 	if (!FindIconInWindowBmpFirst(mainIndex, kQuickLoginIconPath, kQuickLoginIconFallbackPath, kQuickLoginSim, x, y)) {
@@ -639,9 +659,13 @@ bool HandleLoginPrompts(long mainIndex, const std::chrono::steady_clock::time_po
 	}
 
 	long playX = -1, playY = -1;
-	if (!WaitForIconBmpFirst(mainIndex, kPlayIconPath, kPlayIconFallbackPath, 45000, 0.9, playX, playY, deadline)) {
+	bool playFound = false;
+	bool whiteBeforePlay = false;
+	if (!WaitForPlayOrWhite(mainIndex, 45000, playX, playY, playFound, whiteBeforePlay, deadline)) {
 		return false;
 	}
+	if (!playFound && !whiteBeforePlay) return false;
+	if (whiteBeforePlay) return true;
 
 	HWND hwnd = reinterpret_cast<HWND>(static_cast<LONG_PTR>(g_info[mainIndex].hwnd));
 	if (hwnd && IsWindow(hwnd)) {
@@ -650,7 +674,6 @@ bool HandleLoginPrompts(long mainIndex, const std::chrono::steady_clock::time_po
 	std::this_thread::sleep_for(std::chrono::milliseconds(300));
 
 	press(mainIndex, L"enter", 3, 300);
-	std::this_thread::sleep_for(std::chrono::seconds(8));
 	return true;
 }
 
