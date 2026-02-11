@@ -83,6 +83,8 @@ const wchar_t* kQuickLoginIconPath = L"C:\\sptool\\QuickLogin.bmp";
 const wchar_t* kQuickLoginIconFallbackPath = L"C:\\sptool\\QuickLogin.png";
 const wchar_t* kStuckIconPath = L"C:\\sptool\\Stuck.bmp";
 const wchar_t* kStuckIconFallbackPath = L"C:\\sptool\\Stuck.png";
+const wchar_t* kStuck2IconPath = L"C:\\sptool\\Stuck2.bmp";
+const wchar_t* kStuck2IconFallbackPath = L"C:\\sptool\\Stuck2.png";
 const double kQuickLoginSim = 0.985;
 
 const wchar_t* kLaunchCommand = L"nxl://launch/10100";
@@ -779,7 +781,9 @@ bool IsOnLoginScreen(long mainIndex) {
 
 bool IsStuckScreen(long mainIndex) {
 	long x = -1, y = -1;
-	if (!FindIconInWindowBmpFirst(mainIndex, kStuckIconPath, kStuckIconFallbackPath, 0.9, x, y)) return false;
+	if (FindIconInWindowBmpFirst(mainIndex, kStuckIconPath, kStuckIconFallbackPath, 0.9, x, y) && x > 0 && y > 0) return true;
+	x = -1; y = -1;
+	if (!FindIconInWindowBmpFirst(mainIndex, kStuck2IconPath, kStuck2IconFallbackPath, 0.9, x, y)) return false;
 	return x > 0 && y > 0;
 }
 
