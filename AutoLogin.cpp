@@ -86,11 +86,16 @@ const wchar_t* kStuckIconFallbackPath = L"C:\\sptool\\Stuck.png";
 const wchar_t* kStuck2IconPath = L"C:\\sptool\\Stuck2.bmp";
 const wchar_t* kStuck2IconFallbackPath = L"C:\\sptool\\Stuck2.png";
 const double kQuickLoginSim = 0.985;
+constexpr int kDisconnectWatcherActiveIntervalMs = 500;
+constexpr int kDisconnectWatcherIdleIntervalMs = 1000;
+constexpr long kDisconnectWatcherBaseCheckIntervalMs = 1000;
+constexpr long kDisconnectWatcherImageCheckIntervalMs = 3000;
 
 const wchar_t* kLaunchCommand = L"nxl://launch/10100";
 
 std::atomic<bool> g_loginRunning[MAX_HWND];
 std::atomic<long> g_lastCheckMs[MAX_HWND];
+std::atomic<long> g_lastImageCheckMs[MAX_HWND];
 std::atomic<long> g_loginPendingSinceMs[MAX_HWND];
 std::atomic<bool> g_loginNeedRestart[MAX_HWND];
 std::atomic<bool> g_forceRelaunch[MAX_HWND];
@@ -843,7 +848,7 @@ void AutoLogin_CheckAndTrigger(long index) {
 
 	long nowMs = GetTime();
 	long last = g_lastCheckMs[mainIndex].load();
-	if (nowMs - last < 1000) return;
+	if (nowMs - last < kDisconnectWatcherBaseCheckIntervalMs) return;
 	g_lastCheckMs[mainIndex].store(nowMs);
 
 	HWND hwnd = reinterpret_cast<HWND>(static_cast<LONG_PTR>(g_info[mainIndex].hwnd));
@@ -858,6 +863,10 @@ void AutoLogin_CheckAndTrigger(long index) {
 		TriggerAutoLogin(mainIndex);
 		return;
 	}
+
+	long lastImageCheck = g_lastImageCheckMs[mainIndex].load();
+	if (nowMs - lastImageCheck < kDisconnectWatcherImageCheckIntervalMs) return;
+	g_lastImageCheckMs[mainIndex].store(nowMs);
 
 	if (IsStuckScreen(mainIndex)) {
 		g_forceRelaunch[mainIndex].store(true);
@@ -884,10 +893,10 @@ void DisconnectWatcherLoop(long mainIndex, unsigned long long generation) {
 
 		AutoLogin_CheckAndTrigger(mainIndex);
 		if (AutoLogin_IsActive(mainIndex)) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(200));
+			std::this_thread::sleep_for(std::chrono::milliseconds(kDisconnectWatcherActiveIntervalMs));
 		}
 		else {
-			std::this_thread::sleep_for(std::chrono::milliseconds(250));
+			std::this_thread::sleep_for(std::chrono::milliseconds(kDisconnectWatcherIdleIntervalMs));
 		}
 	}
 }
