@@ -10,9 +10,11 @@
 #include "log.h"
 
 #include <atomic>
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <cwctype>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -90,6 +92,10 @@ constexpr int kDisconnectWatcherActiveIntervalMs = 500;
 constexpr int kDisconnectWatcherIdleIntervalMs = 1000;
 constexpr long kDisconnectWatcherBaseCheckIntervalMs = 1000;
 constexpr long kDisconnectWatcherImageCheckIntervalMs = 3000;
+constexpr long kIconHintTtlMs = 2000;
+constexpr int kIconHintHalfWidth = 220;
+constexpr int kIconHintHalfHeight = 150;
+constexpr int kIconHintMinSearchArea = 500 * 320;
 
 const wchar_t* kLaunchCommand = L"nxl://launch/10100";
 
@@ -100,6 +106,17 @@ std::atomic<long> g_loginPendingSinceMs[MAX_HWND];
 std::atomic<bool> g_loginNeedRestart[MAX_HWND];
 std::atomic<bool> g_forceRelaunch[MAX_HWND];
 std::atomic<unsigned long long> g_disconnectWatcherGeneration[MAX_HWND];
+struct IconFindHint {
+	bool valid = false;
+	std::wstring iconPath;
+	long x = -1;
+	long y = -1;
+	long width = 0;
+	long height = 0;
+	long tickMs = 0;
+};
+std::mutex g_iconFindHintMutex;
+IconFindHint g_iconFindHints[MAX_HWND];
 
 bool ContainsIgnoreCase(const std::wstring& value, const std::wstring& needle) {
 	if (value.empty() || needle.empty()) return false;
@@ -522,10 +539,60 @@ bool GetWindowSizeForSearch(long mainIndex, long& outWidth, long& outHeight) {
 	return true;
 }
 
+bool TryGetIconHint(long mainIndex, const std::wstring& iconPath, long width, long height, long& outX, long& outY) {
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) return false;
+	long nowMs = GetTime();
+	std::lock_guard<std::mutex> lock(g_iconFindHintMutex);
+	IconFindHint& hint = g_iconFindHints[mainIndex];
+	if (!hint.valid) return false;
+	if (hint.iconPath != iconPath) return false;
+	if (hint.width != width || hint.height != height) return false;
+	if (nowMs < hint.tickMs || (nowMs - hint.tickMs) > kIconHintTtlMs) return false;
+	outX = hint.x;
+	outY = hint.y;
+	return outX >= 0 && outY >= 0;
+}
+
+void UpdateIconHint(long mainIndex, const std::wstring& iconPath, long width, long height, long x, long y) {
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
+	std::lock_guard<std::mutex> lock(g_iconFindHintMutex);
+	IconFindHint& hint = g_iconFindHints[mainIndex];
+	hint.valid = true;
+	hint.iconPath = iconPath;
+	hint.x = x;
+	hint.y = y;
+	hint.width = width;
+	hint.height = height;
+	hint.tickMs = GetTime();
+}
+
 bool FindIconInWindow(long mainIndex, const std::wstring& iconPath, double sim, long& outx, long& outy) {
 	long width = 0, height = 0;
 	if (!GetWindowSizeForSearch(mainIndex, width, height)) return false;
-	return findPicWithOpenCV(mainIndex, 0, 0, static_cast<int>(width), static_cast<int>(height), iconPath, sim, outx, outy);
+
+	const long fullArea = width * height;
+	if (fullArea >= kIconHintMinSearchArea) {
+		long hintX = -1;
+		long hintY = -1;
+		if (TryGetIconHint(mainIndex, iconPath, width, height, hintX, hintY)) {
+			int roiX1 = static_cast<int>(std::max(0L, hintX - kIconHintHalfWidth));
+			int roiY1 = static_cast<int>(std::max(0L, hintY - kIconHintHalfHeight));
+			int roiX2 = static_cast<int>(std::min(width, hintX + kIconHintHalfWidth));
+			int roiY2 = static_cast<int>(std::min(height, hintY + kIconHintHalfHeight));
+			if (roiX2 > roiX1 + 24 && roiY2 > roiY1 + 24) {
+				if (findPicWithOpenCV(mainIndex, roiX1, roiY1, roiX2, roiY2, iconPath, sim, outx, outy)) {
+					UpdateIconHint(mainIndex, iconPath, width, height, outx, outy);
+					return true;
+				}
+			}
+		}
+	}
+
+	if (findPicWithOpenCV(mainIndex, 0, 0, static_cast<int>(width), static_cast<int>(height), iconPath, sim, outx, outy)) {
+		UpdateIconHint(mainIndex, iconPath, width, height, outx, outy);
+		return true;
+	}
+	return false;
 }
 
 bool FindIconInWindowBmpFirst(long mainIndex, const wchar_t* bmpPath, const wchar_t* pngPath, double sim, long& outx, long& outy) {
