@@ -887,7 +887,7 @@ void DisconnectWatcherLoop(long mainIndex, unsigned long long generation) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(200));
 		}
 		else {
-			std::this_thread::sleep_for(std::chrono::milliseconds(20));
+			std::this_thread::sleep_for(std::chrono::milliseconds(250));
 		}
 	}
 }
@@ -907,3 +907,4 @@ void AutoLogin_StopDisconnectWatcher(long index) {
 	if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
 	g_disconnectWatcherGeneration[mainIndex].fetch_add(1);
 }
+

@@ -66,7 +66,7 @@ void ScriptDelay(long index,long time)
 				_endthreadex(0);
 			}
 
-			Sleep(1);
+			Sleep(100);
 		}
 	}
 
@@ -278,7 +278,7 @@ unsigned WINAPI SubThread(PVOID pParam)
 		// 比如检测到掉线，可考虑通知UI,然后重新运行
         if (AutoLogin_IsActive(index)) { ScriptDelay(index, 200); continue; }
 gMonitorCheck(index, count);
-		ScriptDelay(index,10);
+		ScriptDelay(index,50);
 		count++;
 		if (count > 20) { count = 0; }
 	}
@@ -310,3 +310,4 @@ unsigned WINAPI MiaoThread(PVOID pParam) {
 	startMiao(index);
 
 }
+

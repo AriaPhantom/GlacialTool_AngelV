@@ -71,6 +71,37 @@ extern int GetautoOil();
 extern int Getignite();
 extern int GetWhiteDetect();
 
+namespace {
+constexpr ULONGLONG kOtherPlayerCheckIntervalMs = 500;
+constexpr ULONGLONG kFriendGuildCheckIntervalMs = 500;
+constexpr ULONGLONG kHuangmenCheckIntervalMs = 1000;
+constexpr ULONGLONG kBossCheckIntervalMs = 2000;
+constexpr ULONGLONG kRuneCheckIntervalMs = 3000;
+constexpr ULONGLONG kPlayerCoordCheckIntervalMs = 100;
+constexpr ULONGLONG kWhiteCheckIntervalMs = 200;
+ULONGLONG g_lastOtherPlayerCheckMs[MAX_HWND] = {};
+ULONGLONG g_lastFriendGuildCheckMs[MAX_HWND] = {};
+ULONGLONG g_lastHuangmenCheckMs[MAX_HWND] = {};
+ULONGLONG g_lastBossCheckMs[MAX_HWND] = {};
+ULONGLONG g_lastRuneCheckMs[MAX_HWND] = {};
+ULONGLONG g_lastPlayerCoordCheckMs[MAX_HWND] = {};
+ULONGLONG g_lastWhiteCheckMs[MAX_HWND] = {};
+int NormalizeMonitorMainIndex(long index) {
+	if (index >= MAX_HWND * 2) index -= MAX_HWND * 2;
+	if (index >= MAX_HWND) index -= MAX_HWND;
+	if (index < 0 || index >= MAX_HWND) return -1;
+	return static_cast<int>(index);
+}
+bool ShouldRunMonitorPeriodicCheck(int mainIndex, ULONGLONG* lastCheckMsArray, ULONGLONG intervalMs, ULONGLONG nowMs) {
+	if (mainIndex < 0 || mainIndex >= MAX_HWND || lastCheckMsArray == nullptr) return true;
+	ULONGLONG& lastMs = lastCheckMsArray[mainIndex];
+	if (lastMs == 0 || nowMs < lastMs || (nowMs - lastMs) >= intervalMs) {
+		lastMs = nowMs;
+		return true;
+	}
+	return false;
+}
+} // namespace
 void clickRune(long index);
 
 void subSoftStartPause() {
@@ -155,9 +186,18 @@ void gMonitorCheck(long index, long count)
 		ScriptDelay(index, 200);
 		return;
 	}
-
+	ULONGLONG nowMs = GetTickCount64();
+	int mainIndex = NormalizeMonitorMainIndex(index);
+	bool runOtherPlayerCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastOtherPlayerCheckMs, kOtherPlayerCheckIntervalMs, nowMs);
+	bool runFriendGuildCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastFriendGuildCheckMs, kFriendGuildCheckIntervalMs, nowMs);
+	bool runHuangmenCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastHuangmenCheckMs, kHuangmenCheckIntervalMs, nowMs);
+	bool runBossCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastBossCheckMs, kBossCheckIntervalMs, nowMs);
+	bool runRuneCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastRuneCheckMs, kRuneCheckIntervalMs, nowMs);
+	bool runPlayerCoordCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastPlayerCoordCheckMs, kPlayerCoordCheckIntervalMs, nowMs);
+	bool runWhiteCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastWhiteCheckMs, kWhiteCheckIntervalMs, nowMs);
 	long x, y;
 	long borderx, bordery;
+
 	long findPicRet;
 
 	if (gMonitorInstance.whiteIconUpdate > 0) {
@@ -195,6 +235,7 @@ void gMonitorCheck(long index, long count)
 	}
 
 	// Player Coords
+	if (runPlayerCoordCheck) {
 	int* currentPlayerLocation = findCoordsOnMiniMap(index, playerIcon);
 	if (*(currentPlayerLocation) != -1 && *(currentPlayerLocation + 1) != -1) {
 		int* currentWhiteIconCoords = gMonitorInstance.getWhiteIconCoords();
@@ -208,10 +249,12 @@ void gMonitorCheck(long index, long count)
 		UpdateCoords(relativePlayerLocation);
 		//Log(_T("已发现玩家坐标"));
 	}
+	}
+
 
 
 	// 其他玩家
-	if (count % 2 == 1) {
+	if (runOtherPlayerCheck) {
 		int* randomPlayerCoords = findCoordsOnMiniMap(index, randomIcon);
 		if (*(randomPlayerCoords) != -1 && *(randomPlayerCoords + 1) != -1) {
 
@@ -253,7 +296,7 @@ void gMonitorCheck(long index, long count)
 	}
 
 	// 符文查找
-	if (GetautoRuneSolver() == 1 && count == 0 && *gMonitorInstance.getRuneCoords() == -1) {
+	if (GetautoRuneSolver() == 1 && runRuneCheck && *gMonitorInstance.getRuneCoords() == -1) {
 		int* runeCoords = findCoordsOnMiniMap(index, runeIcon, 0.999);
 		if (*(runeCoords) != -1 && *(runeCoords + 1) != -1 && *(runeCoords) < gMonitorInstance.mapBorderCoords[0] && *(runeCoords + 1) < gMonitorInstance.mapBorderCoords[1]) {
 			int* currentWhiteIconCoords = gMonitorInstance.getWhiteIconCoords();
@@ -270,7 +313,7 @@ void gMonitorCheck(long index, long count)
 
 
 	// 精英boss检测
-	if (count % 20 == 0) {
+	if (runBossCheck) {
 		long BOSS_WIDTH = 200;
 
 		long bossTopLeftX = long((mapleWindowWidth / 2) - (BOSS_WIDTH / 2));
@@ -288,7 +331,7 @@ void gMonitorCheck(long index, long count)
 
 
 	// 白屋检测
-	if (GetWhiteDetect() && count % 3 == 0) {
+	if (GetWhiteDetect() && runWhiteCheck) {
 		long loginPendingMs = AutoLogin_GetLoginPendingMs(index);
 		if (loginPendingMs > 0 && loginPendingMs < 600000)
 		{
@@ -341,13 +384,13 @@ void gMonitorCheck(long index, long count)
 
 
 	// 黄门检测
-	if (GethuangMen() && count % 5 == 0) {
+	if (GethuangMen() && runHuangmenCheck) {
 		if (*findCoordsOnMiniMap(index, enchantportalIcon) > 0) {
 			miaoSenderInstance.setHuangmen(1);
 		}
 	}
 	// 好友检测
-	if (GetfriendPlayerNotification() && count % 2 == 0) {
+	if (GetfriendPlayerNotification() && runFriendGuildCheck) {
 		int random_x, random_y, guild_x, guild_y;
 
 		int* friendPlayerCoords = findCoordsOnMiniMap(index, friendIcon);
@@ -1884,3 +1927,6 @@ void leftRight(long index, int& count) {
 		holdKey(index, _T("right"), 400);
 	}
 }
+
+
+
