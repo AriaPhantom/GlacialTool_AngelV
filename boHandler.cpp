@@ -10,9 +10,13 @@
 #include "script.h"
 #include "RuAdvancing.h"
 #include "FileProc.h"
+#include "SPUtils.h"
 #include <sstream>
 #include <iostream>
 #include <string>
+#include <map>
+#include <mutex>
+#include <vector>
 
 gMonitor gMonitorInstance = gMonitor();
 MiaoSender miaoSenderInstance = MiaoSender();
@@ -72,12 +76,21 @@ extern int Getignite();
 extern int GetWhiteDetect();
 
 namespace {
-constexpr ULONGLONG kOtherPlayerCheckIntervalMs = 500;
+constexpr int kMiniMapTopLeftX = 0;
+constexpr int kMiniMapTopLeftY = 0;
+constexpr int kMiniMapBottomRightX = 350;
+constexpr int kMiniMapBottomRightY = 300;
+
+constexpr int kWhiteRoomTopLeftX = 0;
+constexpr int kWhiteRoomTopLeftY = 0;
+constexpr int kWhiteRoomBottomRightX = 350;
+constexpr int kWhiteRoomBottomRightY = 300;constexpr ULONGLONG kOtherPlayerCheckIntervalMs = 500;
 constexpr ULONGLONG kFriendGuildCheckIntervalMs = 500;
 constexpr ULONGLONG kHuangmenCheckIntervalMs = 1000;
 constexpr ULONGLONG kBossCheckIntervalMs = 2000;
 constexpr ULONGLONG kRuneCheckIntervalMs = 3000;
 constexpr ULONGLONG kPlayerCoordCheckIntervalMs = 100;
+constexpr ULONGLONG kPlayerCoordCheckIdleIntervalMs = 250;
 constexpr ULONGLONG kWhiteCheckIntervalMs = 200;
 ULONGLONG g_lastOtherPlayerCheckMs[MAX_HWND] = {};
 ULONGLONG g_lastFriendGuildCheckMs[MAX_HWND] = {};
@@ -86,6 +99,139 @@ ULONGLONG g_lastBossCheckMs[MAX_HWND] = {};
 ULONGLONG g_lastRuneCheckMs[MAX_HWND] = {};
 ULONGLONG g_lastPlayerCoordCheckMs[MAX_HWND] = {};
 ULONGLONG g_lastWhiteCheckMs[MAX_HWND] = {};
+volatile LONG g_isGoToActive[MAX_HWND] = {};
+struct MiniMapSnapshot {
+	bool valid = false;
+	cv::Mat image;
+};
+
+std::wstring ToWideStringLocal(const TCHAR* value) {
+	if (value == nullptr) return std::wstring();
+#ifdef UNICODE
+	return std::wstring(value);
+#else
+	int size = MultiByteToWideChar(CP_ACP, 0, value, -1, nullptr, 0);
+	if (size <= 1) return std::wstring();
+	std::wstring result(static_cast<size_t>(size - 1), L'\0');
+	MultiByteToWideChar(CP_ACP, 0, value, -1, &result[0], size);
+	return result;
+#endif
+}
+
+std::string WideToAnsiLocal(const std::wstring& value) {
+	if (value.empty()) return std::string();
+	int size = WideCharToMultiByte(CP_ACP, 0, value.c_str(), -1, nullptr, 0, nullptr, nullptr);
+	if (size <= 1) return std::string();
+	std::string result(static_cast<size_t>(size - 1), '\0');
+	WideCharToMultiByte(CP_ACP, 0, value.c_str(), -1, &result[0], size, nullptr, nullptr);
+	return result;
+}
+
+std::vector<std::wstring> SplitIconPaths(const TCHAR* iconPathList) {
+	std::vector<std::wstring> paths;
+	std::wstring raw = ToWideStringLocal(iconPathList);
+	if (raw.empty()) return paths;
+
+	std::wstringstream ss(raw);
+	std::wstring singlePath;
+	while (std::getline(ss, singlePath, L'|')) {
+		if (!singlePath.empty()) {
+			paths.push_back(singlePath);
+		}
+	}
+	return paths;
+}
+
+bool GetMiniMapTemplateCached(const std::wstring& path, cv::Mat& outTemplate) {
+	outTemplate.release();
+	if (path.empty()) return false;
+
+	static std::mutex s_templateCacheMutex;
+	static std::map<std::wstring, cv::Mat> s_templateCache;
+
+	{
+		std::lock_guard<std::mutex> lock(s_templateCacheMutex);
+		auto it = s_templateCache.find(path);
+		if (it != s_templateCache.end() && !it->second.empty()) {
+			outTemplate = it->second;
+			return true;
+		}
+	}
+
+	std::string pathAnsi = WideToAnsiLocal(path);
+	cv::Mat loaded = cv::imread(pathAnsi, cv::IMREAD_UNCHANGED);
+	if (loaded.empty()) return false;
+	if (loaded.channels() == 4) {
+		cv::cvtColor(loaded, loaded, cv::COLOR_BGRA2BGR);
+	}
+	else if (loaded.channels() == 1) {
+		cv::cvtColor(loaded, loaded, cv::COLOR_GRAY2BGR);
+	}
+
+	{
+		std::lock_guard<std::mutex> lock(s_templateCacheMutex);
+		s_templateCache[path] = loaded;
+		outTemplate = s_templateCache[path];
+	}
+	return !outTemplate.empty();
+}
+
+bool CaptureMiniMapSnapshot(long index, MiniMapSnapshot& outSnapshot) {
+	outSnapshot.valid = false;
+	outSnapshot.image.release();
+
+	HWND hwnd = reinterpret_cast<HWND>(static_cast<LONG_PTR>(g_info[index].hwnd));
+	if (!hwnd || !IsWindow(hwnd)) return false;
+
+	cv::Mat captured;
+	if (!SPUtils::CaptureAndResizeToLogic(hwnd,
+		kMiniMapTopLeftX, kMiniMapTopLeftY, kMiniMapBottomRightX, kMiniMapBottomRightY, captured)) {
+		return false;
+	}
+	if (captured.empty()) return false;
+
+	if (captured.channels() == 4) {
+		cv::cvtColor(captured, captured, cv::COLOR_BGRA2BGR);
+	}
+	else if (captured.channels() == 1) {
+		cv::cvtColor(captured, captured, cv::COLOR_GRAY2BGR);
+	}
+
+	outSnapshot.image = captured;
+	outSnapshot.valid = !outSnapshot.image.empty() && outSnapshot.image.channels() == 3;
+	return outSnapshot.valid;
+}
+
+bool FindIconInMiniMapSnapshot(const MiniMapSnapshot& snapshot, const TCHAR* iconPathList, double sim, int& outX, int& outY) {
+	outX = -1;
+	outY = -1;
+	if (!snapshot.valid || snapshot.image.empty()) return false;
+
+	std::vector<std::wstring> iconPaths = SplitIconPaths(iconPathList);
+	for (const std::wstring& iconPath : iconPaths) {
+		cv::Mat templateMat;
+		if (!GetMiniMapTemplateCached(iconPath, templateMat)) continue;
+		if (templateMat.empty()) continue;
+		if (snapshot.image.cols < templateMat.cols || snapshot.image.rows < templateMat.rows) continue;
+		if (snapshot.image.channels() != templateMat.channels()) continue;
+
+		cv::Mat result;
+		cv::matchTemplate(snapshot.image, templateMat, result, cv::TM_CCOEFF_NORMED);
+
+		double minVal = 0.0;
+		double maxVal = 0.0;
+		cv::Point minLoc;
+		cv::Point maxLoc;
+		cv::minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc);
+		if (maxVal >= sim) {
+			outX = maxLoc.x + kMiniMapTopLeftX;
+			outY = maxLoc.y + kMiniMapTopLeftY;
+			return true;
+		}
+	}
+
+	return false;
+}
 int NormalizeMonitorMainIndex(long index) {
 	if (index >= MAX_HWND * 2) index -= MAX_HWND * 2;
 	if (index >= MAX_HWND) index -= MAX_HWND;
@@ -186,6 +332,7 @@ void gMonitorCheck(long index, long count)
 		ScriptDelay(index, 200);
 		return;
 	}
+
 	ULONGLONG nowMs = GetTickCount64();
 	int mainIndex = NormalizeMonitorMainIndex(index);
 	bool runOtherPlayerCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastOtherPlayerCheckMs, kOtherPlayerCheckIntervalMs, nowMs);
@@ -193,23 +340,68 @@ void gMonitorCheck(long index, long count)
 	bool runHuangmenCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastHuangmenCheckMs, kHuangmenCheckIntervalMs, nowMs);
 	bool runBossCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastBossCheckMs, kBossCheckIntervalMs, nowMs);
 	bool runRuneCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastRuneCheckMs, kRuneCheckIntervalMs, nowMs);
-	bool runPlayerCoordCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastPlayerCoordCheckMs, kPlayerCoordCheckIntervalMs, nowMs);
+	ULONGLONG playerCoordIntervalMs = kPlayerCoordCheckIdleIntervalMs;
+	if (mainIndex >= 0 && mainIndex < MAX_HWND && InterlockedCompareExchange(&g_isGoToActive[mainIndex], 0, 0) != 0) {
+		playerCoordIntervalMs = kPlayerCoordCheckIntervalMs;
+	}
+	bool runPlayerCoordCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastPlayerCoordCheckMs, playerCoordIntervalMs, nowMs);
 	bool runWhiteCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastWhiteCheckMs, kWhiteCheckIntervalMs, nowMs);
+
+	const bool autoRuneEnabled = (GetautoRuneSolver() == 1);
+	const bool huangmenEnabled = (GethuangMen() != 0);
+	const bool friendGuildEnabled = (GetfriendPlayerNotification() != 0);
+	const bool whiteDetectEnabled = (GetWhiteDetect() != 0);
+
+	MiniMapSnapshot miniMapSnapshot;
+	const bool needMiniMapSnapshot =
+		runPlayerCoordCheck ||
+		runOtherPlayerCheck ||
+		(autoRuneEnabled && runRuneCheck && *gMonitorInstance.getRuneCoords() == -1) ||
+		(huangmenEnabled && runHuangmenCheck) ||
+		(friendGuildEnabled && runFriendGuildCheck);
+	if (needMiniMapSnapshot) {
+		CaptureMiniMapSnapshot(index, miniMapSnapshot);
+	}
+
+	auto findMiniMapIcon = [&](const TCHAR* iconPath, double sim, int& outX, int& outY) -> bool {
+		if (miniMapSnapshot.valid) {
+			return FindIconInMiniMapSnapshot(miniMapSnapshot, iconPath, sim, outX, outY);
+		}
+		int* coords = findCoordsOnMiniMap(index, iconPath, sim);
+		outX = coords[0];
+		outY = coords[1];
+		return (outX > 0 && outY > 0);
+	};
+
 	long x, y;
 	long borderx, bordery;
-
 	long findPicRet;
+	auto detectWhiteRoom = [&](long& outWhiteX, long& outWhiteY) -> bool {
+		if (miniMapSnapshot.valid) {
+			int sx = -1;
+			int sy = -1;
+			if (FindIconInMiniMapSnapshot(miniMapSnapshot, whiteIcon, 0.9, sx, sy)) {
+				outWhiteX = sx;
+				outWhiteY = sy;
+				return true;
+			}
+			outWhiteX = -1;
+			outWhiteY = -1;
+			return false;
+		}
+		findPicRet = dm->FindPic(kWhiteRoomTopLeftX, kWhiteRoomTopLeftY,
+			kWhiteRoomBottomRightX, kWhiteRoomBottomRightY,
+			whiteIcon, _T("000000"), 0.9, 0, &outWhiteX, &outWhiteY);
+		return outWhiteX > 0 && outWhiteY > 0;
+	};
 
 	if (gMonitorInstance.whiteIconUpdate > 0) {
-		// white icon Coords
 		long whiteTopLeftX = 0;
 		long whiteTopLeftY = 0;
-
 		long whiteBottomRightX = whiteTopLeftX + 500;
 		long whiteBottomRightY = 600;
 
 		int detect_sum = 0;
-		//SetTaskState(index - MAX_HWND, _T("地图边界搜索中"));
 		findPicRet = dm->FindPic(whiteTopLeftX, whiteTopLeftY, whiteBottomRightX, whiteBottomRightY, whiteIcon, _T("000000"), 0.9, 0, &x, &y);
 		if (x > 0 && y > 0) {
 			gMonitorInstance.setWhiteIconCoords(x, y);
@@ -227,40 +419,33 @@ void gMonitorCheck(long index, long count)
 		if (detect_sum == 2)
 		{
 			gMonitorInstance.whiteIconUpdate = 0;
-			SetTaskState(index - MAX_HWND, _T("地图边界已更新"));
+			SetTaskState(index - MAX_HWND, _T("???????????"));
 		}
 		else {
-			SetTaskState(index - MAX_HWND, _T("地图边界更新失败"));
+			SetTaskState(index - MAX_HWND, _T("????????????"));
 		}
 	}
 
-	// Player Coords
 	if (runPlayerCoordCheck) {
-	int* currentPlayerLocation = findCoordsOnMiniMap(index, playerIcon);
-	if (*(currentPlayerLocation) != -1 && *(currentPlayerLocation + 1) != -1) {
-		int* currentWhiteIconCoords = gMonitorInstance.getWhiteIconCoords();
-		int relativePlayerLocationX = *(currentPlayerLocation);
-		int relativePlayerLocationY = *(currentPlayerLocation + 1) - 3 - *(currentWhiteIconCoords + 1);
-		int relativePlayerLocation[2] = { relativePlayerLocationX , relativePlayerLocationY };
-
-
-		gMonitorInstance.setPlayerCoords(relativePlayerLocationX, relativePlayerLocationY);
-		//gui.updateCurrentCoordinate(currentPlayerLocation)  //Update the live coords in gui
-		UpdateCoords(relativePlayerLocation);
-		//Log(_T("已发现玩家坐标"));
-	}
+		int playerX = -1;
+		int playerY = -1;
+		if (findMiniMapIcon(playerIcon, 0.95, playerX, playerY)) {
+			int* currentWhiteIconCoords = gMonitorInstance.getWhiteIconCoords();
+			int relativePlayerLocationX = playerX;
+			int relativePlayerLocationY = playerY - 3 - *(currentWhiteIconCoords + 1);
+			int relativePlayerLocation[2] = { relativePlayerLocationX , relativePlayerLocationY };
+			gMonitorInstance.setPlayerCoords(relativePlayerLocationX, relativePlayerLocationY);
+			UpdateCoords(relativePlayerLocation);
+		}
 	}
 
-
-
-	// 其他玩家
 	if (runOtherPlayerCheck) {
-		int* randomPlayerCoords = findCoordsOnMiniMap(index, randomIcon);
-		if (*(randomPlayerCoords) != -1 && *(randomPlayerCoords + 1) != -1) {
-
-			if (gMonitorInstance.randomPlayerOldPosX != *(randomPlayerCoords) && gMonitorInstance.randomPlayerOldPosY != *(randomPlayerCoords + 1)) {
-				gMonitorInstance.randomPlayerOldPosX = *(randomPlayerCoords);
-				gMonitorInstance.randomPlayerOldPosY = *(randomPlayerCoords + 1);
+		int randomX = -1;
+		int randomY = -1;
+		if (findMiniMapIcon(randomIcon, 0.95, randomX, randomY)) {
+			if (gMonitorInstance.randomPlayerOldPosX != randomX && gMonitorInstance.randomPlayerOldPosY != randomY) {
+				gMonitorInstance.randomPlayerOldPosX = randomX;
+				gMonitorInstance.randomPlayerOldPosY = randomY;
 				gMonitorInstance.randomPlayerSamePosTimer = dm->GetTime();
 			}
 
@@ -268,15 +453,14 @@ void gMonitorCheck(long index, long count)
 				gMonitorInstance.setRandomPlayerTimer(dm->GetTime());
 			}
 			else {
-				if (dm->GetTime() - RANDOM_PLAYER_NOTIFICATION > gMonitorInstance.getRandomPlayerTimer() && (dm->GetTime() - 300000) < gMonitorInstance.randomPlayerSamePosTimer) {
+				if (dm->GetTime() - RANDOM_PLAYER_NOTIFICATION > gMonitorInstance.getRandomPlayerTimer() &&
+					(dm->GetTime() - 300000) < gMonitorInstance.randomPlayerSamePosTimer) {
 					gMonitorInstance.setRandomPlayerInMap(1);
-					//Log(_T("发现其他玩家"));
 					miaoSenderInstance.setOthers(1);
 				}
 			}
 		}
 		else {
-			//Log(_T("未发现其他玩家"));
 			gMonitorInstance.setRandomPlayerTimer(0);
 			gMonitorInstance.setRandomPlayerInMap(0);
 			gMonitorInstance.randomPlayerSamePosTimer = dm->GetTime();
@@ -285,37 +469,32 @@ void gMonitorCheck(long index, long count)
 		}
 	}
 
-	// 冒险窗口信息
-	long topLeftX, topLeftY, bottomRightX, bottomRightY;
-	long windowRet = dm->GetWindowRect(g_info[index].hwnd, &topLeftX, &topLeftY, &bottomRightX, &bottomRightY);
-	long mapleWindowWidth = bottomRightX - topLeftX;
-	long mapleWindowHeight = bottomRightY - topLeftY;
-	if (mapleWindowWidth > 1400) {
-		mapleWindowWidth = long(mapleWindowWidth / 2);
-		mapleWindowHeight = long(mapleWindowHeight / 2);
-	}
-
-	// 符文查找
-	if (GetautoRuneSolver() == 1 && runRuneCheck && *gMonitorInstance.getRuneCoords() == -1) {
-		int* runeCoords = findCoordsOnMiniMap(index, runeIcon, 0.999);
-		if (*(runeCoords) != -1 && *(runeCoords + 1) != -1 && *(runeCoords) < gMonitorInstance.mapBorderCoords[0] && *(runeCoords + 1) < gMonitorInstance.mapBorderCoords[1]) {
+	if (autoRuneEnabled && runRuneCheck && *gMonitorInstance.getRuneCoords() == -1) {
+		int runeX = -1;
+		int runeY = -1;
+		if (findMiniMapIcon(runeIcon, 0.999, runeX, runeY) &&
+			runeX < gMonitorInstance.mapBorderCoords[0] &&
+			runeY < gMonitorInstance.mapBorderCoords[1]) {
 			int* currentWhiteIconCoords = gMonitorInstance.getWhiteIconCoords();
-			int relativeRuneLocationX = *(runeCoords)-2;
-			int relativeRuneLocationY = *(runeCoords + 1) - 2 - *(currentWhiteIconCoords + 1);
-
+			int relativeRuneLocationX = runeX - 2;
+			int relativeRuneLocationY = runeY - 2 - *(currentWhiteIconCoords + 1);
 			if (relativeRuneLocationY > 55) {
 				gMonitorInstance.setRuneCoords(relativeRuneLocationX, relativeRuneLocationY);
 			}
-
 		}
 	}
 
-
-
-	// 精英boss检测
 	if (runBossCheck) {
-		long BOSS_WIDTH = 200;
+		long topLeftX, topLeftY, bottomRightX, bottomRightY;
+		dm->GetWindowRect(g_info[index].hwnd, &topLeftX, &topLeftY, &bottomRightX, &bottomRightY);
+		long mapleWindowWidth = bottomRightX - topLeftX;
+		long mapleWindowHeight = bottomRightY - topLeftY;
+		if (mapleWindowWidth > 1400) {
+			mapleWindowWidth = long(mapleWindowWidth / 2);
+			mapleWindowHeight = long(mapleWindowHeight / 2);
+		}
 
+		long BOSS_WIDTH = 200;
 		long bossTopLeftX = long((mapleWindowWidth / 2) - (BOSS_WIDTH / 2));
 		long bossTopLeftY = long(20 + (mapleWindowHeight / 2));
 		long bossBottomRightX = long((mapleWindowWidth / 2) + (BOSS_WIDTH / 2));
@@ -323,83 +502,65 @@ void gMonitorCheck(long index, long count)
 
 		findPicRet = dm->FindPic(bossTopLeftX, bossTopLeftY, bossBottomRightX, bossBottomRightY, deadOKIcon, _T("000000"), 0.95, 0, &x, &y);
 		if (x > 0 && y > 0) {
-			Log(_T("挂了"));
+			Log(_T("????"));
 			miaoSenderInstance.setBoss(1);
 			subSoftPause();
 		}
 	}
 
-
-	// 白屋检测
-	if (GetWhiteDetect() && runWhiteCheck) {
+	if (whiteDetectEnabled && runWhiteCheck) {
 		long loginPendingMs = AutoLogin_GetLoginPendingMs(index);
 		if (loginPendingMs > 0 && loginPendingMs < 600000)
 		{
-		    long whiteTopLeftX = 0;
-		    long whiteTopLeftY = 0;
-		    long whiteBottomRightX = whiteTopLeftX + 300;
-		    long whiteBottomRightY = 500;
-		    findPicRet = dm->FindPic(whiteTopLeftX, whiteTopLeftY, whiteBottomRightX, whiteBottomRightY, whiteIcon, _T("000000"), 0.9, 0, &x, &y);
-		    if (x > 0 && y > 0)
-		    {
-		        gMonitorInstance.setWhiteTimer(0);
-		        AutoLogin_ClearLoginPending(index);
-		    }
+			if (detectWhiteRoom(x, y))
+			{
+				gMonitorInstance.setWhiteTimer(0);
+				AutoLogin_ClearLoginPending(index);
+			}
 		}
 		if (loginPendingMs <= 0 || loginPendingMs >= 600000)
 		{
-				long whiteTopLeftX = 0;
-				long whiteTopLeftY = 0;
-				long whiteBottomRightX = whiteTopLeftX + 300;
-				long whiteBottomRightY = 500;
-				findPicRet = dm->FindPic(whiteTopLeftX, whiteTopLeftY, whiteBottomRightX, whiteBottomRightY, whiteIcon, _T("000000"), 0.9, 0, &x, &y);
-				//CString tips;
-				//tips.Format(_T("白屋坐标:(%d,%d)"), x,y);
-				//Log(tips);
-				if (x > 0 && y > 0) {
-					gMonitorInstance.setWhiteTimer(0);
+			if (detectWhiteRoom(x, y)) {
+				gMonitorInstance.setWhiteTimer(0);
+			}
+			else if (1) {
+				if (gMonitorInstance.getWhiteTimer() == 0) {
+					gMonitorInstance.setWhiteTimer(dm->GetTime());
 				}
-				else if (1) {
-					if (gMonitorInstance.getWhiteTimer() == 0) {
-						gMonitorInstance.setWhiteTimer(dm->GetTime());
+				else {
+					if (dm->GetTime() - 1000 > gMonitorInstance.getWhiteTimer()) {
+						Log(_T("in white"));
+						miaoSenderInstance.setWhite(1);
+						string s = "C:\\sptool\\WhitePic";
+						long a = dm->GetTime() % 10000;
+						string s_type = ".png";
+						string filePath = s + to_string(a) + s_type;
+						CString filePathT(filePath.c_str());
+						dm->CapturePng(0, 0, 2000, 1200, filePathT);
 					}
-					else {
-						if (dm->GetTime() - 1000 > gMonitorInstance.getWhiteTimer()) {
-							Log(_T("in white"));
-							miaoSenderInstance.setWhite(1);
-							string s = "C:\\sptool\\WhitePic";
-							long a = dm->GetTime() % 10000;
-							string s_type = ".png";
-							string filePath = s + to_string(a) + s_type;
-							const char* cstr = filePath.c_str();
-							dm->CapturePng(0, 0, 2000, 1200, _T(cstr));
-						}
-						if (dm->GetTime() - WHITE_NOTIFICATION > gMonitorInstance.getWhiteTimer()) {
-							subSoftPause();
-						}
+					if (dm->GetTime() - WHITE_NOTIFICATION > gMonitorInstance.getWhiteTimer()) {
+						subSoftPause();
 					}
 				}
+			}
 		}
-}
+	}
 
-
-	// 黄门检测
-	if (GethuangMen() && runHuangmenCheck) {
-		if (*findCoordsOnMiniMap(index, enchantportalIcon) > 0) {
+	if (huangmenEnabled && runHuangmenCheck) {
+		int huangmenX = -1;
+		int huangmenY = -1;
+		if (findMiniMapIcon(enchantportalIcon, 0.95, huangmenX, huangmenY)) {
 			miaoSenderInstance.setHuangmen(1);
 		}
 	}
-	// 好友检测
-	if (GetfriendPlayerNotification() && runFriendGuildCheck) {
-		int random_x, random_y, guild_x, guild_y;
 
-		int* friendPlayerCoords = findCoordsOnMiniMap(index, friendIcon);
-		random_x = *(friendPlayerCoords);
-		random_y = *(friendPlayerCoords + 1);
-
-		int* guildPlayerCoords = findCoordsOnMiniMap(index, guildIcon);
-		guild_x = *(guildPlayerCoords);
-		guild_y = *(guildPlayerCoords + 1);
+	if (friendGuildEnabled && runFriendGuildCheck) {
+		int random_x = -1;
+		int random_y = -1;
+		int guild_x = -1;
+		int guild_y = -1;
+		findMiniMapIcon(friendIcon, 0.95, random_x, random_y);
+		findMiniMapIcon(guildIcon, 0.95, guild_x, guild_y);
 
 		if (guild_x > 0 || random_x > 0) {
 			if (gMonitorInstance.getFriendPlayerTimer() == 0) {
@@ -415,21 +576,16 @@ void gMonitorCheck(long index, long count)
 			gMonitorInstance.setFriendPlayerTimer(0);
 		}
 	}
-
-	// 其他检测
-
-
 }
-
 int* findCoordsOnMiniMap(long index, const TCHAR* innerIcon, double sim) {
 	sptool* dm = g_info[index].dm;
 	long x, y;
-	long findPicRet = dm->FindPic(0, 20, 350, 300, innerIcon, _T("000000"), sim, 0, &x, &y);
+	long findPicRet = dm->FindPic(kMiniMapTopLeftX, kMiniMapTopLeftY, kMiniMapBottomRightX, kMiniMapBottomRightY, innerIcon, _T("000000"), sim, 0, &x, &y);
 	static int  results[2];
 	if (x > 0 && y > 0)
 	{
 		//CString tips;
-		//tips.Format(_T("玩家坐标:(%d,%d)"), x,y);
+		//tips.Format(_T("???????:(%d,%d)"), x,y);
 		//Log(tips);
 		results[0] = x;
 		results[1] = y;
@@ -696,6 +852,19 @@ void goTo(long index, long targetX, long targetY, long rangeFromCoords, bool isR
 	long WANTED_RANGEY = max(rangeFromCoords, rangeY);
 	int* currentPlayerLocation = gMonitorInstance.getPlayerCoords();
 	sptool* dm = g_info[index].dm;
+	int goToMainIndex = NormalizeMonitorMainIndex(index);
+	if (goToMainIndex >= 0 && goToMainIndex < MAX_HWND) {
+		InterlockedExchange(&g_isGoToActive[goToMainIndex], 1);
+	}
+	struct ScopedGoToActiveFlag {
+		int idx;
+		~ScopedGoToActiveFlag() {
+			if (idx >= 0 && idx < MAX_HWND) {
+				InterlockedExchange(&g_isGoToActive[idx], 0);
+			}
+		}
+	};
+	ScopedGoToActiveFlag scopedGoToActiveFlag{ goToMainIndex };
 	long startTime = dm->GetTime();
 	long lastX = *currentPlayerLocation;
 	long lastXMoveTime = startTime;
