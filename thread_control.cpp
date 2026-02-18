@@ -153,7 +153,7 @@ void ThreadPause(long index)
 		return;
 	}
 
-	SPUtils::ReleaseAllKeysFastKeyboardOnly();
+	SPUtils::ReleaseAllKeysFastKeyboardOnlySkipEnter();
 
 	// Ö÷
 	if (g_info[index].thread_state == State_Runing || g_info[index].thread_state == State_Resuming)
