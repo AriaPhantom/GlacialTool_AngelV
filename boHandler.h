@@ -60,7 +60,7 @@ bool isInRange(int targetX, int targetY, int* playerCoords, long wantedRange);
 void goToDirection(long index, const TCHAR* direction, int distance, bool rune = false);
 void goUp(long index, long distance, long wait = 800);
 void goDown(long index, long distance, long downoverride, bool rune);
-void goTo(long index, long targetX, long targetY, long rangeFromCoords, bool isRune = false, long upoverride = 500, long downoverride = 600, bool randomWalk = false, long rangeY = 0);
+void goTo(long index, long targetX, long targetY, long rangeFromCoords, bool isRune = false, long upoverride = 500, long downoverride = 600, bool randomWalk = false, long rangeY = 0, bool preciseLock = false, long preciseMaxWaitMs = 240, long precisePollMs = 60, int preciseStableCount = 2);
 
 void rightJump(long index);
 

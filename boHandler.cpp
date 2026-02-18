@@ -750,6 +750,52 @@ void JumpAttack(long index, bool rune) {
 	}
 }
 
+
+bool WaitForTargetLock(long index, long targetX, long targetY, long rangeX, long rangeY, long maxWaitMs, long pollMs, int stableCount) {
+	sptool* dm = g_info[index].dm;
+	if (dm == NULL || maxWaitMs <= 0 || pollMs <= 0) {
+		return false;
+	}
+
+	int required = stableCount < 1 ? 1 : stableCount;
+	int* initialCoords = gMonitorInstance.getPlayerCoords();
+	int lastX = *initialCoords;
+	int lastY = *(initialCoords + 1);
+	bool seenCoordChange = false;
+	int nearStable = 0;
+	long startTime = dm->GetTime();
+
+	while (gMonitorInstance.status > 0 && dm->GetTime() - startTime < maxWaitMs) {
+		ScriptDelay(index, pollMs);
+
+		int* currentCoords = gMonitorInstance.getPlayerCoords();
+		int currentX = *currentCoords;
+		int currentY = *(currentCoords + 1);
+
+		if (currentX != lastX || currentY != lastY) {
+			seenCoordChange = true;
+		}
+
+		if (currentX > 0 && currentY > 0 &&
+			abs(targetX - currentX) <= rangeX &&
+			abs(targetY - currentY) <= rangeY) {
+			if (seenCoordChange || dm->GetTime() - startTime >= (pollMs * 2)) {
+				nearStable++;
+				if (nearStable >= required) {
+					return true;
+				}
+			}
+		}
+		else {
+			nearStable = 0;
+		}
+
+		lastX = currentX;
+		lastY = currentY;
+	}
+
+	return false;
+}
 void goToDirection(long index, const TCHAR* direction, int distance, bool rune) {
 	sptool* dm = g_info[index].dm;
 
@@ -853,7 +899,7 @@ void rightJump(long index) {
 	ScriptDelay(index, 500);
 }
 
-void goTo(long index, long targetX, long targetY, long rangeFromCoords, bool isRune, long upoverride, long downoverride, bool randomWalk, long rangeY) {
+void goTo(long index, long targetX, long targetY, long rangeFromCoords, bool isRune, long upoverride, long downoverride, bool randomWalk, long rangeY, bool preciseLock, long preciseMaxWaitMs, long precisePollMs, int preciseStableCount) {
 	long WANTED_RANGE = rangeFromCoords;
 	long WANTED_RANGEY = max(rangeFromCoords, rangeY);
 	int* currentPlayerLocation = gMonitorInstance.getPlayerCoords();
@@ -955,6 +1001,12 @@ void goTo(long index, long targetX, long targetY, long rangeFromCoords, bool isR
 		}
 	}
 
+
+	if (preciseLock && gMonitorInstance.status > 0) {
+		long lockRangeX = max((long)0, WANTED_RANGE);
+		long lockRangeY = max((long)0, WANTED_RANGEY);
+		WaitForTargetLock(index, targetX, targetY, lockRangeX, lockRangeY, preciseMaxWaitMs, precisePollMs, preciseStableCount);
+	}
 }
 
 void cashShopTour(long index) {
@@ -1803,15 +1855,8 @@ void ForestMap(long index) {
 				keyUp(index, "left");
 				ScriptDelay(index, 450);
 			}
-			if (gMonitorInstance.status) { goTo(index, 17, 127, 5, true); }
-			if (gMonitorInstance.status) { ScriptDelay(index, 30); }
-			if (gMonitorInstance.status) { goTo(index, 17, 127, 3, true); }
-			if (gMonitorInstance.status) { ScriptDelay(index, 30); }
-			if (gMonitorInstance.status) { goTo(index, 17, 127, 1, true); }
-			if (gMonitorInstance.status) { ScriptDelay(index, 50); }
-			if (gMonitorInstance.status) { goTo(index, 17, 127, 0, true); }
-			if (gMonitorInstance.status) { ScriptDelay(index, 100); }
-			if (gMonitorInstance.status) { goTo(index, 17, 127, 0, true); }
+			// rope precision: single precise goTo, keep up as separate action
+ if (gMonitorInstance.status) { goTo(index, 17, 127, 1, true, 500, 600, false, 0, true, 420, 60, 2); }
 			if (gMonitorInstance.status) { holdKey(index, "up", 100, 133); }
 		}
 		if (gMonitorInstance.status) { ScriptDelay(index, 350); }
@@ -1941,15 +1986,8 @@ void Forest3Map(long index) {
 			ScriptDelay(index, 350);
 		}
 
-		if (gMonitorInstance.status) { goTo(index, 26, 124, 3, true); }
-		if (gMonitorInstance.status) { ScriptDelay(index, 30); }
-		if (gMonitorInstance.status) { goTo(index, 26, 124, 3, true); }
-		if (gMonitorInstance.status) { ScriptDelay(index, 30); }
-		if (gMonitorInstance.status) { goTo(index, 26, 124, 1, true); }
-		if (gMonitorInstance.status) { ScriptDelay(index, 50); }
-		if (gMonitorInstance.status) { goTo(index, 26, 124, 0, true); }
-		if (gMonitorInstance.status) { ScriptDelay(index, 100); }
-		if (gMonitorInstance.status) { goTo(index, 26, 124, 0, true); }
+		// rope precision: single precise goTo, keep up as separate action
+ if (gMonitorInstance.status) { goTo(index, 26, 124, 1, true, 500, 600, false, 0, true, 420, 60, 2); }
 		if (gMonitorInstance.status) { holdKey(index, "up", 100, 133); }
 
 		if (gMonitorInstance.status) { ScriptDelay(index, 350); }
