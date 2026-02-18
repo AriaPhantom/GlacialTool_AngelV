@@ -84,5 +84,9 @@ void   ThreadNotifyUI_Post(long notify_code,long index);
 // 同步通知UI
 // 这个接口是唯一的一个多线程安全的接口,一般用来脚本线程给UI通知信息，这个是同步接口，调用后一直等待,直到UI处理完毕
 void   ThreadNotifyUI_Send(long notify_code,long index);
+// State-change wait/signal helpers used by ScriptDelay to avoid pause spin loops.
+void   ThreadSignalStateChanged(long index);
+bool   ThreadWaitStateSignal(long index, DWORD timeout_ms);
+
 
 #endif

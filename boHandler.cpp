@@ -89,7 +89,7 @@ constexpr ULONGLONG kFriendGuildCheckIntervalMs = 500;
 constexpr ULONGLONG kHuangmenCheckIntervalMs = 1000;
 constexpr ULONGLONG kBossCheckIntervalMs = 2000;
 constexpr ULONGLONG kRuneCheckIntervalMs = 3000;
-constexpr ULONGLONG kPlayerCoordCheckIntervalMs = 100;
+constexpr ULONGLONG kPlayerCoordCheckIntervalMs = 50;
 constexpr ULONGLONG kPlayerCoordCheckIdleIntervalMs = 250;
 constexpr ULONGLONG kWhiteCheckIntervalMs = 200;
 ULONGLONG g_lastOtherPlayerCheckMs[MAX_HWND] = {};
@@ -170,8 +170,9 @@ bool GetMiniMapTemplateCached(const std::wstring& path, cv::Mat& outTemplate) {
 
 	{
 		std::lock_guard<std::mutex> lock(s_templateCacheMutex);
-		s_templateCache[path] = loaded;
-		outTemplate = s_templateCache[path];
+		auto& entry = s_templateCache[path];
+		entry = std::move(loaded);
+		outTemplate = entry;
 	}
 	return !outTemplate.empty();
 }
@@ -197,7 +198,7 @@ bool CaptureMiniMapSnapshot(long index, MiniMapSnapshot& outSnapshot) {
 		cv::cvtColor(captured, captured, cv::COLOR_GRAY2BGR);
 	}
 
-	outSnapshot.image = captured;
+	outSnapshot.image = std::move(captured);
 	outSnapshot.valid = !outSnapshot.image.empty() && outSnapshot.image.channels() == 3;
 	return outSnapshot.valid;
 }
@@ -207,6 +208,8 @@ bool FindIconInMiniMapSnapshot(const MiniMapSnapshot& snapshot, const TCHAR* ico
 	outY = -1;
 	if (!snapshot.valid || snapshot.image.empty()) return false;
 
+	thread_local cv::Mat s_miniMapMatchResult;
+
 	std::vector<std::wstring> iconPaths = SplitIconPaths(iconPathList);
 	for (const std::wstring& iconPath : iconPaths) {
 		cv::Mat templateMat;
@@ -215,14 +218,16 @@ bool FindIconInMiniMapSnapshot(const MiniMapSnapshot& snapshot, const TCHAR* ico
 		if (snapshot.image.cols < templateMat.cols || snapshot.image.rows < templateMat.rows) continue;
 		if (snapshot.image.channels() != templateMat.channels()) continue;
 
-		cv::Mat result;
-		cv::matchTemplate(snapshot.image, templateMat, result, cv::TM_CCOEFF_NORMED);
+		const int resultRows = snapshot.image.rows - templateMat.rows + 1;
+		const int resultCols = snapshot.image.cols - templateMat.cols + 1;
+		s_miniMapMatchResult.create(resultRows, resultCols, CV_32FC1);
+		cv::matchTemplate(snapshot.image, templateMat, s_miniMapMatchResult, cv::TM_CCOEFF_NORMED);
 
 		double minVal = 0.0;
 		double maxVal = 0.0;
 		cv::Point minLoc;
 		cv::Point maxLoc;
-		cv::minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc);
+		cv::minMaxLoc(s_miniMapMatchResult, &minVal, &maxVal, &minLoc, &maxLoc);
 		if (maxVal >= sim) {
 			outX = maxLoc.x + kMiniMapTopLeftX;
 			outY = maxLoc.y + kMiniMapTopLeftY;
@@ -358,7 +363,8 @@ void gMonitorCheck(long index, long count)
 		runOtherPlayerCheck ||
 		(autoRuneEnabled && runRuneCheck && *gMonitorInstance.getRuneCoords() == -1) ||
 		(huangmenEnabled && runHuangmenCheck) ||
-		(friendGuildEnabled && runFriendGuildCheck);
+		(friendGuildEnabled && runFriendGuildCheck) ||
+		(whiteDetectEnabled && runWhiteCheck);
 	if (needMiniMapSnapshot) {
 		CaptureMiniMapSnapshot(index, miniMapSnapshot);
 	}

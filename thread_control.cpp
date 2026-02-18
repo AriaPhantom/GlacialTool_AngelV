@@ -10,6 +10,23 @@ extern HWND   g_main_hwnd;
 extern void UpdateUI(long index,long action);
 
 ThreadInfo g_info[MAX_HWND * 3];
+static HANDLE g_threadStateEvents[MAX_HWND * 3] = { 0 };
+
+static HANDLE GetThreadStateEvent(long index)
+{
+	if (index < 0 || index >= MAX_HWND * 3)
+	{
+		return NULL;
+	}
+
+	if (g_threadStateEvents[index] == NULL)
+	{
+		g_threadStateEvents[index] = CreateEvent(NULL, FALSE, FALSE, NULL);
+	}
+
+	return g_threadStateEvents[index];
+}
+
 
 static void ThreadReset(long index)
 {
@@ -54,6 +71,8 @@ void   ThreadInit()
 	for (int i = 0;i < MAX_HWND * 3;++i)
 	{
 		ThreadReset(i);
+		HANDLE ev = GetThreadStateEvent(i);
+		if (ev) ResetEvent(ev);
 	}
 }
 
@@ -151,6 +170,9 @@ void ThreadPause(long index)
 	}
 
 	Log(_T("ÔÝÍ£ Ö÷ÐòºÅ:%d"),index);
+	ThreadSignalStateChanged(index);
+	ThreadSignalStateChanged(index + MAX_HWND);
+
 	UpdateUI(index,UI_UPDATE);
 }
 
@@ -182,6 +204,9 @@ void ThreadResume(long index)
 	}
 
 	Log(_T("»Ö¸´ Ö÷ÐòºÅ:%d"),index);
+	ThreadSignalStateChanged(index);
+	ThreadSignalStateChanged(index + MAX_HWND);
+
 	UpdateUI(index,UI_UPDATE);
 }
 
@@ -226,6 +251,10 @@ void ThreadSetExitState(long index)
 	{
 		g_info[index + MAX_HWND * 2].dm->SetExitThread(1);
 	}
+	ThreadSignalStateChanged(index);
+	ThreadSignalStateChanged(index + MAX_HWND);
+	ThreadSignalStateChanged(index + MAX_HWND * 2);
+
 	
 	UpdateUI(index,UI_UPDATE);
 }
@@ -381,4 +410,28 @@ void  ThreadNotifyUI_Post(long notify_code,long index)
 void  ThreadNotifyUI_Send(long notify_code,long index)
 {
 	SendMessage(g_main_hwnd,WM_NOTIFY_UI,(WPARAM)notify_code,(LPARAM)index);
+}
+void ThreadSignalStateChanged(long index)
+{
+	HANDLE ev = GetThreadStateEvent(index);
+	if (ev)
+	{
+		SetEvent(ev);
+	}
+}
+
+bool ThreadWaitStateSignal(long index, DWORD timeout_ms)
+{
+	HANDLE ev = GetThreadStateEvent(index);
+	if (ev == NULL)
+	{
+		if (timeout_ms != INFINITE && timeout_ms > 0)
+		{
+			Sleep(timeout_ms);
+		}
+		return false;
+	}
+
+	DWORD waitRet = WaitForSingleObject(ev, timeout_ms);
+	return waitRet == WAIT_OBJECT_0;
 }

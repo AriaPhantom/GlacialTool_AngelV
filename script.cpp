@@ -66,7 +66,7 @@ void ScriptDelay(long index,long time)
 				_endthreadex(0);
 			}
 
-			Sleep(100);
+			ThreadWaitStateSignal(index, INFINITE);
 		}
 	}
 
