@@ -425,10 +425,10 @@ void gMonitorCheck(long index, long count)
 		if (detect_sum == 2)
 		{
 			gMonitorInstance.whiteIconUpdate = 0;
-			SetTaskState(index - MAX_HWND, _T("???????????"));
+			SetTaskState(index - MAX_HWND, _T("地图边界已更新"));
 		}
 		else {
-			SetTaskState(index - MAX_HWND, _T("????????????"));
+			SetTaskState(index - MAX_HWND, _T("地图边界更新失败"));
 		}
 	}
 
