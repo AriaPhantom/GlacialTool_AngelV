@@ -722,6 +722,12 @@ void press(long index, const TCHAR* key, int times, long delay) {
 	sptool* dm = g_info[index].dm;
 	for (size_t i = 0; i < times; i++)
 	{
+		// Pause hotkey can arrive between ScriptDelay checkpoints; block any extra key injection immediately.
+		if (g_info[index].is_pause ||
+			g_info[index].thread_state == State_Pausing ||
+			g_info[index].thread_state == State_Pause) {
+			break;
+		}
 		dm->KeyPressChar(key);
 		ScriptDelay(index, delay);
 	}

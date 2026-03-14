@@ -153,8 +153,6 @@ void ThreadPause(long index)
 		return;
 	}
 
-	SPUtils::ReleaseAllKeysFastKeyboardOnlySkipEnter();
-
 	// Ö÷
 	if (g_info[index].thread_state == State_Runing || g_info[index].thread_state == State_Resuming)
 	{
@@ -168,6 +166,9 @@ void ThreadPause(long index)
 		g_info[index+MAX_HWND].is_pause = TRUE;
 		g_info[index+MAX_HWND].thread_state = State_Pausing;
 	}
+
+	// Mark pause first to minimize the race window where a script can still inject one more key.
+	SPUtils::ReleaseAllKeysFastKeyboardOnlySkipEnter();
 
 	Log(_T("ÔÝÍ£ Ö÷ÐòºÅ:%d"),index);
 	ThreadSignalStateChanged(index);
