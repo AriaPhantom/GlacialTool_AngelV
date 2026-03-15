@@ -61,6 +61,7 @@ void   ThreadInit();
 
 // Æô¶¯
 BOOL   ThreadStart(long hwnd);
+BOOL   ThreadStartPendingAutoLogin();
 
 // ÔÝÍ£
 void   ThreadPause(long index);

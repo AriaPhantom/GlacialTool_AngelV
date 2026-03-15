@@ -890,6 +890,42 @@ bool AutoLogin_IsActive(long index) {
 	return g_loginRunning[mainIndex].load();
 }
 
+bool AutoLogin_RunStartup(long index) {
+	long mainIndex = NormalizeMainIndex(index);
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) return false;
+
+	SPUtils::ReleaseAllKeysFastKeyboardOnlySkipEnter();
+	gMonitorInstance.setRuneCoords(-1, -1);
+	g_loginNeedRestart[mainIndex].store(false);
+
+	if (g_loginPendingSinceMs[mainIndex].load() <= 0) {
+		g_loginPendingSinceMs[mainIndex].store(GetTime());
+	}
+
+	subSoftPause();
+	SetTaskState(mainIndex, _T("AUTO LOGIN"));
+
+	bool success = false;
+	for (int attempt = 0; attempt < 2 && !success; ++attempt) {
+		success = RunAutoLoginOnce(mainIndex);
+		if (!success) {
+			KillMapleStoryProcesses();
+			std::this_thread::sleep_for(std::chrono::seconds(3));
+		}
+	}
+
+	if (success) {
+		gMonitorInstance.whiteIconUpdate = 1;
+		g_loginPendingSinceMs[mainIndex].store(0);
+		g_loginNeedRestart[mainIndex].store(false);
+		SetTaskState(mainIndex, _T("AUTO LOGIN OK"));
+		return true;
+	}
+
+	SetTaskState(mainIndex, _T("AUTO LOGIN FAIL"));
+	return false;
+}
+
 long AutoLogin_GetLoginPendingMs(long index) {
 	long mainIndex = NormalizeMainIndex(index);
 	if (mainIndex < 0 || mainIndex >= MAX_HWND) return 0;

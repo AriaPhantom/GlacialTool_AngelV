@@ -141,6 +141,56 @@ BOOL   ThreadStart(long hwnd)
 	return TRUE;
 }
 
+BOOL ThreadStartPendingAutoLogin()
+{
+	long index = ThreadGetPos();
+	if (index == -1)
+	{
+		Log(_T("No free slot for cold-start auto login"));
+		return FALSE;
+	}
+
+	g_info[index].handle = NULL;
+	g_info[index].hwnd = 0;
+	g_info[index].pid = 0;
+	g_info[index].dm = NULL;
+	g_info[index].is_pause = FALSE;
+	g_info[index].is_stop = FALSE;
+	g_info[index].thread_state = State_Starting;
+
+	g_info[index+MAX_HWND].handle = NULL;
+	g_info[index+MAX_HWND].hwnd = 0;
+	g_info[index+MAX_HWND].pid = 0;
+	g_info[index+MAX_HWND].dm = NULL;
+	g_info[index+MAX_HWND].is_pause = FALSE;
+	g_info[index+MAX_HWND].is_stop = FALSE;
+	g_info[index+MAX_HWND].thread_state = State_Inactive;
+
+	g_info[index + MAX_HWND * 2].handle = NULL;
+	g_info[index + MAX_HWND * 2].hwnd = 0;
+	g_info[index + MAX_HWND * 2].pid = 0;
+	g_info[index + MAX_HWND * 2].dm = NULL;
+	g_info[index + MAX_HWND * 2].is_pause = FALSE;
+	g_info[index + MAX_HWND * 2].is_stop = FALSE;
+	g_info[index + MAX_HWND * 2].thread_state = State_Inactive;
+
+	UpdateUI(index,UI_ADD);
+
+	g_info[index].handle = (HANDLE)_beginthreadex(0, 0, MainThread, (PVOID)(DWORD_PTR)index, 0, 0);
+	if (g_info[index].handle == NULL)
+	{
+		UpdateUI(index,UI_DELETE);
+		ThreadReset(index);
+		ThreadReset(index + MAX_HWND);
+		ThreadReset(index + MAX_HWND * 2);
+		Log(_T("Create cold-start auto-login thread failed"));
+		return FALSE;
+	}
+
+	Log(_T("Start cold-start auto-login flow, main index:%d"),index);
+	return TRUE;
+}
+
 void ThreadPause(long index)
 {
 	if (index < 0 || index >= MAX_HWND)

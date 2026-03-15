@@ -7,6 +7,8 @@
 #include "AutoLogin.h"
 #include "SPUtils.h"
 
+extern int GetAutoLogin();
+
 
 void DoWork(long index);
 unsigned WINAPI SubThread(PVOID pParam);
@@ -97,6 +99,7 @@ unsigned WINAPI MainThread(PVOID pParam)
 {
 	long index = (long)(DWORD_PTR)pParam;
 	sptool* dm;
+	bool startupAutoLogin = false;
 
 	// 初始化当前线程com组件为MTA模式
 	CoInitializeEx (NULL,0);
@@ -123,6 +126,26 @@ unsigned WINAPI MainThread(PVOID pParam)
 	dm->SetPath(_T("c:\\sptool"));
 	dm->EnableRealMouse(2, 6, 62);
 	dm->SetShowErrorMsg(0);
+
+	HWND hwnd = reinterpret_cast<HWND>(static_cast<LONG_PTR>(g_info[index].hwnd));
+	if ((!hwnd || !IsWindow(hwnd)) && GetAutoLogin())
+	{
+		startupAutoLogin = true;
+		if (!AutoLogin_RunStartup(index))
+		{
+			Log(_T("Main: cold-start auto login failed"));
+			ThreadNotifyUI_Post(NOTIFY_STOP,index);
+			return 0;
+		}
+		hwnd = reinterpret_cast<HWND>(static_cast<LONG_PTR>(g_info[index].hwnd));
+	}
+
+	if (!hwnd || !IsWindow(hwnd))
+	{
+		Log(_T("Main: no valid window after startup binding"));
+		ThreadNotifyUI_Post(NOTIFY_STOP,index);
+		return 0;
+	}
 
 	// 强制解绑
 	// dm->ForceUnBindWindow(dm->IsBind(g_info[index].hwnd));
@@ -186,6 +209,10 @@ unsigned WINAPI MainThread(PVOID pParam)
 
 
 	AutoLogin_StartDisconnectWatcher(index);
+	if (startupAutoLogin)
+	{
+		subSoftStart();
+	}
 
 	startBo(index);
 	

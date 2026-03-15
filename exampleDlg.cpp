@@ -95832,20 +95832,38 @@ void CexampleDlg::OnBnClickedButtonStartall()
 	{
 		hwnds = g_dm->EnumWindow(0, _T("MapleStory"), _T("MapleStoryClass"), 1 + 8);
 	}
+
+	BOOL started = FALSE;
 	if (hwnds.GetLength() == 0)
 	{
-		::MessageBox(NULL, _T("枚举窗口失败，未找到目标窗口"), _T("错误"), MB_OK);
-		return;
+		if (GetAutoLogin())
+		{
+			started = ThreadStartPendingAutoLogin();
+		}
+		else
+		{
+			::MessageBox(NULL, _T("??????????????"), _T("??"), MB_OK);
+			return;
+		}
 	}
-
-	long hwnd = _tstoi(hwnds);
-	if (!ThreadStart(hwnd))
+	else
 	{
-		g_dm->TerminateProcess(g_dm->GetWindowProcessId(hwnd));
+		long hwnd = _tstoi(hwnds);
+		started = ThreadStart(hwnd);
+		if (!started)
+		{
+			g_dm->TerminateProcess(g_dm->GetWindowProcessId(hwnd));
+		}
 	}
 
-	subSoftStart();
-	detectionStart();
+	if (!started)
+		return;
+
+	if (hwnds.GetLength() != 0)
+	{
+		subSoftStart();
+		detectionStart();
+	}
 }
 
 void CexampleDlg::OnBnClickedButtonStopall()
