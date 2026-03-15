@@ -448,6 +448,8 @@
 
 #include "resource.h"
 
+HWND findMSWindow();
+
 
 
 
@@ -95827,39 +95829,40 @@ int GetWuyaInputMode()
 
 void CexampleDlg::OnBnClickedButtonStartall()
 {
-	CString hwnds = g_dm->EnumWindowByProcess(_T("MapleStory.exe"), NULL, _T("MapleStoryClass"), 1 + 8 + 16);
-	if (hwnds.GetLength() == 0)
-	{
-		hwnds = g_dm->EnumWindow(0, _T("MapleStory"), _T("MapleStoryClass"), 1 + 8);
-	}
-
-	BOOL started = FALSE;
-	if (hwnds.GetLength() == 0)
+	HWND hwnds = findMSWindow();
+	bool startPendingAutoLogin = false;
+	if (hwnds == 0)
 	{
 		if (GetAutoLogin())
 		{
-			started = ThreadStartPendingAutoLogin();
+			startPendingAutoLogin = true;
 		}
 		else
 		{
-			::MessageBox(NULL, _T("??????????????"), _T("??"), MB_OK);
+			CString strMessage;
+			strMessage.Format(_T("\u627E\u4E0D\u5230\u7A97\u53E3\uFF0C\u4EE3\u7801: %p"), hwnds);
+			AfxMessageBox(strMessage, MB_OK | MB_ICONERROR);
 			return;
 		}
 	}
+
+	BOOL started = FALSE;
+	if (startPendingAutoLogin)
+	{
+		started = ThreadStartPendingAutoLogin();
+	}
 	else
 	{
-		long hwnd = _tstoi(hwnds);
-		started = ThreadStart(hwnd);
-		if (!started)
-		{
-			g_dm->TerminateProcess(g_dm->GetWindowProcessId(hwnd));
-		}
+		long hwnd_long = static_cast<long>(reinterpret_cast<LONG_PTR>(hwnds));
+		started = ThreadStart(hwnd_long);
 	}
 
 	if (!started)
+	{
 		return;
+	}
 
-	if (hwnds.GetLength() != 0)
+	if (!startPendingAutoLogin)
 	{
 		subSoftStart();
 		detectionStart();
