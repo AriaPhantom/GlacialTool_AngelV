@@ -192,7 +192,7 @@ unsigned WINAPI MainThread(PVOID pParam)
 	g_info[index + MAX_HWND * 2].thread_state = State_Starting;
 
 	// 通知UI,副线程开始创建了
-	ThreadNotifyUI_Post(NOTIFY_UPDATE, index + MAX_HWND);
+	ThreadNotifyUI_Post(NOTIFY_UPDATE, index + MAX_HWND * 2);
 
 	// 创建喵码线程
 	g_info[index + MAX_HWND * 2].handle = (HANDLE)_beginthreadex(0, 0, MiaoThread, (PVOID)(DWORD_PTR)(index + MAX_HWND * 2), 0, 0);

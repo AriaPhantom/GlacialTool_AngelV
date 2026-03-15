@@ -164,7 +164,7 @@ BOOL ThreadStartPendingAutoLogin()
 	g_info[index+MAX_HWND].dm = NULL;
 	g_info[index+MAX_HWND].is_pause = FALSE;
 	g_info[index+MAX_HWND].is_stop = FALSE;
-	g_info[index+MAX_HWND].thread_state = State_Inactive;
+	g_info[index+MAX_HWND].thread_state = State_Starting;
 
 	g_info[index + MAX_HWND * 2].handle = NULL;
 	g_info[index + MAX_HWND * 2].hwnd = 0;
@@ -172,7 +172,7 @@ BOOL ThreadStartPendingAutoLogin()
 	g_info[index + MAX_HWND * 2].dm = NULL;
 	g_info[index + MAX_HWND * 2].is_pause = FALSE;
 	g_info[index + MAX_HWND * 2].is_stop = FALSE;
-	g_info[index + MAX_HWND * 2].thread_state = State_Inactive;
+	g_info[index + MAX_HWND * 2].thread_state = State_Starting;
 
 	UpdateUI(index,UI_ADD);
 
@@ -431,9 +431,20 @@ BOOL   ThreadRestart(long index)
 	g_info[index].thread_state = State_Starting;
 
 	g_info[index+MAX_HWND].handle = NULL;
+	g_info[index+MAX_HWND].hwnd = g_info[index].hwnd;
+	g_info[index+MAX_HWND].pid = g_info[index].pid;
+	g_info[index+MAX_HWND].dm = NULL;
 	g_info[index+MAX_HWND].is_pause = FALSE;
 	g_info[index+MAX_HWND].is_stop = FALSE;
-	g_info[index+MAX_HWND].thread_state = State_Inactive;
+	g_info[index+MAX_HWND].thread_state = State_Starting;
+
+	g_info[index + MAX_HWND * 2].handle = NULL;
+	g_info[index + MAX_HWND * 2].hwnd = g_info[index].hwnd;
+	g_info[index + MAX_HWND * 2].pid = g_info[index].pid;
+	g_info[index + MAX_HWND * 2].dm = NULL;
+	g_info[index + MAX_HWND * 2].is_pause = FALSE;
+	g_info[index + MAX_HWND * 2].is_stop = FALSE;
+	g_info[index + MAX_HWND * 2].thread_state = State_Starting;
 
 	UpdateUI(index,UI_UPDATE);
 
@@ -444,6 +455,7 @@ BOOL   ThreadRestart(long index)
 		UpdateUI(index,UI_DELETE);
 		ThreadReset(index);
 		ThreadReset(index+MAX_HWND);
+		ThreadReset(index + MAX_HWND * 2);
 		Log(_T("创建线程失败"));
 		return FALSE;
 	}
