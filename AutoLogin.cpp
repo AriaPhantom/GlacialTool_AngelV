@@ -338,6 +338,13 @@ int ClampChannel(int channel) {
 	return channel;
 }
 
+void PressAutoLoginKey(long mainIndex, const wchar_t* key, int times, long delay) {
+	if (key == nullptr || *key == L'\0' || times <= 0) return;
+	ActivateWindow(mainIndex);
+	std::this_thread::sleep_for(std::chrono::milliseconds(60));
+	SPUtils::KeyPress(std::wstring(key), times, delay);
+}
+
 void RunPostLoginActions(long mainIndex) {
 	std::wstring keys = Trim(GetAutoLoginKeys());
 	if (keys.empty()) return;
@@ -627,24 +634,93 @@ bool WaitForIconBmpFirst(long mainIndex, const wchar_t* bmpPath, const wchar_t* 
 	return false;
 }
 
+bool WaitForStableWhite(long mainIndex, int timeoutMs, int stableMs, double sim,
+	long& outx, long& outy, const std::chrono::steady_clock::time_point& deadline) {
+	const auto start = std::chrono::steady_clock::now();
+	bool whiteVisible = false;
+	std::chrono::steady_clock::time_point whiteSince = start;
+
+	while (std::chrono::steady_clock::now() - start < std::chrono::milliseconds(timeoutMs)) {
+		if (std::chrono::steady_clock::now() > deadline) return false;
+
+		long x = -1, y = -1;
+		if (FindIconInWindow(mainIndex, whiteIcon, sim, x, y)) {
+			if (!whiteVisible) {
+				whiteVisible = true;
+				whiteSince = std::chrono::steady_clock::now();
+			}
+			outx = x;
+			outy = y;
+			auto stableElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+				std::chrono::steady_clock::now() - whiteSince).count();
+			if (stableElapsed >= stableMs) {
+				return true;
+			}
+		}
+		else {
+			whiteVisible = false;
+		}
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
+	}
+
+	return false;
+}
+
 bool WaitForPlayOrWhite(long mainIndex, int timeoutMs, long& outx, long& outy, bool& playFound, bool& whiteFound,
 	const std::chrono::steady_clock::time_point& deadline) {
 	playFound = false;
 	whiteFound = false;
 	auto start = std::chrono::steady_clock::now();
+	bool playVisible = false;
+	bool whiteVisible = false;
+	std::chrono::steady_clock::time_point playSince = start;
+	std::chrono::steady_clock::time_point whiteSince = start;
+	const int playStableMs = 900;
+	const int whiteStableMs = 500;
 	while (std::chrono::steady_clock::now() - start < std::chrono::milliseconds(timeoutMs)) {
 		if (std::chrono::steady_clock::now() > deadline) return false;
-		if (FindIconInWindowBmpFirst(mainIndex, kPlayIconPath, kPlayIconFallbackPath, 0.9, outx, outy)) {
-			playFound = true;
-			return true;
+		long px = -1, py = -1;
+		if (FindIconInWindowBmpFirst(mainIndex, kPlayIconPath, kPlayIconFallbackPath, 0.9, px, py)) {
+			if (!playVisible) {
+				playVisible = true;
+				playSince = std::chrono::steady_clock::now();
+			}
+			auto playStableElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+				std::chrono::steady_clock::now() - playSince).count();
+			if (playStableElapsed >= playStableMs) {
+				playFound = true;
+				outx = px;
+				outy = py;
+				return true;
+			}
 		}
-		if (FindIconInWindow(mainIndex, whiteIcon, 0.9, outx, outy)) {
-			whiteFound = true;
-			return true;
+		else {
+			playVisible = false;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(150));
+
+		long wx = -1, wy = -1;
+		if (FindIconInWindow(mainIndex, whiteIcon, 0.9, wx, wy)) {
+			if (!whiteVisible) {
+				whiteVisible = true;
+				whiteSince = std::chrono::steady_clock::now();
+			}
+			auto whiteStableElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+				std::chrono::steady_clock::now() - whiteSince).count();
+			if (whiteStableElapsed >= whiteStableMs) {
+				whiteFound = true;
+				outx = wx;
+				outy = wy;
+				return true;
+			}
+		}
+		else {
+			whiteVisible = false;
+		}
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
 	}
-	return true;
+	return false;
 }
 
 bool TryQuickLoginClick(long mainIndex) {
@@ -722,7 +798,7 @@ bool HandleLoginPrompts(long mainIndex, const std::chrono::steady_clock::time_po
 		}
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 		SelectChannel(mainIndex, deadline);
-		press(mainIndex, L"enter", 2, 320);
+		PressAutoLoginKey(mainIndex, L"enter", 2, 320);
 		std::this_thread::sleep_for(std::chrono::seconds(3));
 	}
 
@@ -745,14 +821,16 @@ bool HandleLoginPrompts(long mainIndex, const std::chrono::steady_clock::time_po
 	}
 	std::this_thread::sleep_for(std::chrono::milliseconds(300));
 
-	press(mainIndex, L"enter", 3, 300);
+	PressAutoLoginKey(mainIndex, L"enter", 2, 300);
+	long wx = -1, wy = -1;
+	WaitForStableWhite(mainIndex, 80000, 500, 0.9, wx, wy, deadline);
 	return true;
 }
 
 bool FinalizeLogin(long mainIndex, const std::chrono::steady_clock::time_point& deadline) {
 	long x = -1, y = -1;
-	bool whiteFound = WaitForIcon(mainIndex, whiteIcon, 60000, 0.9, x, y, deadline);
-	std::this_thread::sleep_for(std::chrono::seconds(2));
+	bool whiteFound = WaitForStableWhite(mainIndex, 60000, 500, 0.9, x, y, deadline);
+	std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
 	if (whiteFound) {
 		press(mainIndex, L"a", 2, 120);
