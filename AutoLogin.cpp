@@ -635,10 +635,19 @@ bool WaitForIconBmpFirst(long mainIndex, const wchar_t* bmpPath, const wchar_t* 
 }
 
 bool WaitForStableWhite(long mainIndex, int timeoutMs, int stableMs, double sim,
-	long& outx, long& outy, const std::chrono::steady_clock::time_point& deadline) {
+	long& outx, long& outy, const std::chrono::steady_clock::time_point& deadline,
+	int pollMs = 200, int initialDelayMs = 0) {
 	const auto start = std::chrono::steady_clock::now();
+	const int safePollMs = std::max(10, pollMs);
+	if (initialDelayMs > 0) {
+		auto delayStart = std::chrono::steady_clock::now();
+		while (std::chrono::steady_clock::now() - delayStart < std::chrono::milliseconds(initialDelayMs)) {
+			if (std::chrono::steady_clock::now() > deadline) return false;
+			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		}
+	}
 	bool whiteVisible = false;
-	std::chrono::steady_clock::time_point whiteSince = start;
+	std::chrono::steady_clock::time_point whiteSince = std::chrono::steady_clock::now();
 
 	while (std::chrono::steady_clock::now() - start < std::chrono::milliseconds(timeoutMs)) {
 		if (std::chrono::steady_clock::now() > deadline) return false;
@@ -661,7 +670,7 @@ bool WaitForStableWhite(long mainIndex, int timeoutMs, int stableMs, double sim,
 			whiteVisible = false;
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(200));
+		std::this_thread::sleep_for(std::chrono::milliseconds(safePollMs));
 	}
 
 	return false;
@@ -823,7 +832,7 @@ bool HandleLoginPrompts(long mainIndex, const std::chrono::steady_clock::time_po
 
 	PressAutoLoginKey(mainIndex, L"enter", 2, 300);
 	long wx = -1, wy = -1;
-	WaitForStableWhite(mainIndex, 80000, 500, 0.9, wx, wy, deadline);
+	WaitForStableWhite(mainIndex, 80000, 500, 0.9, wx, wy, deadline, 50, 4000);
 	return true;
 }
 
