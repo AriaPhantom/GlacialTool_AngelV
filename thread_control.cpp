@@ -287,6 +287,8 @@ void ThreadSetExitState(long index)
 	g_info[index + MAX_HWND * 2].is_stop = TRUE;
 	g_info[index + MAX_HWND * 2].thread_state = State_Stoping;
 
+	SPUtils::ReleaseAllKeysFastKeyboardOnlySkipEnter();
+
 	// 插件同样也设置结束标记
 	if (g_info[index].dm)
 	{
