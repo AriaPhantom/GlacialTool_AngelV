@@ -191,6 +191,7 @@
 
 
 #include "example.h"
+#include "SPUtils.h"
 
 
 
@@ -95895,6 +95896,42 @@ void CexampleDlg::OnBnClickedButtonStopall()
 		long index = (long)item->data(Qt::UserRole).toLongLong();
 		ThreadSetExitState(index);
 	}
+
+	int mark_index = item_count - 1;
+	while (mark_index >= 0)
+	{
+		QTableWidgetItem* item = m_statusList->item(mark_index, 0);
+		if (item == NULL)
+		{
+			--mark_index;
+			continue;
+		}
+
+		long index = (long)item->data(Qt::UserRole).toLongLong();
+		if (index >= 0 && index < MAX_HWND)
+		{
+			if (g_info[index].handle != NULL &&
+				(g_info[index].thread_state == State_Runing || g_info[index].thread_state == State_Resuming))
+			{
+				g_info[index].is_pause = TRUE;
+				g_info[index].thread_state = State_Pausing;
+			}
+
+			long subIndex = index + MAX_HWND;
+			if (g_info[subIndex].handle != NULL &&
+				(g_info[subIndex].thread_state == State_Runing || g_info[subIndex].thread_state == State_Resuming))
+			{
+				g_info[subIndex].is_pause = TRUE;
+				g_info[subIndex].thread_state = State_Pausing;
+			}
+		}
+
+		--mark_index;
+	}
+
+	// Pre-mark every running slot before the per-window pause loop so "Pause All"
+	// doesn't leave the later rows one more chance to inject Enter/confirm keys.
+	SPUtils::ReleaseAllKeysFastKeyboardOnlySkipEnter();
 
 	int list_index = item_count - 1;
 	while (list_index >= 0)

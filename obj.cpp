@@ -4,6 +4,7 @@
 
 #include "SPUtils.h"
 #include "CP.h"
+#include "thread_control.h"
 
 #include <algorithm>
 #include <atomic>
@@ -19,6 +20,22 @@ namespace {
 
 HWND LongToHwnd(long hwnd_long) {
 	return reinterpret_cast<HWND>(static_cast<intptr_t>(hwnd_long));
+}
+
+bool IsPauseOrStopPendingForBoundWindow(long boundHwnd, long boundPid) {
+	for (long i = 0; i < MAX_HWND * 3; ++i) {
+		if (g_info[i].hwnd != boundHwnd) continue;
+		if (boundPid != 0 && g_info[i].pid != 0 && g_info[i].pid != boundPid) continue;
+
+		if (g_info[i].is_stop ||
+			g_info[i].thread_state == State_Stoping ||
+			g_info[i].is_pause ||
+			g_info[i].thread_state == State_Pausing ||
+			g_info[i].thread_state == State_Pause) {
+			return true;
+		}
+	}
+	return false;
 }
 
 std::wstring ToWString(const TCHAR* t) {
@@ -540,6 +557,7 @@ long sptool::KeyDownChar(const TCHAR* key) {
 	DWORD pid = 0;
 	GetWindowThreadProcessId(hwnd, &pid);
 	if (m_boundPid == 0 || pid == 0 || static_cast<long>(pid) != m_boundPid) return 0;
+	if (IsPauseOrStopPendingForBoundWindow(m_boundHwnd, m_boundPid)) return 0;
 	SPUtils::KeyDown(ToWString(key));
 	return 1;
 }
@@ -560,6 +578,7 @@ long sptool::KeyPressChar(const TCHAR* key) {
 	DWORD pid = 0;
 	GetWindowThreadProcessId(hwnd, &pid);
 	if (m_boundPid == 0 || pid == 0 || static_cast<long>(pid) != m_boundPid) return 0;
+	if (IsPauseOrStopPendingForBoundWindow(m_boundHwnd, m_boundPid)) return 0;
 	SPUtils::KeyPress(ToWString(key), 1, 0);
 	return 1;
 }
