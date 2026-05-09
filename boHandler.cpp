@@ -1,2151 +1,4348 @@
-#include "stdafx.h"
+ï»¿#include "stdafx.h"
+
 #include "boHandler.h"
+
 #include "AutoLogin.h"
+
 #include "obj.h"
+
 #include "thread_control.h"
+
 #include "gMonitor.h"
+
 #include "runeData.h"
+
 #include "lodepng.h"
+
 #include "MiaoSender.h"
+
 #include "script.h"
+
 #include "RuAdvancing.h"
+
 #include "FileProc.h"
+
 #include "SPUtils.h"
+
 #include <sstream>
+
 #include <iostream>
+
 #include <string>
+
 #include <map>
+
 #include <mutex>
+
 #include <vector>
 
+
+
 gMonitor gMonitorInstance = gMonitor();
+
 MiaoSender miaoSenderInstance = MiaoSender();
+
 int rune_fail_time = 0;
+
 int guild_skill_count = 0;
-long oilTimeOut = 0;
 
-long buffTimeOut_buff_±¸ÓÃ1 = 0;
+long autoOilCooldownRemainingMs[MAX_HWND] = {};
+ULONGLONG autoOilLastOnlineTickMs[MAX_HWND] = {};
 
-long buffTimeOut_buff_×ê»ú = 0;
-long buffTimeOut_buff_·É½£ = 0;
-long buffTimeOut_buff_ÊÖÀ× = 0;
-long buffTimeOut_buff_ÂÖ»Ø = 0;
-long buffTimeOut_buff_Ğ¡Á¢³¡ = 0;
-long buffTimeOut_buff_´óÁ¢³¡ = 0;
-long buffTimeOut_buff_½£Óê = 0;
-long buffTimeOut_buff_´úÂë = 0;
-long buffTimeOut_buff_÷»×Ó = 0;
-long buffTimeOut_buff_ÄÜÁ¿²¹³ä = 0;
-long buffTimeOut_buff_°¬¶û´ïÏ´Ôè = 0;
-long buffTimeOut_buff_½ø½×Å®Éñ = 0;
-long buffTimeOut_buff_¼Å¾²ÂÒÎè = 0;
-long buffTimeOut_buff_·´¿¹·ÅÖÃ = 0;
-long buffTimeOut_buff_ºÚÇò = 0;
-long buffTimeOut_buff_¼ñÇ® = 0;
 
-long buffTimeOut_buff_Ö©Öë = 0;
-long buffTimeOut_buff_Ã×ÌØÀ­ = 0;
+
+long buffTimeOut_buff_å¤‡ç”¨1 = 0;
+
+
+
+long buffTimeOut_buff_é’»æœº = 0;
+
+long buffTimeOut_buff_é£å‰‘ = 0;
+
+long buffTimeOut_buff_æ‰‹é›· = 0;
+
+long buffTimeOut_buff_è½®å› = 0;
+
+long buffTimeOut_buff_å°ç«‹åœº = 0;
+
+long buffTimeOut_buff_å¤§ç«‹åœº = 0;
+
+long buffTimeOut_buff_å‰‘é›¨ = 0;
+
+long buffTimeOut_buff_ä»£ç  = 0;
+
+long buffTimeOut_buff_éª°å­ = 0;
+
+long buffTimeOut_buff_èƒ½é‡è¡¥å…… = 0;
+
+long buffTimeOut_buff_è‰¾å°”è¾¾æ´—æ¾¡ = 0;
+
+long buffTimeOut_buff_è¿›é˜¶å¥³ç¥ = 0;
+
+long buffTimeOut_buff_å¯‚é™ä¹±èˆ = 0;
+
+long buffTimeOut_buff_åæŠ—æ”¾ç½® = 0;
+
+long buffTimeOut_buff_é»‘çƒ = 0;
+
+long buffTimeOut_buff_æ¡é’± = 0;
+
+
+
+long buffTimeOut_buff_èœ˜è›› = 0;
+
+long buffTimeOut_buff_ç±³ç‰¹æ‹‰ = 0;
+
+
 
 long buffTimeOut_buff_MVP = 0;
-long buffTimeOut_buff_¹«Ô° = 0;
-long buffTimeOut_buff_µã»ğ = 0;
-long buffTimeOut_buff_ÆûÓÍ = 0;
-long buffTimeOut_buff_¾­ÑéÃØÒ©2h = 0;
-long buffTimeOut_buff_¾­ÑéÃØÒ©30 = 0;
-long buffTimeOut_buff_¾­Ñéexp30 = 0;
-long buffTimeOut_buff_¾­Ñéexp10 = 0;
+
+long buffTimeOut_buff_å…¬å›­ = 0;
+
+long buffTimeOut_buff_ç‚¹ç« = 0;
+
+long buffTimeOut_buff_æ±½æ²¹ = 0;
+
+long buffTimeOut_buff_ç»éªŒç§˜è¯2h = 0;
+
+long buffTimeOut_buff_ç»éªŒç§˜è¯30 = 0;
+
+long buffTimeOut_buff_ç»éªŒexp30 = 0;
+
+long buffTimeOut_buff_ç»éªŒexp10 = 0;
+
+
 
 long buffTimeOut_buff_bossChest = 0;
 
+
+
 void UpdateCoords(int* nums);
 
+
+
 extern int GetautoRuneSolver();
+
 extern int GetfriendPlayerNotification();
+
 extern int Gethunt();
+
 extern int Getmap();
+
 extern int GetEXP_PARK();
+
 extern int Getkuxing();
+
 extern int GethuangMen();
+
 extern int GetautoWealth();
+
 extern int GetExp10();
+
 extern int GetExp30();
+
 extern long GetExpBuffDuration();
+
 extern int GetexpPot();
+
 extern int GetautoOil();
+
 extern int Getignite();
+
 extern int GetWhiteDetect();
 
+
+
 namespace {
+
 constexpr int kMiniMapTopLeftX = 0;
+
 constexpr int kMiniMapTopLeftY = 0;
+
 constexpr int kMiniMapBottomRightX = 350;
+
 constexpr int kMiniMapBottomRightY = 300;
 
+
+
 constexpr int kWhiteRoomTopLeftX = 0;
+
 constexpr int kWhiteRoomTopLeftY = 0;
+
 constexpr int kWhiteRoomBottomRightX = 350;
+
 constexpr int kWhiteRoomBottomRightY = 300;constexpr ULONGLONG kOtherPlayerCheckIntervalMs = 500;
+
 constexpr ULONGLONG kFriendGuildCheckIntervalMs = 500;
+
 constexpr ULONGLONG kHuangmenCheckIntervalMs = 1000;
+
 constexpr ULONGLONG kBossCheckIntervalMs = 2000;
+
 constexpr ULONGLONG kRuneCheckIntervalMs = 3000;
+
 constexpr ULONGLONG kPlayerCoordCheckIntervalMs = 50;
+
 constexpr ULONGLONG kPlayerCoordCheckIdleIntervalMs = 250;
+
 constexpr ULONGLONG kWhiteCheckIntervalMs = 200;
+
 ULONGLONG g_lastOtherPlayerCheckMs[MAX_HWND] = {};
+
 ULONGLONG g_lastFriendGuildCheckMs[MAX_HWND] = {};
+
 ULONGLONG g_lastHuangmenCheckMs[MAX_HWND] = {};
+
 ULONGLONG g_lastBossCheckMs[MAX_HWND] = {};
+
 ULONGLONG g_lastRuneCheckMs[MAX_HWND] = {};
+
 ULONGLONG g_lastPlayerCoordCheckMs[MAX_HWND] = {};
+
 ULONGLONG g_lastWhiteCheckMs[MAX_HWND] = {};
+
 volatile LONG g_isGoToActive[MAX_HWND] = {};
+
 struct MiniMapSnapshot {
+
 	bool valid = false;
+
 	cv::Mat image;
+
 };
 
+
+
 std::wstring ToWideStringLocal(const TCHAR* value) {
+
 	if (value == nullptr) return std::wstring();
+
 #ifdef UNICODE
+
 	return std::wstring(value);
+
 #else
+
 	int size = MultiByteToWideChar(CP_ACP, 0, value, -1, nullptr, 0);
+
 	if (size <= 1) return std::wstring();
+
 	std::wstring result(static_cast<size_t>(size - 1), L'\0');
+
 	MultiByteToWideChar(CP_ACP, 0, value, -1, &result[0], size);
+
 	return result;
+
 #endif
+
 }
+
+
 
 std::string WideToAnsiLocal(const std::wstring& value) {
+
 	if (value.empty()) return std::string();
+
 	int size = WideCharToMultiByte(CP_ACP, 0, value.c_str(), -1, nullptr, 0, nullptr, nullptr);
+
 	if (size <= 1) return std::string();
+
 	std::string result(static_cast<size_t>(size - 1), '\0');
+
 	WideCharToMultiByte(CP_ACP, 0, value.c_str(), -1, &result[0], size, nullptr, nullptr);
+
 	return result;
+
 }
+
+
 
 std::vector<std::wstring> SplitIconPaths(const TCHAR* iconPathList) {
+
 	std::vector<std::wstring> paths;
+
 	std::wstring raw = ToWideStringLocal(iconPathList);
+
 	if (raw.empty()) return paths;
 
+
+
 	std::wstringstream ss(raw);
+
 	std::wstring singlePath;
+
 	while (std::getline(ss, singlePath, L'|')) {
+
 		if (!singlePath.empty()) {
+
 			paths.push_back(singlePath);
+
 		}
+
 	}
+
 	return paths;
+
 }
+
+
 
 bool GetMiniMapTemplateCached(const std::wstring& path, cv::Mat& outTemplate) {
+
 	outTemplate.release();
+
 	if (path.empty()) return false;
 
+
+
 	static std::mutex s_templateCacheMutex;
+
 	static std::map<std::wstring, cv::Mat> s_templateCache;
 
+
+
 	{
+
 		std::lock_guard<std::mutex> lock(s_templateCacheMutex);
+
 		auto it = s_templateCache.find(path);
+
 		if (it != s_templateCache.end() && !it->second.empty()) {
+
 			outTemplate = it->second;
+
 			return true;
+
 		}
+
 	}
+
+
 
 	std::string pathAnsi = WideToAnsiLocal(path);
+
 	cv::Mat loaded = cv::imread(pathAnsi, cv::IMREAD_UNCHANGED);
+
 	if (loaded.empty()) return false;
+
 	if (loaded.channels() == 4) {
+
 		cv::cvtColor(loaded, loaded, cv::COLOR_BGRA2BGR);
+
 	}
+
 	else if (loaded.channels() == 1) {
+
 		cv::cvtColor(loaded, loaded, cv::COLOR_GRAY2BGR);
+
 	}
+
+
 
 	{
+
 		std::lock_guard<std::mutex> lock(s_templateCacheMutex);
+
 		auto& entry = s_templateCache[path];
+
 		entry = std::move(loaded);
+
 		outTemplate = entry;
+
 	}
+
 	return !outTemplate.empty();
+
 }
+
+
 
 bool CaptureMiniMapSnapshot(long index, MiniMapSnapshot& outSnapshot) {
+
 	outSnapshot.valid = false;
+
 	outSnapshot.image.release();
 
+
+
 	HWND hwnd = reinterpret_cast<HWND>(static_cast<LONG_PTR>(g_info[index].hwnd));
+
 	if (!hwnd || !IsWindow(hwnd)) return false;
 
+
+
 	cv::Mat captured;
+
 	if (!SPUtils::CaptureAndResizeToLogic(hwnd,
+
 		kMiniMapTopLeftX, kMiniMapTopLeftY, kMiniMapBottomRightX, kMiniMapBottomRightY, captured)) {
+
 		return false;
+
 	}
+
 	if (captured.empty()) return false;
 
+
+
 	if (captured.channels() == 4) {
+
 		cv::cvtColor(captured, captured, cv::COLOR_BGRA2BGR);
+
 	}
+
 	else if (captured.channels() == 1) {
+
 		cv::cvtColor(captured, captured, cv::COLOR_GRAY2BGR);
+
 	}
+
+
 
 	outSnapshot.image = std::move(captured);
+
 	outSnapshot.valid = !outSnapshot.image.empty() && outSnapshot.image.channels() == 3;
+
 	return outSnapshot.valid;
+
 }
 
+
+
 bool FindIconInMiniMapSnapshot(const MiniMapSnapshot& snapshot, const TCHAR* iconPathList, double sim, int& outX, int& outY) {
+
 	outX = -1;
+
 	outY = -1;
+
 	if (!snapshot.valid || snapshot.image.empty()) return false;
+
+
 
 	thread_local cv::Mat s_miniMapMatchResult;
 
+
+
 	std::vector<std::wstring> iconPaths = SplitIconPaths(iconPathList);
+
 	for (const std::wstring& iconPath : iconPaths) {
+
 		cv::Mat templateMat;
+
 		if (!GetMiniMapTemplateCached(iconPath, templateMat)) continue;
+
 		if (templateMat.empty()) continue;
+
 		if (snapshot.image.cols < templateMat.cols || snapshot.image.rows < templateMat.rows) continue;
+
 		if (snapshot.image.channels() != templateMat.channels()) continue;
 
+
+
 		const int resultRows = snapshot.image.rows - templateMat.rows + 1;
+
 		const int resultCols = snapshot.image.cols - templateMat.cols + 1;
+
 		s_miniMapMatchResult.create(resultRows, resultCols, CV_32FC1);
+
 		cv::matchTemplate(snapshot.image, templateMat, s_miniMapMatchResult, cv::TM_CCOEFF_NORMED);
 
+
+
 		double minVal = 0.0;
+
 		double maxVal = 0.0;
+
 		cv::Point minLoc;
+
 		cv::Point maxLoc;
+
 		cv::minMaxLoc(s_miniMapMatchResult, &minVal, &maxVal, &minLoc, &maxLoc);
+
 		if (maxVal >= sim) {
+
 			outX = maxLoc.x + kMiniMapTopLeftX;
+
 			outY = maxLoc.y + kMiniMapTopLeftY;
+
 			return true;
+
 		}
+
+	}
+
+
+
+	return false;
+
+}
+
+int NormalizeMonitorMainIndex(long index) {
+
+	if (index >= MAX_HWND * 2) index -= MAX_HWND * 2;
+
+	if (index >= MAX_HWND) index -= MAX_HWND;
+
+	if (index < 0 || index >= MAX_HWND) return -1;
+
+	return static_cast<int>(index);
+
+}
+
+bool ShouldRunMonitorPeriodicCheck(int mainIndex, ULONGLONG* lastCheckMsArray, ULONGLONG intervalMs, ULONGLONG nowMs) {
+
+	if (mainIndex < 0 || mainIndex >= MAX_HWND || lastCheckMsArray == nullptr) return true;
+
+	ULONGLONG& lastMs = lastCheckMsArray[mainIndex];
+
+	if (lastMs == 0 || nowMs < lastMs || (nowMs - lastMs) >= intervalMs) {
+
+		lastMs = nowMs;
+
+		return true;
+
 	}
 
 	return false;
+
 }
-int NormalizeMonitorMainIndex(long index) {
-	if (index >= MAX_HWND * 2) index -= MAX_HWND * 2;
-	if (index >= MAX_HWND) index -= MAX_HWND;
-	if (index < 0 || index >= MAX_HWND) return -1;
-	return static_cast<int>(index);
-}
-bool ShouldRunMonitorPeriodicCheck(int mainIndex, ULONGLONG* lastCheckMsArray, ULONGLONG intervalMs, ULONGLONG nowMs) {
-	if (mainIndex < 0 || mainIndex >= MAX_HWND || lastCheckMsArray == nullptr) return true;
-	ULONGLONG& lastMs = lastCheckMsArray[mainIndex];
-	if (lastMs == 0 || nowMs < lastMs || (nowMs - lastMs) >= intervalMs) {
-		lastMs = nowMs;
-		return true;
-	}
-	return false;
-}
+
 } // namespace
+
 void clickRune(long index);
 
-void subSoftStartPause() {
-	gMonitorInstance.switchStatus();
-	buffTimeOut_buff_ÂÖ»Ø = 0;
-}
 
-void subSoftPause() {
-	gMonitorInstance.stopStatus();
-}
 
-void subSoftStart() {
-	gMonitorInstance.startStatus();
-	detectionStart();
-}
+void UpdateAutoOilCooldown(long index, bool isOnline) {
+	int mainIndex = NormalizeMonitorMainIndex(index);
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
 
-void detectionStart() {
-	gMonitorInstance.detectionStatus = 1;
-}
-
-void detectWhiteIcon() {
-	gMonitorInstance.whiteIconUpdate = 1;
-}
-
-void startMiao(long index) {
-	sptool* dm = g_info[index].dm;
-	unsigned long currentTime;
-	int send_status = 0;
-
-	while (1) {
-		currentTime = dm->GetTime();
-		if (miaoSenderInstance.send_boss > 0) {
-			if (currentTime - miaoSenderInstance.cooldown_boss >= 10000) {
-				send_status = sendMiaoCodeByType(miaoSenderInstance.MiaoCode_boss, "boss", "boss alert");
-				if (send_status == 200) {
-					miaoSenderInstance.send_boss--;
-					miaoSenderInstance.cooldown_boss = dm->GetTime();
-				}
-				ScriptDelay(index, 3000);
-			}
-		}
-		if (miaoSenderInstance.send_others > 0) {
-			if (currentTime - miaoSenderInstance.cooldown_others >= 10000) {
-				send_status = sendMiaoCodeByType(miaoSenderInstance.MiaoCode_others, "others", "others alert");
-				if (send_status == 200) {
-					miaoSenderInstance.send_others--;
-					miaoSenderInstance.cooldown_others = dm->GetTime();
-				}
-				ScriptDelay(index, 3000);
-			}
-		}
-		if (miaoSenderInstance.send_white > 0) {
-			if (currentTime - miaoSenderInstance.cooldown_white >= 10000) {
-				send_status = sendMiaoCodeByType(miaoSenderInstance.MiaoCode_white, "white", "white alert");
-				if (send_status == 200) {
-					miaoSenderInstance.send_white--;
-					miaoSenderInstance.cooldown_white = dm->GetTime();
-				}
-				ScriptDelay(index, 3000);
-			}
-		}
-		if (miaoSenderInstance.send_huangmen > 0) {
-			if (currentTime - miaoSenderInstance.cooldown_huangmen >= 10000) {
-				send_status = sendMiaoCodeByType(miaoSenderInstance.Miaocode_huangmen, "huangmen", "huangmen alert");
-				if (send_status == 200) {
-					miaoSenderInstance.send_huangmen--;
-					miaoSenderInstance.cooldown_huangmen = dm->GetTime();
-				}
-				ScriptDelay(index, 3000);
-			}
-		}
-		ScriptDelay(index, 200);
-	}
-}
-
-void gMonitorCheck(long index, long count)
-{
-	sptool* dm = g_info[index].dm;
-
-	if (Gethunt() != 1 || gMonitorInstance.detectionStatus == 0)
-	{
-		ScriptDelay(index, 200);
+	if (!isOnline) {
+		autoOilLastOnlineTickMs[mainIndex] = 0;
 		return;
 	}
 
 	ULONGLONG nowMs = GetTickCount64();
-	int mainIndex = NormalizeMonitorMainIndex(index);
-	bool runOtherPlayerCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastOtherPlayerCheckMs, kOtherPlayerCheckIntervalMs, nowMs);
-	bool runFriendGuildCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastFriendGuildCheckMs, kFriendGuildCheckIntervalMs, nowMs);
-	bool runHuangmenCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastHuangmenCheckMs, kHuangmenCheckIntervalMs, nowMs);
-	bool runBossCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastBossCheckMs, kBossCheckIntervalMs, nowMs);
-	bool runRuneCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastRuneCheckMs, kRuneCheckIntervalMs, nowMs);
-	ULONGLONG playerCoordIntervalMs = kPlayerCoordCheckIdleIntervalMs;
-	if (mainIndex >= 0 && mainIndex < MAX_HWND && InterlockedCompareExchange(&g_isGoToActive[mainIndex], 0, 0) != 0) {
-		playerCoordIntervalMs = kPlayerCoordCheckIntervalMs;
+	ULONGLONG lastMs = autoOilLastOnlineTickMs[mainIndex];
+	autoOilLastOnlineTickMs[mainIndex] = nowMs;
+	if (lastMs == 0 || nowMs <= lastMs) {
+		return;
 	}
+
+	long& remainingMs = autoOilCooldownRemainingMs[mainIndex];
+	if (remainingMs <= 0) {
+		remainingMs = 0;
+		return;
+	}
+
+	ULONGLONG elapsedMs = nowMs - lastMs;
+	if (elapsedMs >= static_cast<ULONGLONG>(remainingMs)) {
+		remainingMs = 0;
+	}
+	else {
+		remainingMs -= static_cast<long>(elapsedMs);
+	}
+}
+
+bool IsAutoOilReady(long index) {
+	int mainIndex = NormalizeMonitorMainIndex(index);
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) return true;
+	return autoOilCooldownRemainingMs[mainIndex] <= 0;
+}
+
+void ArmAutoOilCooldown(long index, long cooldownMs) {
+	int mainIndex = NormalizeMonitorMainIndex(index);
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
+	autoOilCooldownRemainingMs[mainIndex] = cooldownMs > 0 ? cooldownMs : 0;
+	autoOilLastOnlineTickMs[mainIndex] = GetTickCount64();
+}
+
+void subSoftStartPause() {
+
+	gMonitorInstance.switchStatus();
+
+	buffTimeOut_buff_è½®å› = 0;
+
+}
+
+
+
+void subSoftPause() {
+
+	gMonitorInstance.stopStatus();
+
+}
+
+
+
+void subSoftStart() {
+
+	gMonitorInstance.startStatus();
+
+	detectionStart();
+
+}
+
+
+
+void detectionStart() {
+
+	gMonitorInstance.detectionStatus = 1;
+
+}
+
+
+
+void detectWhiteIcon() {
+
+	gMonitorInstance.whiteIconUpdate = 1;
+
+}
+
+
+
+void startMiao(long index) {
+
+	sptool* dm = g_info[index].dm;
+
+	unsigned long currentTime;
+
+	int send_status = 0;
+
+
+
+	while (1) {
+
+		currentTime = dm->GetTime();
+
+		if (miaoSenderInstance.send_boss > 0) {
+
+			if (currentTime - miaoSenderInstance.cooldown_boss >= 10000) {
+
+				send_status = sendMiaoCodeByType(miaoSenderInstance.MiaoCode_boss, "boss", "boss alert");
+
+				if (send_status == 200) {
+
+					miaoSenderInstance.send_boss--;
+
+					miaoSenderInstance.cooldown_boss = dm->GetTime();
+
+				}
+
+				ScriptDelay(index, 3000);
+
+			}
+
+		}
+
+		if (miaoSenderInstance.send_others > 0) {
+
+			if (currentTime - miaoSenderInstance.cooldown_others >= 10000) {
+
+				send_status = sendMiaoCodeByType(miaoSenderInstance.MiaoCode_others, "others", "others alert");
+
+				if (send_status == 200) {
+
+					miaoSenderInstance.send_others--;
+
+					miaoSenderInstance.cooldown_others = dm->GetTime();
+
+				}
+
+				ScriptDelay(index, 3000);
+
+			}
+
+		}
+
+		if (miaoSenderInstance.send_white > 0) {
+
+			if (currentTime - miaoSenderInstance.cooldown_white >= 10000) {
+
+				send_status = sendMiaoCodeByType(miaoSenderInstance.MiaoCode_white, "white", "white alert");
+
+				if (send_status == 200) {
+
+					miaoSenderInstance.send_white--;
+
+					miaoSenderInstance.cooldown_white = dm->GetTime();
+
+				}
+
+				ScriptDelay(index, 3000);
+
+			}
+
+		}
+
+		if (miaoSenderInstance.send_huangmen > 0) {
+
+			if (currentTime - miaoSenderInstance.cooldown_huangmen >= 10000) {
+
+				send_status = sendMiaoCodeByType(miaoSenderInstance.Miaocode_huangmen, "huangmen", "huangmen alert");
+
+				if (send_status == 200) {
+
+					miaoSenderInstance.send_huangmen--;
+
+					miaoSenderInstance.cooldown_huangmen = dm->GetTime();
+
+				}
+
+				ScriptDelay(index, 3000);
+
+			}
+
+		}
+
+		ScriptDelay(index, 200);
+
+	}
+
+}
+
+
+
+void gMonitorCheck(long index, long count)
+
+{
+
+	sptool* dm = g_info[index].dm;
+
+
+
+	if (Gethunt() != 1 || gMonitorInstance.detectionStatus == 0)
+
+	{
+
+		ScriptDelay(index, 200);
+
+		return;
+
+	}
+
+
+
+	ULONGLONG nowMs = GetTickCount64();
+
+	int mainIndex = NormalizeMonitorMainIndex(index);
+
+	bool runOtherPlayerCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastOtherPlayerCheckMs, kOtherPlayerCheckIntervalMs, nowMs);
+
+	bool runFriendGuildCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastFriendGuildCheckMs, kFriendGuildCheckIntervalMs, nowMs);
+
+	bool runHuangmenCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastHuangmenCheckMs, kHuangmenCheckIntervalMs, nowMs);
+
+	bool runBossCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastBossCheckMs, kBossCheckIntervalMs, nowMs);
+
+	bool runRuneCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastRuneCheckMs, kRuneCheckIntervalMs, nowMs);
+
+	ULONGLONG playerCoordIntervalMs = kPlayerCoordCheckIdleIntervalMs;
+
+	if (mainIndex >= 0 && mainIndex < MAX_HWND && InterlockedCompareExchange(&g_isGoToActive[mainIndex], 0, 0) != 0) {
+
+		playerCoordIntervalMs = kPlayerCoordCheckIntervalMs;
+
+	}
+
 	bool runPlayerCoordCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastPlayerCoordCheckMs, playerCoordIntervalMs, nowMs);
+
 	bool runWhiteCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastWhiteCheckMs, kWhiteCheckIntervalMs, nowMs);
 
+
+
 	const bool autoRuneEnabled = (GetautoRuneSolver() == 1);
+
 	const bool huangmenEnabled = (GethuangMen() != 0);
+
 	const bool friendGuildEnabled = (GetfriendPlayerNotification() != 0);
+
 	const bool whiteDetectEnabled = (GetWhiteDetect() != 0);
 
+
+
 	MiniMapSnapshot miniMapSnapshot;
+
 	const bool needMiniMapSnapshot =
+
 		runPlayerCoordCheck ||
+
 		runOtherPlayerCheck ||
+
 		(autoRuneEnabled && runRuneCheck && *gMonitorInstance.getRuneCoords() == -1) ||
+
 		(huangmenEnabled && runHuangmenCheck) ||
+
 		(friendGuildEnabled && runFriendGuildCheck) ||
+
 		(whiteDetectEnabled && runWhiteCheck);
+
 	if (needMiniMapSnapshot) {
+
 		CaptureMiniMapSnapshot(index, miniMapSnapshot);
+
 	}
 
+
+
 	auto findMiniMapIcon = [&](const TCHAR* iconPath, double sim, int& outX, int& outY) -> bool {
+
 		if (miniMapSnapshot.valid) {
+
 			return FindIconInMiniMapSnapshot(miniMapSnapshot, iconPath, sim, outX, outY);
+
 		}
+
 		int* coords = findCoordsOnMiniMap(index, iconPath, sim);
+
 		outX = coords[0];
+
 		outY = coords[1];
+
 		return (outX > 0 && outY > 0);
+
 	};
+
+
 
 	long x, y;
+
 	long borderx, bordery;
+
 	long findPicRet;
+
 	auto detectWhiteRoom = [&](long& outWhiteX, long& outWhiteY) -> bool {
+
 		if (miniMapSnapshot.valid) {
+
 			int sx = -1;
+
 			int sy = -1;
+
 			if (FindIconInMiniMapSnapshot(miniMapSnapshot, whiteIcon, 0.9, sx, sy)) {
+
 				outWhiteX = sx;
+
 				outWhiteY = sy;
+
 				return true;
+
 			}
+
 			outWhiteX = -1;
+
 			outWhiteY = -1;
+
 			return false;
+
 		}
+
 		findPicRet = dm->FindPic(kWhiteRoomTopLeftX, kWhiteRoomTopLeftY,
+
 			kWhiteRoomBottomRightX, kWhiteRoomBottomRightY,
+
 			whiteIcon, _T("000000"), 0.9, 0, &outWhiteX, &outWhiteY);
+
 		return outWhiteX > 0 && outWhiteY > 0;
+
 	};
 
+
+
 	if (gMonitorInstance.whiteIconUpdate > 0) {
+
 		long whiteTopLeftX = 0;
+
 		long whiteTopLeftY = 0;
+
 		long whiteBottomRightX = whiteTopLeftX + 500;
+
 		long whiteBottomRightY = 600;
 
+
+
 		int detect_sum = 0;
+
 		findPicRet = dm->FindPic(whiteTopLeftX, whiteTopLeftY, whiteBottomRightX, whiteBottomRightY, whiteIcon, _T("000000"), 0.9, 0, &x, &y);
+
 		if (x > 0 && y > 0) {
+
 			gMonitorInstance.setWhiteIconCoords(x, y);
+
 			detect_sum++;
+
+
 
 			findPicRet = dm->FindPic(whiteTopLeftX, y + 60, whiteBottomRightX, whiteBottomRightY, mapBorderIcon, _T("000000"), 0.9, 0, &borderx, &bordery);
 
+
+
 			if (borderx > 0 && bordery > 0) {
+
 				gMonitorInstance.mapBorderCoords[0] = borderx + 3;
+
 				gMonitorInstance.mapBorderCoords[1] = bordery + 3;
+
 				detect_sum++;
+
 			}
+
 		}
+
+
 
 		if (detect_sum == 2)
+
 		{
+
 			gMonitorInstance.whiteIconUpdate = 0;
-			SetTaskState(index - MAX_HWND, _T("µØÍ¼±ß½çÒÑ¸üĞÂ"));
+
+			SetTaskState(index - MAX_HWND, _T("åœ°å›¾è¾¹ç•Œå·²æ›´æ–°"));
+
 		}
+
 		else {
-			SetTaskState(index - MAX_HWND, _T("µØÍ¼±ß½ç¸üĞÂÊ§°Ü"));
+
+			SetTaskState(index - MAX_HWND, _T("åœ°å›¾è¾¹ç•Œæ›´æ–°å¤±è´¥"));
+
 		}
+
 	}
+
+
 
 	if (runPlayerCoordCheck) {
+
 		int playerX = -1;
+
 		int playerY = -1;
+
 		if (findMiniMapIcon(playerIcon, 0.95, playerX, playerY)) {
+
 			int* currentWhiteIconCoords = gMonitorInstance.getWhiteIconCoords();
+
 			int relativePlayerLocationX = playerX;
+
 			int relativePlayerLocationY = playerY - 3 - *(currentWhiteIconCoords + 1);
+
 			int relativePlayerLocation[2] = { relativePlayerLocationX , relativePlayerLocationY };
+
 			gMonitorInstance.setPlayerCoords(relativePlayerLocationX, relativePlayerLocationY);
+
 			UpdateCoords(relativePlayerLocation);
+
 		}
+
 	}
+
+
 
 	if (runOtherPlayerCheck) {
+
 		int randomX = -1;
+
 		int randomY = -1;
+
 		if (findMiniMapIcon(randomIcon, 0.95, randomX, randomY)) {
+
 			if (gMonitorInstance.randomPlayerOldPosX != randomX && gMonitorInstance.randomPlayerOldPosY != randomY) {
+
 				gMonitorInstance.randomPlayerOldPosX = randomX;
+
 				gMonitorInstance.randomPlayerOldPosY = randomY;
+
 				gMonitorInstance.randomPlayerSamePosTimer = dm->GetTime();
+
 			}
+
+
 
 			if (gMonitorInstance.getRandomPlayerTimer() == 0) {
+
 				gMonitorInstance.setRandomPlayerTimer(dm->GetTime());
+
 			}
+
 			else {
+
 				if (dm->GetTime() - RANDOM_PLAYER_NOTIFICATION > gMonitorInstance.getRandomPlayerTimer() &&
+
 					(dm->GetTime() - 300000) < gMonitorInstance.randomPlayerSamePosTimer) {
+
 					gMonitorInstance.setRandomPlayerInMap(1);
+
 					miaoSenderInstance.setOthers(1);
+
 				}
+
 			}
+
 		}
+
 		else {
+
 			gMonitorInstance.setRandomPlayerTimer(0);
+
 			gMonitorInstance.setRandomPlayerInMap(0);
+
 			gMonitorInstance.randomPlayerSamePosTimer = dm->GetTime();
+
 			gMonitorInstance.randomPlayerOldPosX = -1;
+
 			gMonitorInstance.randomPlayerOldPosY = -1;
+
 		}
+
 	}
+
+
 
 	if (autoRuneEnabled && runRuneCheck && *gMonitorInstance.getRuneCoords() == -1) {
+
 		int runeX = -1;
+
 		int runeY = -1;
+
 		if (findMiniMapIcon(runeIcon, 0.999, runeX, runeY) &&
+
 			runeX < gMonitorInstance.mapBorderCoords[0] &&
+
 			runeY < gMonitorInstance.mapBorderCoords[1]) {
+
 			int* currentWhiteIconCoords = gMonitorInstance.getWhiteIconCoords();
+
 			int relativeRuneLocationX = runeX - 2;
+
 			int relativeRuneLocationY = runeY - 2 - *(currentWhiteIconCoords + 1);
+
 			if (relativeRuneLocationY > 55) {
+
 				gMonitorInstance.setRuneCoords(relativeRuneLocationX, relativeRuneLocationY);
+
 			}
+
 		}
+
 	}
+
+
 
 	if (runBossCheck) {
+
 		long topLeftX, topLeftY, bottomRightX, bottomRightY;
+
 		dm->GetWindowRect(g_info[index].hwnd, &topLeftX, &topLeftY, &bottomRightX, &bottomRightY);
+
 		long mapleWindowWidth = bottomRightX - topLeftX;
+
 		long mapleWindowHeight = bottomRightY - topLeftY;
+
 		if (mapleWindowWidth > 1400) {
+
 			mapleWindowWidth = long(mapleWindowWidth / 2);
+
 			mapleWindowHeight = long(mapleWindowHeight / 2);
+
 		}
+
+
 
 		long BOSS_WIDTH = 200;
+
 		long bossTopLeftX = long((mapleWindowWidth / 2) - (BOSS_WIDTH / 2));
+
 		long bossTopLeftY = long(20 + (mapleWindowHeight / 2));
+
 		long bossBottomRightX = long((mapleWindowWidth / 2) + (BOSS_WIDTH / 2));
+
 		long bossBottomRightY = long(120 + (mapleWindowHeight / 2));
 
+
+
 		findPicRet = dm->FindPic(bossTopLeftX, bossTopLeftY, bossBottomRightX, bossBottomRightY, deadOKIcon, _T("000000"), 0.95, 0, &x, &y);
+
 		if (x > 0 && y > 0) {
+
 			Log(_T("????"));
+
 			miaoSenderInstance.setBoss(1);
+
 			subSoftPause();
+
 		}
+
 	}
+
+
 
 	if (whiteDetectEnabled && runWhiteCheck) {
+
 		long loginPendingMs = AutoLogin_GetLoginPendingMs(index);
+
 		if (loginPendingMs > 0 && loginPendingMs < 600000)
+
 		{
+
 			if (detectWhiteRoom(x, y))
+
 			{
+
 				gMonitorInstance.setWhiteTimer(0);
+
 				AutoLogin_ClearLoginPending(index);
+
 			}
+
 		}
+
 		if (loginPendingMs <= 0 || loginPendingMs >= 600000)
+
 		{
+
 			if (detectWhiteRoom(x, y)) {
+
 				gMonitorInstance.setWhiteTimer(0);
+
 			}
+
 			else if (1) {
+
 				if (gMonitorInstance.getWhiteTimer() == 0) {
+
 					gMonitorInstance.setWhiteTimer(dm->GetTime());
+
 				}
+
 				else {
+
 					if (dm->GetTime() - 1000 > gMonitorInstance.getWhiteTimer()) {
+
 						Log(_T("in white"));
+
 						miaoSenderInstance.setWhite(1);
+
 						string s = "C:\\sptool\\WhitePic";
+
 						long a = dm->GetTime() % 10000;
+
 						string s_type = ".png";
+
 						string filePath = s + to_string(a) + s_type;
+
 						CString filePathT(filePath.c_str());
+
 						dm->CapturePng(0, 0, 2000, 1200, filePathT);
+
 					}
+
 					if (dm->GetTime() - WHITE_NOTIFICATION > gMonitorInstance.getWhiteTimer()) {
+
 						subSoftPause();
+
 					}
+
 				}
+
 			}
+
 		}
+
 	}
+
+
 
 	if (huangmenEnabled && runHuangmenCheck) {
+
 		int huangmenX = -1;
+
 		int huangmenY = -1;
+
 		if (findMiniMapIcon(enchantportalIcon, 0.95, huangmenX, huangmenY)) {
+
 			miaoSenderInstance.setHuangmen(1);
+
 		}
+
 	}
+
+
 
 	if (friendGuildEnabled && runFriendGuildCheck) {
+
 		int random_x = -1;
+
 		int random_y = -1;
+
 		int guild_x = -1;
+
 		int guild_y = -1;
+
 		findMiniMapIcon(friendIcon, 0.95, random_x, random_y);
+
 		findMiniMapIcon(guildIcon, 0.95, guild_x, guild_y);
 
+
+
 		if (guild_x > 0 || random_x > 0) {
+
 			if (gMonitorInstance.getFriendPlayerTimer() == 0) {
+
 				gMonitorInstance.setFriendPlayerTimer(dm->GetTime());
+
 			}
+
 			else {
+
 				if (dm->GetTime() - FRIEND_PLAYER_NOTIFICATION > gMonitorInstance.getFriendPlayerTimer()) {
+
 					miaoSenderInstance.setOthers(1);
+
 				}
+
 			}
+
 		}
+
 		else {
+
 			gMonitorInstance.setFriendPlayerTimer(0);
+
 		}
-	}
-}
-int* findCoordsOnMiniMap(long index, const TCHAR* innerIcon, double sim) {
-	sptool* dm = g_info[index].dm;
-	long x, y;
-	long findPicRet = dm->FindPic(kMiniMapTopLeftX, kMiniMapTopLeftY, kMiniMapBottomRightX, kMiniMapBottomRightY, innerIcon, _T("000000"), sim, 0, &x, &y);
-	static int  results[2];
-	if (x > 0 && y > 0)
-	{
-		//CString tips;
-		//tips.Format(_T("???????:(%d,%d)"), x,y);
-		//Log(tips);
-		results[0] = x;
-		results[1] = y;
-	}
-	else {
-		results[0] = -1;
-		results[1] = -1;
+
 	}
 
-	return results;
 }
+
+int* findCoordsOnMiniMap(long index, const TCHAR* innerIcon, double sim) {
+
+	sptool* dm = g_info[index].dm;
+
+	long x, y;
+
+	long findPicRet = dm->FindPic(kMiniMapTopLeftX, kMiniMapTopLeftY, kMiniMapBottomRightX, kMiniMapBottomRightY, innerIcon, _T("000000"), sim, 0, &x, &y);
+
+	static int  results[2];
+
+	if (x > 0 && y > 0)
+
+	{
+
+		//CString tips;
+
+		//tips.Format(_T("???????:(%d,%d)"), x,y);
+
+		//Log(tips);
+
+		results[0] = x;
+
+		results[1] = y;
+
+	}
+
+	else {
+
+		results[0] = -1;
+
+		results[1] = -1;
+
+	}
+
+
+
+	return results;
+
+}
+
+
 
 int* findPic(long index, long TopLeftX, long TopLeftY, long BottomRightX, long BottomRightY, const TCHAR* innerIcon, double sim , long dir) {
+
 	sptool* dm = g_info[index].dm;
+
 	long x, y;
+
 	long findPicRet = dm->FindPic(TopLeftX, TopLeftY, BottomRightX, BottomRightY, innerIcon, _T("000000"), sim, dir, &x, &y);
+
 	static int  results[2];
+
 	if (x > 0 && y > 0)
+
 	{
+
 		results[0] = x;
+
 		results[1] = y;
+
 	}
+
 	else {
+
 		results[0] = -1;
+
 		results[1] = -1;
+
 	}
+
+
 
 	return results;
+
 }
+
+
 
 void checkChatPop(long index) {
+
 	sptool* dm = g_info[index].dm;
+
 	long x = 0, y = 0;
+
 	long findPicRet;
+
+
 
 	findPicRet = dm->FindPic(418, 448, 534, 489, chatIcon, _T("000000"), 0.999, 0, &x, &y);
+
 	if (x > 0 && y > 0) {
+
 		ScriptDelay(index, 200);
+
 		press(index, "esc", 1);
+
 		ScriptDelay(index, 200);
+
 	}
+
 }
+
+
 
 void checkBossChest(long index) {
+
 	sptool* dm = g_info[index].dm;
+
 	long x = 0, y = 0;
+
 	long findPicRet;
 
+
+
 	long topLeftX, topLeftY, bottomRightX, bottomRightY;
+
 	long windowRet = dm->GetWindowRect(g_info[index].hwnd, &topLeftX, &topLeftY, &bottomRightX, &bottomRightY);
+
 	long mapleWindowWidth = bottomRightX - topLeftX;
+
 	long mapleWindowHeight = bottomRightY - topLeftY;
+
 	if (mapleWindowWidth > 1400) {
+
 		mapleWindowWidth = long(mapleWindowWidth / 2);
+
 		mapleWindowHeight = long(mapleWindowHeight / 2);
+
 	}
+
+
 
 	findPicRet = dm->FindPic(long(mapleWindowWidth / 2), mapleWindowHeight - 300, mapleWindowWidth, mapleWindowHeight, bossChestIcon, _T("000000"), 0.999, 0, &x, &y);
+
 	if (x > 0 && y > 0) {
+
 		dm->CapturePng(long(mapleWindowWidth / 2), mapleWindowHeight - 300, mapleWindowWidth, mapleWindowHeight, _T("C:\\sptool\\CapturedChest.png"));
-		holdKey(index, BossÏä×Ó, randomUniform(1800, 2000), 333);
+
+		holdKey(index, Bossç®±å­, randomUniform(1800, 2000), 333);
+
 	}
 
+
+
 }
+
+
 
 long randomUniform(long lower, long upper) {
+
 	srand((unsigned)time(NULL));
+
 	return (rand() % (upper - lower + 1)) + lower;
+
 }
+
+
 
 void keyDown(long index, const TCHAR* key) {
+
 	if (key == _T("")) {
+
 		return;
+
 	}
 
+
+
 	sptool* dm = g_info[index].dm;
+
 	dm->KeyDownChar(key);
+
 }
+
+
 
 void keyUp(long index, const TCHAR* key) {
+
 	if (key == _T("")) {
+
 		return;
+
 	}
 
+
+
 	sptool* dm = g_info[index].dm;
+
 	dm->KeyUpChar(key);
+
 }
+
+
 
 void holdKey(long index, const TCHAR* key, long holdTime, long interval) {
-	// Ôö¼ÓÒ»¸ö½¡×³ĞÔ¼ì²é£¬·ÀÖ¹ key ÊÇ¿ÕÖ¸Õë»ò¿Õ×Ö·û´®
+
+	// å¢åŠ ä¸€ä¸ªå¥å£®æ€§æ£€æŸ¥ï¼Œé˜²æ­¢ key æ˜¯ç©ºæŒ‡é’ˆæˆ–ç©ºå­—ç¬¦ä¸²
+
 	if (key == nullptr || _tcscmp(key, _T("")) == 0) {
+
 		return;
+
 	}
 
+
+
 	sptool* dm = g_info[index].dm;
+
 	long safeInterval = min(interval, holdTime);
 
-	// ÅĞ¶ÏkeyÊÇ·ñÎª·½Ïò¼ü
-	// ×¢Òâ£ºÕâÀïµÄ "up", "down", "left", "right" ÊÇÊ¾Àı
-	// ÄúĞèÒª¸ù¾İÄúÊµ¼Ê´«ÈëµÄ°´¼ü×Ö·û´®½øĞĞµ÷Õû
+
+
+	// åˆ¤æ–­keyæ˜¯å¦ä¸ºæ–¹å‘é”®
+
+	// æ³¨æ„ï¼šè¿™é‡Œçš„ "up", "down", "left", "right" æ˜¯ç¤ºä¾‹
+
+	// æ‚¨éœ€è¦æ ¹æ®æ‚¨å®é™…ä¼ å…¥çš„æŒ‰é”®å­—ç¬¦ä¸²è¿›è¡Œè°ƒæ•´
+
 	if (_tcscmp(key, _T("up")) == 0 ||
+
 		_tcscmp(key, _T("down")) == 0 ||
+
 		_tcscmp(key, _T("left")) == 0 ||
+
 		_tcscmp(key, _T("right")) == 0)
+
 	{
-		// ·½Ïò¼üµÄÂß¼­£º°´ÏÂ -> µÈ´ı(holdTime) -> µ¯Æğ
+
+		// æ–¹å‘é”®çš„é€»è¾‘ï¼šæŒ‰ä¸‹ -> ç­‰å¾…(holdTime) -> å¼¹èµ·
+
 		dm->KeyDownChar(key);
-		ScriptDelay(index, holdTime); // Ö±½ÓÑÓ³Ù holdTime
+
+		ScriptDelay(index, holdTime); // ç›´æ¥å»¶è¿Ÿ holdTime
+
 		dm->KeyUpChar(key);
+
 	}
+
 	else
+
 	{
-		// ÆäËû°´¼üµÄÂß¼­£º±£³ÖÔ­ÓĞĞĞÎª
+
+		// å…¶ä»–æŒ‰é”®çš„é€»è¾‘ï¼šä¿æŒåŸæœ‰è¡Œä¸º
+
 		long startTime = dm->GetTime();
+
 		while (dm->GetTime() - startTime < holdTime) {
+
 			dm->KeyDownChar(key);
+
 			ScriptDelay(index, safeInterval);
+
 		}
+
 		dm->KeyUpChar(key);
+
 	}
+
 }
+
+
 
 void press(long index, const TCHAR* key, int times, long delay) {
+
 	if (key == _T("")) {
+
 		return;
+
 	}
 
+
+
 	sptool* dm = g_info[index].dm;
+
 	for (size_t i = 0; i < times; i++)
+
 	{
+
 		// Pause hotkey can arrive between ScriptDelay checkpoints; block any extra key injection immediately.
+
 		if (g_info[index].is_pause ||
+
 			g_info[index].thread_state == State_Pausing ||
+
 			g_info[index].thread_state == State_Pause) {
+
 			break;
+
 		}
+
 		dm->KeyPressChar(key);
+
 		ScriptDelay(index, delay);
+
 	}
+
 }
+
+
 
 bool isInRange(int targetX, int targetY, int* playerCoords, long wantedRange) {
+
 	long xRange = abs(targetX - *playerCoords);
+
 	long yRange = abs(targetY - *(playerCoords + 1));
+
 	return (xRange < wantedRange&& yRange < wantedRange);
+
 }
+
+
 
 void JumpAttack(long index, bool rune) {
+
 	sptool* dm = g_info[index].dm;
 
+
+
 	long topLeftX, topLeftY, bottomRightX, bottomRightY;
+
 	long windowRet = dm->GetWindowRect(g_info[index].hwnd, &topLeftX, &topLeftY, &bottomRightX, &bottomRightY);
+
 	long mapleWindowWidth = bottomRightX - topLeftX;
+
 	long mapleWindowHeight = bottomRightY - topLeftY;
+
 	if (mapleWindowWidth > 1400) {
+
 		mapleWindowWidth = long(mapleWindowWidth / 2);
+
 		mapleWindowHeight = long(mapleWindowHeight / 2);
+
 	}
 
+
+
 	if (gMonitorInstance.status) {
-		holdKey(index, ºäÕ¨, randomUniform(360, 400), 233);
+
+		holdKey(index, è½°ç‚¸, randomUniform(360, 400), 233);
+
 	}
+
 }
+
+
+
 
 
 bool WaitForTargetLock(long index, long targetX, long targetY, long rangeX, long rangeY, long maxWaitMs, long pollMs, int stableCount) {
+
 	sptool* dm = g_info[index].dm;
+
 	if (dm == NULL || maxWaitMs <= 0 || pollMs <= 0) {
+
 		return false;
+
 	}
+
+
 
 	int required = stableCount < 1 ? 1 : stableCount;
+
 	int* initialCoords = gMonitorInstance.getPlayerCoords();
+
 	int lastX = *initialCoords;
+
 	int lastY = *(initialCoords + 1);
+
 	bool seenCoordChange = false;
+
 	int nearStable = 0;
+
 	long startTime = dm->GetTime();
+
+
 
 	while (gMonitorInstance.status > 0 && dm->GetTime() - startTime < maxWaitMs) {
+
 		ScriptDelay(index, pollMs);
 
+
+
 		int* currentCoords = gMonitorInstance.getPlayerCoords();
+
 		int currentX = *currentCoords;
+
 		int currentY = *(currentCoords + 1);
 
+
+
 		if (currentX != lastX || currentY != lastY) {
+
 			seenCoordChange = true;
+
 		}
+
+
 
 		if (currentX > 0 && currentY > 0 &&
+
 			abs(targetX - currentX) <= rangeX &&
+
 			abs(targetY - currentY) <= rangeY) {
+
 			if (seenCoordChange || dm->GetTime() - startTime >= (pollMs * 2)) {
+
 				nearStable++;
+
 				if (nearStable >= required) {
+
 					return true;
+
 				}
+
 			}
+
 		}
+
 		else {
+
 			nearStable = 0;
+
 		}
+
+
 
 		lastX = currentX;
+
 		lastY = currentY;
+
 	}
+
+
 
 	return false;
+
 }
+
 void goToDirection(long index, const TCHAR* direction, int distance, bool rune) {
+
 	sptool* dm = g_info[index].dm;
+
+
 
 	if (abs(distance) >= 20) {
+
 		if (abs(distance) >= 40) {
+
 			keyDown(index, direction);
+
 			press(index, JUMP_KEY, 2, randomUniform(115,125));
+
 			ScriptDelay(index, 580);
+
 			keyUp(index, direction);
+
 			ScriptDelay(index, 100);
+
 		}
+
 		#ifdef Adele
+
 		else if (abs(distance) >= 30) {
+
 			keyDown(index, direction);
+
 			press(index, JUMP_KEY, 2, randomUniform(115, 125));
+
 			ScriptDelay(index, 480);
+
 			keyUp(index, direction);
+
 			ScriptDelay(index, 200);
+
 		}
+
 		else {
+
 			keyDown(index, direction);
+
 			press(index, JUMP_KEY, 1, 90);
+
 			ScriptDelay(index, 250);
+
 			press(index, JUMP_KEY);
+
 			ScriptDelay(index, 120);
+
 			keyUp(index, direction);
+
 			ScriptDelay(index, 350 + int(distance * 2));
+
 		}
+
 		#else
+
 		else if (abs(distance) >= 30) {
+
 			keyDown(index, direction);
+
 			press(index, JUMP_KEY, 2, randomUniform(115, 125));
+
 			ScriptDelay(index, 480);
+
 			keyUp(index, direction);
+
 			ScriptDelay(index, 200);
+
 		}
+
 		else {
+
 			keyDown(index, direction);
+
 			press(index, JUMP_KEY, 1, 70);
+
 			ScriptDelay(index, 400);
+
 			press(index, JUMP_KEY);
+
 			ScriptDelay(index, 120);
+
 			keyUp(index, direction);
+
 			ScriptDelay(index, 350 + int(distance * 2));
+
 		}
+
 		#endif 
 
-	}
-	else if (abs(distance) == 1) {
-		holdKey(index, direction, 20);
-		ScriptDelay(index, 150);
-	}
-	else {
-		holdKey(index, direction, 40 * abs(distance));
-		ScriptDelay(index, 350);
+
+
 	}
 
+	else if (abs(distance) == 1) {
+
+		holdKey(index, direction, 20);
+
+		ScriptDelay(index, 150);
+
+	}
+
+	else {
+
+		holdKey(index, direction, 40 * abs(distance));
+
+		ScriptDelay(index, 350);
+
+	}
+
+
+
 }
+
+
 
 void goUp(long index, long distance, long wait) {
+
 	if (abs(distance) <= 3) {
-		//Log("¶ÌÍ¾");
+
+		//Log("çŸ­é€”");
+
 		press(index, JUMP_KEY, 1, 150);
+
 		ScriptDelay(index, wait);
+
 	}
+
 	else if (abs(distance) <= 15) {
-		//Log("¶ÌÍ¾");
+
+		//Log("çŸ­é€”");
+
 		press(index, JUMP_KEY, 1);
+
 		ScriptDelay(index, 130);
+
 		#ifdef NL
-			press(index, ÉÏÌø, 1, 150);
+
+			press(index, ä¸Šè·³, 1, 150);
+
 			ScriptDelay(index, randomUniform(170, 190));
+
 			ScriptDelay(index, wait);
+
 		#else 
+
 			keyDown(index, "up");
+
 			press(index, JUMP_KEY, 1);
+
 			ScriptDelay(index, randomUniform(165, 170));
+
 			keyUp(index, "up");
+
 		#endif 
+
 	}
+
 	else {
-		//Log("³¤Í¾");
-		press(index, ¹³×Ó, 1, 250);
+
+		//Log("é•¿é€”");
+
+		press(index, é’©å­, 1, 250);
+
 		ScriptDelay(index, abs(distance) * 10);
+
 		ScriptDelay(index, randomUniform(300, 320));
+
 		ScriptDelay(index, wait);
+
 	}
+
 }
+
+
 
 void goDown(long index, long distance, long downoverride, bool rune) {
+
 	keyDown(index, "down");
+
 	holdKey(index, JUMP_KEY, 12 * distance, 66);
+
 	keyUp(index, "down");
+
 	ScriptDelay(index, max((long)0, downoverride - 12 * distance));
+
 }
+
+
 
 void rightJump(long index) {
+
 	keyDown(index, "right");
+
 	press(index, JUMP_KEY);
+
 	keyUp(index, "right");
+
 	ScriptDelay(index, 500);
+
 }
 
+
+
 void goTo(long index, long targetX, long targetY, long rangeFromCoords, bool isRune, long upoverride, long downoverride, bool randomWalk, long rangeY, bool preciseLock, long preciseMaxWaitMs, long precisePollMs, int preciseStableCount) {
+
 	long WANTED_RANGE = rangeFromCoords;
+
 	long WANTED_RANGEY = max(rangeFromCoords, rangeY);
+
 	int* currentPlayerLocation = gMonitorInstance.getPlayerCoords();
+
 	sptool* dm = g_info[index].dm;
+
 	int goToMainIndex = NormalizeMonitorMainIndex(index);
+
 	if (goToMainIndex >= 0 && goToMainIndex < MAX_HWND) {
+
 		InterlockedExchange(&g_isGoToActive[goToMainIndex], 1);
+
 	}
+
 	struct ScopedGoToActiveFlag {
+
 		int idx;
+
 		~ScopedGoToActiveFlag() {
+
 			if (idx >= 0 && idx < MAX_HWND) {
+
 				InterlockedExchange(&g_isGoToActive[idx], 0);
+
 			}
+
 		}
+
 	};
+
 	ScopedGoToActiveFlag scopedGoToActiveFlag{ goToMainIndex };
+
 	long startTime = dm->GetTime();
+
 	long lastX = *currentPlayerLocation;
+
 	long lastXMoveTime = startTime;
+
 	long lastStuckJumpTime = 0;
+
 	//CString tips;
-	//tips.Format(_T("»ñÈ¡µÄ×ø±ê:(%d,%d)"), *currentPlayerLocation, *(currentPlayerLocation+1));
+
+	//tips.Format(_T("è·å–çš„åæ ‡:(%d,%d)"), *currentPlayerLocation, *(currentPlayerLocation+1));
+
 	//Log(tips);
+
+
 
 	int success = 0;
 
+
+
 	while (success == 0) {
+
 		if (*currentPlayerLocation > 0) {
+
 			int xDistance = targetX - *currentPlayerLocation;
+
 			while (abs(xDistance) > WANTED_RANGE && gMonitorInstance.status > 0) {
+
 				if (xDistance > 0) {
+
 					goToDirection(index, _T("right"), xDistance, isRune);
+
 				}
+
 				else {
+
 					goToDirection(index, _T("left"), xDistance, isRune);
+
 				}
+
+
 
 				if (dm->GetTime() > 3000 + startTime && gMonitorInstance.status) {
+
 					checkChatPop(index);
+
 				}
+
+
 
 				if (dm->GetTime() > 12000 + startTime && gMonitorInstance.status) {
+
 					rightJump(index);
+
 					startTime = dm->GetTime();
+
 				}
 
+
+
 				currentPlayerLocation = gMonitorInstance.getPlayerCoords();
+
 				xDistance = targetX - *currentPlayerLocation;
+
 				long now = dm->GetTime();
+
 				if (abs(xDistance) > 2) {
+
 					if (*currentPlayerLocation == lastX) {
+
 						if (now - lastXMoveTime > 800 && now - lastStuckJumpTime > 1500) {
+
 							rightJump(index);
+
 							lastStuckJumpTime = now;
+
 							lastXMoveTime = now;
+
 							currentPlayerLocation = gMonitorInstance.getPlayerCoords();
+
 							xDistance = targetX - *currentPlayerLocation;
+
 						}
+
 					}
+
 					else {
+
 						lastX = *currentPlayerLocation;
+
 						lastXMoveTime = now;
+
 					}
+
 				}
+
 			}
+
+
 
 			int yTrial = 0;
 
+
+
 			int yDistance = targetY - *(currentPlayerLocation + 1);
+
 			while (abs(yDistance) > WANTED_RANGEY && gMonitorInstance.status > 0) {
+
 				if (yDistance < 0) {
+
 					goUp(index, yDistance, upoverride);
+
 				}
+
 				else {
+
 					goDown(index, abs(yDistance), downoverride, isRune);
+
 				}
+
+
 
 				if (dm->GetTime() > 3000 + startTime && gMonitorInstance.status) {
+
 					checkChatPop(index);
+
 				}
+
+
 
 				currentPlayerLocation = gMonitorInstance.getPlayerCoords();
+
 				yDistance = targetY - *(currentPlayerLocation + 1);
 
+
+
 				if (yTrial >= 2) {
+
 					break;
+
 				}
+
+
 
 				yTrial++;
 
+
+
 			}
+
+
 
 			if (yTrial < 2){
+
 				success = 1;
+
 			}
 
+
+
 			
+
 		}
+
 	}
+
+
+
 
 
 	if (preciseLock && gMonitorInstance.status > 0) {
+
 		long lockRangeX = max((long)0, WANTED_RANGE);
+
 		long lockRangeY = max((long)0, WANTED_RANGEY);
+
 		WaitForTargetLock(index, targetX, targetY, lockRangeX, lockRangeY, preciseMaxWaitMs, precisePollMs, preciseStableCount);
+
 	}
+
 }
 
+
+
 void cashShopTour(long index) {
+
 	sptool* dm = g_info[index].dm;
-	// Ã°ÏÕ´°¿ÚĞÅÏ¢
+
+	// å†’é™©çª—å£ä¿¡æ¯
+
 	long topLeftX, topLeftY, bottomRightX, bottomRightY;
+
 	long windowRet = dm->GetWindowRect(g_info[index].hwnd, &topLeftX, &topLeftY, &bottomRightX, &bottomRightY);
+
 	long mapleWindowWidth = bottomRightX - topLeftX;
+
 	long mapleWindowHeight = bottomRightY - topLeftY;
+
 	if (mapleWindowWidth > 1400) {
+
 		mapleWindowWidth = long(mapleWindowWidth / 2);
+
 		mapleWindowHeight = long(mapleWindowHeight / 2);
+
 	}
 
-	//ÔİÍ£ÆÁÄ»¼ì²â
+
+
+	//æš‚åœå±å¹•æ£€æµ‹
+
 	gMonitorInstance.detectionStatus = 0;
 
 
-	//½øÈëÉÌ³Ç
-	int successCashShop = 0;
-	long x, y;
-	dm->SetWindowState(g_info[index].hwnd, 12);
-	while (successCashShop == 0) {
-		holdKey(index, ÉÌ³Ç, 960, 333);
 
-		//²é¿´ÊÇ·ñ½øÈë³É¹¦
+
+
+	//è¿›å…¥å•†åŸ
+
+	int successCashShop = 0;
+
+	long x, y;
+
+	dm->SetWindowState(g_info[index].hwnd, 12);
+
+	while (successCashShop == 0) {
+
+		holdKey(index, å•†åŸ, 960, 333);
+
+
+
+		//æŸ¥çœ‹æ˜¯å¦è¿›å…¥æˆåŠŸ
+
 		long findPicRet = dm->FindPic(0, 20, mapleWindowWidth, mapleWindowHeight, okIcon, _T("000000"), 0.9, 0, &x, &y);
+
 		if (x > 0 && y > 0) {
-			//½øÈëÊ§°Ü
+
+			//è¿›å…¥å¤±è´¥
+
 			successCashShop = 0;
+
 			press(index, "esc");
+
 		}
+
+
 
 		findPicRet = dm->FindPic(0, 300, 300, mapleWindowHeight, cashShopExitIcon, _T("000000"), 0.9, 0, &x, &y);
+
 		if (x > 0 && y > 0) {
-			//½øÈë³É¹¦
+
+			//è¿›å…¥æˆåŠŸ
+
 			successCashShop = 1;
+
 		}
+
 	}
 
-	//ÍË³öÉÌ³Ç
+
+
+	//é€€å‡ºå•†åŸ
+
 	x = 0, y = 0;
+
 	int exitCashShop = 0;
+
 	while (exitCashShop < 1) {
+
 		dm->SetWindowState(g_info[index].hwnd, 12);
+
 		press(index, "esc");
+
 		ScriptDelay(index, 200);
-		SetTaskState(index, _T("²éÕÒÉÌ³ÇÍË³ö±êÊ¶"));
-		//²éÕÒÍË³öÌáÊ¾
+
+		SetTaskState(index, _T("æŸ¥æ‰¾å•†åŸé€€å‡ºæ ‡è¯†"));
+
+		//æŸ¥æ‰¾é€€å‡ºæç¤º
+
 		long findPicRet = dm->FindPic(0, 20, mapleWindowWidth, mapleWindowHeight, cashShopExitOKIcon, _T("000000"), 0.9, 0, &x, &y);
+
 		if (x > 0 && y > 0) {
+
 			dm->SetWindowState(g_info[index].hwnd, 12);
+
 			ScriptDelay(index, 200);
+
 			press(index, "enter");
+
 			//long buff_location_x = x + 7;
+
 			//long buff_location_y = y + 10;
 
+
+
 			//dm->MoveTo(buff_location_x, buff_location_y);
+
 			//dm->LeftClick();
-			SetTaskState(index, _T("ÕÒµ½±êÊ¶£¬ÍË³ö"));
+
+			SetTaskState(index, _T("æ‰¾åˆ°æ ‡è¯†ï¼Œé€€å‡º"));
+
 			ScriptDelay(index, 1500);
+
 			exitCashShop = 1;
 
 
+
+
+
 		}
+
 		else {
+
 			ScriptDelay(index, 300);
-			SetTaskState(index, _T("Î´ÕÒµ½±êÊ¶"));
+
+			SetTaskState(index, _T("æœªæ‰¾åˆ°æ ‡è¯†"));
+
 		}
+
 	}
 
-	//»Øµ½µØÍ¼
+
+
+	//å›åˆ°åœ°å›¾
+
 	int return2Map = 0;
-	//µÈ´ıµØÍ¼±êÖ¾³öÏÖ
-	SetTaskState(index, _T("µÈ´ıµØÍ¼±êÖ¾³öÏÖ"));
+
+	//ç­‰å¾…åœ°å›¾æ ‡å¿—å‡ºç°
+
+	SetTaskState(index, _T("ç­‰å¾…åœ°å›¾æ ‡å¿—å‡ºç°"));
+
 	int waitTime = 10;
+
 	long whiteTopLeftX = 0;
+
 	long whiteTopLeftY = 0;
 
+
+
 	long whiteBottomRightX = whiteTopLeftX + 300;
+
 	long whiteBottomRightY = 300;
+
 	while (return2Map == 0) {
+
 		ScriptDelay(index, 1000);
+
 		long findPicRet = dm->FindPic(whiteTopLeftX, whiteTopLeftY, whiteBottomRightX, whiteBottomRightY, whiteIcon, _T("000000"), 0.9, 0, &x, &y);
+
 		if (x > 0 && y > 0) {
+
 			return2Map = 1;
+
 			break;
+
 		}
+
 	}
 
-	//»Ö¸´ÆÁÄ»¼ì²â
+
+
+	//æ¢å¤å±å¹•æ£€æµ‹
+
 	gMonitorInstance.setRuneCoords(-1, -1);
+
 	gMonitorInstance.detectionStatus = 1;
-	buffTimeOut_buff_ÂÖ»Ø = 0;
+
+	buffTimeOut_buff_è½®å› = 0;
+
 }
 
+
+
 CString getArrowsKey(CString* arrowsKey) {
+
 	return *(arrowsKey + 1);
+
 }
+
+
 
 CString findArrowDirection(std::vector<unsigned char> image, long x, long y, unsigned width, unsigned height) {
 
+
+
 	for (int i = 0; i < 20; i++)
+
 	{	
+
 		// rightPixel
+
 		if (x + i < static_cast<long>(width)) {
 
+
+
 			long red = (long)image[y * width * 4 + (x + i) * 4];
+
 			long green = (long)image[y * width * 4 + (x + i) * 4 + 1];
+
 			long blue = (long)image[y * width * 4 + (x+ i) * 4 + 2];
 
+
+
 			if (green >= 200 && 150 < red && red <= 255) {
+
 				return (CString)"right";
+
 			}
+
 		}
+
+
 
 		// leftPixel
+
 		if (x - i >= 0) {
 
+
+
 			long red = (long)image[y * width * 4 + (x - i) * 4];
+
 			long green = (long)image[y * width * 4 + (x - i) * 4 + 1];
+
 			long blue = (long)image[y * width * 4 + (x - i) * 4 + 2];
 
+
+
 			if (green >= 200 && 150 < red && red <= 255) {
+
 				return (CString)"left";
+
 			}
+
 		}
+
+
 
 		// upPixel
+
 		if (y - i >= 0) {
 
+
+
 			long red = (long)image[(y - i) * width * 4 + x * 4];
+
 			long green = (long)image[(y - i) * width * 4 + x * 4 + 1];
+
 			long blue = (long)image[(y - i) * width * 4 + x * 4 + 2];
 
+
+
 			if (green >= 200 && 150 < red && red <= 255) {
+
 				return (CString)"up";
+
 			}
+
 		}
+
+
 
 		// downPixel
+
 		if (y + i < static_cast<long>(height)) {
 
+
+
 			long red = (long)image[(y + i) * width * 4 + x * 4];
+
 			long green = (long)image[(y + i) * width * 4 + x * 4 + 1];
+
 			long blue = (long)image[(y + i) * width * 4 + x * 4 + 2];
 
+
+
 			if (green >= 200 && 150 < red && red <= 255) {
+
 				return (CString)"down";
+
 			}
+
 		}
+
+
+
 
 
 	}
 
+
+
 	return "";
+
 }
+
+
 
 runeData* solveRune() {
 
+
+
 	runeData *data= new runeData[11];
 
+
+
 	int count = 0;
+
 	bool addable;
 
+
+
 	const char* filename = "C:\\sptool\\RuPic.png";
+
 	std::vector<unsigned char> image; //the raw pixels
+
 	unsigned width, height;
 
+
+
 	//decode
+
 	unsigned error = lodepng::decode(image, width, height, filename);
 
+
+
 	for (long currentX = 0; currentX < static_cast<long>(width); currentX++)
+
 	{
+
 		for (long currentY = 0; currentY < static_cast<long>(height); currentY++)
+
 		{
+
 			addable = true;
+
 			// CString rgbPixel = dm->GetColor(currentX, currentY);
+
+
 
 			long red, green, blue;
 
+
+
 			red = (long)image[currentY * width * 4 + currentX * 4];
+
 			green = (long)image[currentY * width * 4 + currentX * 4 + 1];
+
 			blue = (long)image[currentY * width * 4 + currentX * 4 + 2];
 
+
+
 			//red = strtoull(rgbPixel.Left(2), NULL, 16);
+
 			//green = strtoull(rgbPixel.Mid(2, 2), NULL, 16);
+
 			//blue = strtoull(rgbPixel.Right(2), NULL, 16);
 
+
+
 			//CString tips;
-			//tips.Format(_T("rbg:(%d,%d,%d),×ø±ê (%d,%d)"), red, green, blue, currentX, currentY);
+
+			//tips.Format(_T("rbg:(%d,%d,%d),åæ ‡ (%d,%d)"), red, green, blue, currentX, currentY);
+
 			//Log(tips);
 
+
+
 			//int red = std::stoi((string)rgbPixel.Left(2), nullptr, 16);
+
 			//int green = std::stoi((string)rgbPixel.Mid(2,2), nullptr, 16);
+
 			//int blue = std::stoi((string)rgbPixel.Right(2), nullptr, 16);
+
+
 
 			if ( 235 <= green && green <= 255 && 0 <= red && red <= 70 && 0 <= blue && blue <= 80) {
 
 
 
+
+
+
+
 				for (int i = 0; i < count; i++)
+
 				{
+
 					if (abs(currentX - data[i].x) <= 25) {
+
 						addable = false;
+
 					}
+
 				}
+
+
 
 				if (addable) {
+
 					//CString tips;
-					//tips.Format(_T("rbg:(%d,%d,%d),×ø±ê (%d,%d)"), red, green, blue, currentX, currentY);
+
+					//tips.Format(_T("rbg:(%d,%d,%d),åæ ‡ (%d,%d)"), red, green, blue, currentX, currentY);
+
 					//Log(tips);
+
 					CString direction = findArrowDirection(image, currentX, currentY, width, height);
+
 					if (direction != "") {
+
 						data[count].arrow = direction;
+
 						data[count].x = currentX;
+
 						count++;
+
 					}
+
 				}
+
 			}
+
 		}
+
 	}
 
+
+
 	data[10].arrow = "info";
+
 	data[10].x = -count;
 
+
+
 	return data;
+
 }
 
+
+
 void checkRune(long index, int* runeCoords) {
+
 	if (*gMonitorInstance.getRuneCoords() > 0) {
+
+
 
 		sptool* dm = g_info[index].dm;
 
-		// ÌáĞÑ
+
+
+		// æé†’
+
 		if (rune_fail_time % 10 == 7) {
+
 			rightJump(index);
+
 			miaoSenderInstance.setHuangmen(1);
+
 		}
 
-		//½øÉÌ³ÇË¢ĞÂ·ûÎÄ
+
+
+		//è¿›å•†åŸåˆ·æ–°ç¬¦æ–‡
+
 		if ((rune_fail_time > 0) && (rune_fail_time % 3 == 0)) {
+
 			cashShopTour(index);
+
 			ScriptDelay(index, 500);
+
 		}
+
+
 
 		long x, y;
+
 		x = *runeCoords;
+
 		y = *(runeCoords + 1);
 
+
+
 		if (x == -1 && y == -1)
+
 		{
+
 			rune_fail_time++;
+
 			return;
+
+		}
+
+
+
+		if (gMonitorInstance.status) {
+
+			goTo(index, x, y, 1, true);
+
+			ScriptDelay(index, 300);
+
 		}
 
 		if (gMonitorInstance.status) {
+
 			goTo(index, x, y, 1, true);
-			ScriptDelay(index, 300);
-		}
-		if (gMonitorInstance.status) {
-			goTo(index, x, y, 1, true);
+
 			ScriptDelay(index, 200);
+
 		}
+
 		if (gMonitorInstance.status) {
+
 			goTo(index, x, y, 1, true);
+
 			ScriptDelay(index, 100);
+
 		}
+
+
 
 		if (gMonitorInstance.status && rune_fail_time == 0) {
+
 			ScriptDelay(index, 500);
+
 		}
+
 		else if (gMonitorInstance.status) {
+
 			ScriptDelay(index, 100);
+
 		}
+
 		int* currentPlayerCoords = gMonitorInstance.getPlayerCoords();
+
 		if (!isInRange(x, y, currentPlayerCoords, 5)) {
+
 			return;
+
 		}
+
 		press(index, OPEN_RUNE_KEY, 1, 200);
-		SetTaskState(index, _T("½ØÍ¼·ûÎÄ"));
+
+		SetTaskState(index, _T("æˆªå›¾ç¬¦æ–‡"));
+
 		if (gMonitorInstance.status) {
+
 			ScriptDelay(index, 800);
+
 		}
 
 
-		// Ã°ÏÕ´°¿ÚĞÅÏ¢
+
+
+
+		// å†’é™©çª—å£ä¿¡æ¯
+
 		long topLeftX, topLeftY, bottomRightX, bottomRightY;
+
 		long windowRet = dm->GetWindowRect(g_info[index].hwnd, &topLeftX, &topLeftY, &bottomRightX, &bottomRightY);
+
 		long mapleWindowWidth = bottomRightX - topLeftX;
+
 		long mapleWindowHeight = bottomRightY - topLeftY;
+
 		if (mapleWindowWidth > 1400) {
+
 			mapleWindowWidth = long(mapleWindowWidth / 2);
+
 			mapleWindowHeight = long(mapleWindowHeight / 2);
+
 		}
+
+
 
 		long RUNE_WIDTH = 460;
+
 		long runeTopLeftX = long((mapleWindowWidth / 2) - (RUNE_WIDTH / 2));
+
 		long runeTopLeftY = long(mapleWindowHeight / 4) - 30;
+
 		long runeBottomRightX = runeTopLeftX + RUNE_WIDTH;
+
 		long runeBottomRightY = runeTopLeftY + 100;
+
+
 
 		dm->CapturePng(runeTopLeftX, runeTopLeftY, runeBottomRightX, runeBottomRightY, _T("C:\\sptool\\RuPic.png"));
 
-		SetTaskState(index, _T("½âÂë·ûÎÄ"));
+
+
+		SetTaskState(index, _T("è§£ç ç¬¦æ–‡"));
+
 		runeData* resData = solveRune();
-		// Ô­ÎÄ¼şÂ·¾¶
+
+		// åŸæ–‡ä»¶è·¯å¾„
+
 		std::string original_path = "C:/sptool/RuPic.png";
+
 		cv::Mat image = cv::imread(original_path);
+
 		std::vector<std::string> directions = getArrowDirections(3, image);
+
 		std::vector<std::string> directions2 = getArrowDirections(5, image);
+
 		if (directions.size() != 4) {
+
 			directions = directions2;
+
 		}
+
 		bool needRightJump = false;
+
 		if (resData[10].x == -4) {
+
 			for (int i = 0; i < 4; i++)
+
 			{
+
 				ScriptDelay(index, randomUniform(100, 250));
+
 				press(index, resData[i].arrow);
+
 			}
 
 
+
+
+
 			gMonitorInstance.setRuneCoords(-1, -1);
-			SetTaskState(index, _T("Ë¢Í¼"));
+
+			SetTaskState(index, _T("åˆ·å›¾"));
+
+
 
 			if (resData[3].arrow == (CString)"up" | resData[3].arrow == (CString)"down") {
+
 				ScriptDelay(index, 300);
+
 				needRightJump = true;
+
 			}
+
 			else {
+
 				ScriptDelay(index, 500);
+
 			}
+
 			rune_fail_time = 0;
+
+
 
 			//for (size_t i = 0; i < 3; i++)
+
 			//{
+
 			//	clickRune(index);
+
 			//	ScriptDelay(index, 200);
+
 			//}
 
+
+
 			if (needRightJump)
+
 			{
+
 				rightJump(index);
+
 			}
+
 		}
+
 		else if (directions.size() == 4) {
 
+
+
 			string s = "RuSuccessPic";
+
 			long a = dm->GetTime() % 10000;
+
 			string s_type = ".png";
+
 			string new_filename = s + to_string(a) + s_type;
+
 			copy_and_rename_file(original_path, new_filename);
+
+
 
 			for (const string& direction : directions) {
+
 				ScriptDelay(index, randomUniform(100, 250));
+
 				press(index, direction.c_str());
+
 			}
+
+
 
 			gMonitorInstance.setRuneCoords(-1, -1);
-			SetTaskState(index, _T("Ë¢Í¼"));
+
+			SetTaskState(index, _T("åˆ·å›¾"));
+
+
 
 			if (directions[3].c_str() == (CString)"up" | resData[3].arrow == (CString)"down") {
+
 				ScriptDelay(index, 300);
+
 				needRightJump = true;
+
 			}
+
 			else {
+
 				ScriptDelay(index, 300);
+
 			}
+
 			rune_fail_time = 0;
 
+
+
 			if (needRightJump)
+
 			{
+
 				rightJump(index);
+
 			}
+
 		}
+
 		else {
+
 			string s = "RuFailPic";
+
 			long a = dm->GetTime() % 10000;
+
 			string s_type = ".png";
+
 			string new_filename = s + to_string(a) + s_type;
+
 			copy_and_rename_file(original_path, new_filename);
 
+
+
 			rune_fail_time++;
+
 			if (gMonitorInstance.status) {
+
 				ScriptDelay(index, 500);
+
 				for (size_t i = 0; i < 2; i++)
+
 				{
+
 					JumpAttack(index, false);
+
 					ScriptDelay(index, 1500);
+
 				}
+
 			}
-			SetTaskState(index, _T("·ûÎÄÊ§°Ü"));
+
+			SetTaskState(index, _T("ç¬¦æ–‡å¤±è´¥"));
+
+
+
 
 
 		}
+
+
+
 
 
 		delete[] resData;
+
 	}
+
 }
+
+
 
 void checkDefaults(long index) {
+
 	// Check if there is a rune
+
 	checkRune(index, gMonitorInstance.getRuneCoords());
+
+
 
 }
 
+
+
 void startBo(long index) {
+
 	sptool* dm = g_info[index].dm;
 
+
+
 	long buffTimeOut = dm->GetTime() + BUFF_TIME;
+
 	long buffTimeOut_2 = dm->GetTime() + BUFF_TIME_2;
+
 	long tigerTimeOut = dm->GetTime();
+
 	long lcdTimeOut = dm->GetTime();
+
 	long timeTrack = dm->GetTime();
+
 	long currentTime;
-	buffTimeOut_buff_Ã×ÌØÀ­ = dm->GetTime() + 120000;
+
+	buffTimeOut_buff_ç±³ç‰¹æ‹‰ = dm->GetTime() + 120000;
+
 	int tiger = 0;
 
+
+
 	long topLeftX, topLeftY, bottomRightX, bottomRightY;
+
 	long windowRet = dm->GetWindowRect(g_info[index].hwnd, &topLeftX, &topLeftY, &bottomRightX, &bottomRightY);
+
 	long mapleWindowWidth = bottomRightX - topLeftX;
+
 	long mapleWindowHeight = bottomRightY - topLeftY;
+
 	if (mapleWindowWidth > 1400) {
+
 		mapleWindowWidth = long(mapleWindowWidth / 2);
+
 		mapleWindowHeight = long(mapleWindowHeight / 2);
+
 	}
 
+
+
 	long RUNE_WIDTH = 460;
+
 	long runeTopLeftX = long((mapleWindowWidth / 2) - (RUNE_WIDTH / 2));
+
 	long runeTopLeftY = long(mapleWindowHeight / 4) - 30;
+
 	long runeBottomRightX = runeTopLeftX + RUNE_WIDTH;
+
 	long runeBottomRightY = runeTopLeftY + 100;
+
+
 
 	dm->CapturePng(0, 0, mapleWindowWidth, mapleWindowHeight, _T("C:\\sptool\\MyPic.png"));
 
+
+
 	while (1) {
+
         if (AutoLogin_IsActive(index)) { ScriptDelay(index, 200); continue; }
+
+		UpdateAutoOilCooldown(index, gMonitorInstance.status == 1);
 		if (gMonitorInstance.status == 1) {
+
 			currentTime = dm->GetTime();
+
 			dm->SetWindowState(g_info[index].hwnd, 12);
 
-			// ÅĞ¶ÏÊÇ²»ÊÇË¢Í¼Ä£Ê½
+
+
+			// åˆ¤æ–­æ˜¯ä¸æ˜¯åˆ·å›¾æ¨¡å¼
+
 			if (Gethunt()) {
-				SetTaskState(index,_T("Ë¢Í¼"));
+
+				SetTaskState(index,_T("åˆ·å›¾"));
+
 				if (GetautoRuneSolver() == 1) { checkDefaults(index); }
+
 				if (dm->GetTime()> buffTimeOut_buff_bossChest) {
+
 					checkBossChest(index);
+
 					buffTimeOut_buff_bossChest = dm->GetTime() + 75000;
+
 				}
+
 				if (*gMonitorInstance.getPlayerCoords() > 0 && *gMonitorInstance.getRuneCoords() == -1) {
+
 					if (Getmap() == 0) {
+
 						UpperDeckMap(index);
+
 					}
+
+
 
 					if (Getmap() == 1) {
+
 						Forest3Map(index);
+
 					}
 
+
+
 				}
+
 				else {
+
 					ScriptDelay(index, 250);
-					SetTaskState(index, _T("´ı»ú"));
+
+					SetTaskState(index, _T("å¾…æœº"));
+
 				}
+
 			}
+
 		}
+
 		else {
+
 			ScriptDelay(index, 250);
-			SetTaskState(index, _T("´ı»ú"));
+
+			SetTaskState(index, _T("å¾…æœº"));
+
 		}
+
 	}
+
 }
+
+
 
 void clickRune(long index) {
+
 	(void)index;
+
 	return;
 
+
+
 	sptool* dm = g_info[index].dm;
 
-	// Ã°ÏÕ´°¿ÚĞÅÏ¢
+
+
+	// å†’é™©çª—å£ä¿¡æ¯
+
 	long topLeftX, topLeftY, bottomRightX, bottomRightY;
+
 	long windowRet = dm->GetWindowRect(g_info[index].hwnd, &topLeftX, &topLeftY, &bottomRightX, &bottomRightY);
+
 	long mapleWindowWidth = bottomRightX - topLeftX;
+
 	long mapleWindowHeight = bottomRightY - topLeftY;
+
 	if (mapleWindowWidth > 1400) {
+
 		mapleWindowWidth = long(mapleWindowWidth / 2);
+
 		mapleWindowHeight = long(mapleWindowHeight / 2);
+
 	}
+
+
 
 	long runestateTopLeftX = 0;
+
 	long runestateTopLeftY = 0;
 
+
+
 	long runestateBottomRightX = mapleWindowWidth;
+
 	long runestateBottomRightY = 45;
 
+
+
 	long x, y;
+
 	long findPicRet = dm->FindPic(runestateTopLeftX, runestateTopLeftY,
+
 		runestateBottomRightX, runestateBottomRightY, runestateIcon, _T("000000"), 0.8, 0, &x, &y);
 
+
+
 	if (x > 0 && y > 0) {
+
 		long buff_location_x = x + 10;
+
 		long buff_location_y = y + 7;
 
+
+
 		dm->MoveTo(buff_location_x, buff_location_y);
+
 		dm->RightClick();
+
 		dm->MoveTo(buff_location_x, buff_location_y + 60);
+
 	}
+
 }
+
+
 
 void FieldCheck(long index, bool long_activate_gunboat_one, bool left = true, bool compulsory = false) {
+
 	sptool* dm = g_info[index].dm;
 
-	if ((gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_Ğ¡Á¢³¡) || compulsory)
+
+
+	if ((gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_å°ç«‹åœº) || compulsory)
+
 	{
+
 		ScriptDelay(index, 200);
+
 		if (left) {
+
 			holdKey(index, _T("left"), 30);
+
 		}
+
 		else
+
 		{
+
 			holdKey(index, _T("right"), 30);
+
 		}
-		holdKey(index, Ğ¡Á¢³¡, 350);
-		buffTimeOut_buff_Ğ¡Á¢³¡ = dm->GetTime() + BUFF_TIME_Ğ¡Á¢³¡;
+
+		holdKey(index, å°ç«‹åœº, 350);
+
+		buffTimeOut_buff_å°ç«‹åœº = dm->GetTime() + BUFF_TIME_å°ç«‹åœº;
+
 		ScriptDelay(index, 630);
+
 	}
 
+
+
 }
+
+
 
 void ResistCheck(long index, bool left = true, bool compulsory = false) {
+
 	sptool* dm = g_info[index].dm;
-	if ((gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_·´¿¹·ÅÖÃ) || compulsory)
+
+	if ((gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_åæŠ—æ”¾ç½®) || compulsory)
+
 	{
-		holdKey(index, ·´¿¹·ÅÖÃ, 580, 233);
-		buffTimeOut_buff_·´¿¹·ÅÖÃ = dm->GetTime() + BUFF_TIME_·´¿¹·ÅÖÃ;
+
+		holdKey(index, åæŠ—æ”¾ç½®, 580, 233);
+
+		buffTimeOut_buff_åæŠ—æ”¾ç½® = dm->GetTime() + BUFF_TIME_åæŠ—æ”¾ç½®;
+
 		ScriptDelay(index, 380);
+
 	}
+
 }
+
+
 
 void CheckJanus(long index, bool compulsory = false, int order = 1) {
+
 	sptool* dm = g_info[index].dm;
-	if (gMonitorInstance.status && order == 1 && (compulsory || dm->GetTime() > buffTimeOut_buff_ºÚÇò))
+
+	if (gMonitorInstance.status && order == 1 && (compulsory || dm->GetTime() > buffTimeOut_buff_é»‘çƒ))
+
 	{
-		holdKey(index, ºÚÇò, 140, 55);
-		buffTimeOut_buff_ºÚÇò = dm->GetTime() + BUFF_TIME_ºÚÇò;
+
+		holdKey(index, é»‘çƒ, 140, 55);
+
+		buffTimeOut_buff_é»‘çƒ = dm->GetTime() + BUFF_TIME_é»‘çƒ;
+
 		ScriptDelay(index, 470);
+
 	}
+
 	else if (gMonitorInstance.status && order == 2)
+
 	{
-		holdKey(index, ºÚÇò, 140, 55);
+
+		holdKey(index, é»‘çƒ, 140, 55);
+
 		ScriptDelay(index, 470);
+
 	}
+
 	else if (gMonitorInstance.status && order == 3)
+
 	{
-		holdKey(index, ºÚÇò, 140, 55);
+
+		holdKey(index, é»‘çƒ, 140, 55);
+
 		ScriptDelay(index, 370);
+
 	}
+
 }
+
+
 
 void CheckFountain(long index) {
+
 	sptool* dm = g_info[index].dm;
-	if (gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_°¬¶û´ïÏ´Ôè )
+
+	if (gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_è‰¾å°”è¾¾æ´—æ¾¡ )
+
 	{
-		holdKey(index, °¬¶û´ïÏ´Ôè, 440, 233);
-		buffTimeOut_buff_°¬¶û´ïÏ´Ôè = dm->GetTime() + BUFF_TIME_°¬¶û´ïÏ´Ôè;
+
+		holdKey(index, è‰¾å°”è¾¾æ´—æ¾¡, 440, 233);
+
+		buffTimeOut_buff_è‰¾å°”è¾¾æ´—æ¾¡ = dm->GetTime() + BUFF_TIME_è‰¾å°”è¾¾æ´—æ¾¡;
+
 		ScriptDelay(index, 270);
+
 	}
+
 }
 
+
+
 void CheckRoutineBuff(long index, bool left = true, bool spider = false, int job = 5) {
+
 	sptool* dm = g_info[index].dm;
 
+
+
 	#ifdef Adele
-	if (gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_·É½£)
+
+	if (gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_é£å‰‘)
+
 	{
+
 		sptool* dm = g_info[index].dm;
+
 		long startTime = dm->GetTime();
+
 		while (dm->GetTime() - startTime < 3000) {
-			dm->KeyDownChar(·É½£);
-			dm->KeyDownChar(ºäÕ¨);
+
+			dm->KeyDownChar(é£å‰‘);
+
+			dm->KeyDownChar(è½°ç‚¸);
+
 			ScriptDelay(index, 133);
+
 		}
-		dm->KeyUpChar(·É½£);
-		dm->KeyUpChar(ºäÕ¨);
-		buffTimeOut_buff_·É½£ = dm->GetTime() + BUFF_TIME_·É½£;
+
+		dm->KeyUpChar(é£å‰‘);
+
+		dm->KeyUpChar(è½°ç‚¸);
+
+		buffTimeOut_buff_é£å‰‘ = dm->GetTime() + BUFF_TIME_é£å‰‘;
+
 		ScriptDelay(index, 10);
+
 	}
 
+
+
 	#else 
-	if (gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_÷»×Ó && job >= 5)
+
+	if (gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_éª°å­ && job >= 5)
+
 	{
-		holdKey(index, ÷»×Ó, 580, 233);
-		buffTimeOut_buff_÷»×Ó = dm->GetTime() + BUFF_TIME_÷»×Ó;
+
+		holdKey(index, éª°å­, 580, 233);
+
+		buffTimeOut_buff_éª°å­ = dm->GetTime() + BUFF_TIME_éª°å­;
+
 		ScriptDelay(index, 310);
+
 	}
+
 	#endif 
 
 
 
-	//if (gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_´úÂë && job >= 5)
+
+
+
+
+	//if (gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_ä»£ç  && job >= 5)
+
 	//{
-	//	holdKey(index, ÄÜÁ¿²¹³ä, 540, 133);
+
+	//	holdKey(index, èƒ½é‡è¡¥å……, 540, 133);
+
 	//	ScriptDelay(index, 70);
-	//	holdKey(index, ´úÂë, 680, 133);
-	//	buffTimeOut_buff_´úÂë = dm->GetTime() + BUFF_TIME_´úÂë;
+
+	//	holdKey(index, ä»£ç , 680, 133);
+
+	//	buffTimeOut_buff_ä»£ç  = dm->GetTime() + BUFF_TIME_ä»£ç ;
+
 	//	ScriptDelay(index, 110);
+
 	//}
 
-	if (gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_ÂÖ»Ø && job >= 5)
+
+
+	if (gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_è½®å› && job >= 5)
+
 	{
-		holdKey(index, ÂÖ»Ø, 680, 333);
-		buffTimeOut_buff_ÂÖ»Ø = dm->GetTime() + BUFF_TIME_ÂÖ»Ø;
+
+		holdKey(index, è½®å›, 680, 333);
+
+		buffTimeOut_buff_è½®å› = dm->GetTime() + BUFF_TIME_è½®å›;
+
 		ScriptDelay(index, 110);
+
 	}
 
-	if (gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_Ö©Öë && spider  )
+
+
+	if (gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_èœ˜è›› && spider  )
+
 	{
-		holdKey(index, Ö©Öë, 510, 233);
-		buffTimeOut_buff_Ö©Öë = dm->GetTime() + BUFF_TIME_Ö©Öë;
+
+		holdKey(index, èœ˜è››, 510, 233);
+
+		buffTimeOut_buff_èœ˜è›› = dm->GetTime() + BUFF_TIME_èœ˜è››;
+
 		ScriptDelay(index, 1170);
+
 	}
 
-	if (gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_Ã×ÌØÀ­ && job >= 5)
+
+
+	if (gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_ç±³ç‰¹æ‹‰ && job >= 5)
+
 	{
-		holdKey(index, Ã×ÌØÀ­, 510, 233);
-		buffTimeOut_buff_Ã×ÌØÀ­ = dm->GetTime() + BUFF_TIME_Ã×ÌØÀ­;
+
+		holdKey(index, ç±³ç‰¹æ‹‰, 510, 233);
+
+		buffTimeOut_buff_ç±³ç‰¹æ‹‰ = dm->GetTime() + BUFF_TIME_ç±³ç‰¹æ‹‰;
+
 		ScriptDelay(index, 670);
+
 	}
+
+
 
 }
+
+
 
 void OKDetector(long index) {
+
 	sptool* dm = g_info[index].dm;
 
+
+
 	long topLeftX, topLeftY, bottomRightX, bottomRightY;
+
 	long windowRet = dm->GetWindowRect(g_info[index].hwnd, &topLeftX, &topLeftY, &bottomRightX, &bottomRightY);
+
 	long mapleWindowWidth = bottomRightX - topLeftX;
+
 	long mapleWindowHeight = bottomRightY - topLeftY;
+
 	if (mapleWindowWidth > 1400) {
+
 		mapleWindowWidth = long(mapleWindowWidth / 2);
+
 		mapleWindowHeight = long(mapleWindowHeight / 2);
+
 	}
+
 	long BOSS_WIDTH = 200;
 
+
+
 	long bossTopLeftX = long((mapleWindowWidth / 2) - (BOSS_WIDTH / 2));
+
 	long bossTopLeftY = long((mapleWindowHeight / 2) - 20);
+
 	long bossBottomRightX = long((mapleWindowWidth / 2) + (BOSS_WIDTH / 2));
+
 	long bossBottomRightY = long(120 + (mapleWindowHeight / 2));
+
 	long x, y;
 
+
+
 	int findPicRet = dm->FindPic(bossTopLeftX, bossTopLeftY, bossBottomRightX, bossBottomRightY, okIcon, _T("000000"), 0.95, 0, &x, &y);
+
 	if (x > 0 && y > 0) {
+
 		press(index, "esc", 1, randomUniform(300, 410));
+
 	}
+
 }
+
+
 
 void CheckUseBuff(long index) {
 
+
+
 	sptool* dm = g_info[index].dm;
 
 
-	//ÏûºÄÆ·buff
-	if (Getignite() & (buffTimeOut_buff_µã»ğ <= dm->GetTime())) {
+
+
+
+	//æ¶ˆè€—å“buff
+
+	if (Getignite() & (buffTimeOut_buff_ç‚¹ç« <= dm->GetTime())) {
+
 		dm->SetWindowState(g_info[index].hwnd, 12);
+
 		ScriptDelay(index, 50);
-		holdKey(index, µã»ğ, randomUniform(500, 610), 233);
-		buffTimeOut_buff_µã»ğ = dm->GetTime() + 1810000;
+
+		holdKey(index, ç‚¹ç«, randomUniform(500, 610), 233);
+
+		buffTimeOut_buff_ç‚¹ç« = dm->GetTime() + 1810000;
+
 	}
 
-	if (GetautoOil() & (oilTimeOut <= dm->GetTime())) {
-		holdKey(index, ÆûÓÍ, randomUniform(200, 220));
-		oilTimeOut = dm->GetTime() + 3700000;
+
+
+	if (GetautoOil() && IsAutoOilReady(index)) {
+
+		holdKey(index, æ±½æ²¹, randomUniform(200, 220));
+
+		ArmAutoOilCooldown(index, 3700000);
+
 	}
 
-	if (GetexpPot() & (buffTimeOut_buff_¾­ÑéÃØÒ©2h <= dm->GetTime())) {
+
+
+	if (GetexpPot() & (buffTimeOut_buff_ç»éªŒç§˜è¯2h <= dm->GetTime())) {
+
 		dm->SetWindowState(g_info[index].hwnd, 12);
+
 		ScriptDelay(index, 50);
-		holdKey(index, ¾­ÑéÃØÒ©2h, randomUniform(900, 920), 333);
+
+		holdKey(index, ç»éªŒç§˜è¯2h, randomUniform(900, 920), 333);
+
 		OKDetector(index);
-		holdKey(index, ¾Û²ÆÃØÒ©2h, randomUniform(900, 920), 333);
+
+		holdKey(index, èšè´¢ç§˜è¯2h, randomUniform(900, 920), 333);
+
 		OKDetector(index);
-		buffTimeOut_buff_¾­ÑéÃØÒ©2h = dm->GetTime() + BUFF_TIME_¾­ÑéÃØÒ©2h;
+
+		buffTimeOut_buff_ç»éªŒç§˜è¯2h = dm->GetTime() + BUFF_TIME_ç»éªŒç§˜è¯2h;
+
 	}
 
-	if (GetautoWealth() & (buffTimeOut_buff_¾­ÑéÃØÒ©30 <= dm->GetTime())) {
+
+
+	if (GetautoWealth() & (buffTimeOut_buff_ç»éªŒç§˜è¯30 <= dm->GetTime())) {
+
 		dm->SetWindowState(g_info[index].hwnd, 12);
+
 		ScriptDelay(index, 50);
-		holdKey(index, ¾­ÑéÃØÒ©30, randomUniform(800, 920), 333);
+
+		holdKey(index, ç»éªŒç§˜è¯30, randomUniform(800, 920), 333);
+
 		OKDetector(index);
-		holdKey(index, ¾Û²ÆÃØÒ©30, randomUniform(800, 920), 333);
+
+		holdKey(index, èšè´¢ç§˜è¯30, randomUniform(800, 920), 333);
+
 		OKDetector(index);
-		buffTimeOut_buff_¾­ÑéÃØÒ©30 = dm->GetTime() + BUFF_TIME_¾­ÑéÃØÒ©30;
+
+		buffTimeOut_buff_ç»éªŒç§˜è¯30 = dm->GetTime() + BUFF_TIME_ç»éªŒç§˜è¯30;
+
 	}
 
-	if (GetExp30() & (buffTimeOut_buff_¾­Ñéexp30 <= dm->GetTime())) {
+
+
+	if (GetExp30() & (buffTimeOut_buff_ç»éªŒexp30 <= dm->GetTime())) {
+
 		dm->SetWindowState(g_info[index].hwnd, 12);
+
 		ScriptDelay(index, 50);
-		holdKey(index, ¾­Ñéexp30, randomUniform(700, 820), 333);
+
+		holdKey(index, ç»éªŒexp30, randomUniform(700, 820), 333);
+
 		//ScriptDelay(index,300);
+
 		OKDetector(index);
-		buffTimeOut_buff_¾­Ñéexp30 = dm->GetTime() + GetExpBuffDuration();
+
+		buffTimeOut_buff_ç»éªŒexp30 = dm->GetTime() + GetExpBuffDuration();
+
 	}
 
 
 
-	//if (GetExp10() & !GetExp30() & (buffTimeOut_buff_¾­Ñéexp10 <= dm->GetTime())) {
-	//	holdKey(index, ¾­Ñéexp15, randomUniform(700, 820), 133);
+
+
+
+
+	//if (GetExp10() & !GetExp30() & (buffTimeOut_buff_ç»éªŒexp10 <= dm->GetTime())) {
+
+	//	holdKey(index, ç»éªŒexp15, randomUniform(700, 820), 133);
+
 	//	//ScriptDelay(index, 300);
+
 	//	OKDetector(index);
-	//	buffTimeOut_buff_¾­Ñéexp10 = dm->GetTime() + BUFF_TIME_¾­Ñéexp10;
+
+	//	buffTimeOut_buff_ç»éªŒexp10 = dm->GetTime() + BUFF_TIME_ç»éªŒexp10;
+
 	//}
 
-	//if (GetExp30() & GetExp10() & (buffTimeOut_buff_¾­Ñéexp30 <= dm->GetTime())) {
-	//	holdKey(index, ¾­Ñéexp30, randomUniform(700, 820), 133);
+
+
+	//if (GetExp30() & GetExp10() & (buffTimeOut_buff_ç»éªŒexp30 <= dm->GetTime())) {
+
+	//	holdKey(index, ç»éªŒexp30, randomUniform(700, 820), 133);
+
 	//	//ScriptDelay(index, 300);
+
 	//	OKDetector(index);
-	//	buffTimeOut_buff_¾­Ñéexp30 = dm->GetTime() + BUFF_TIME_¾­Ñéexp20;
+
+	//	buffTimeOut_buff_ç»éªŒexp30 = dm->GetTime() + BUFF_TIME_ç»éªŒexp20;
+
 	//}
+
+
 
 	if (Getkuxing() & (buffTimeOut_buff_MVP <= dm->GetTime())) {
+
 		dm->SetWindowState(g_info[index].hwnd, 12);
+
 		ScriptDelay(index, 50);
+
 		holdKey(index, MVP, randomUniform(700, 820), 333);
+
 		//ScriptDelay(index, 300);
+
 		OKDetector(index);
+
 		buffTimeOut_buff_MVP = dm->GetTime() + BUFF_TIME_MVP;
+
 	}
 
-	if (GetEXP_PARK() & (buffTimeOut_buff_¹«Ô° <= dm->GetTime())) {
+
+
+	if (GetEXP_PARK() & (buffTimeOut_buff_å…¬å›­ <= dm->GetTime())) {
+
 		dm->SetWindowState(g_info[index].hwnd, 12);
+
 		ScriptDelay(index, 50);
+
 		ScriptDelay(index, 400);
-		press(index, ¹«Ô°, 1, randomUniform(200, 320));
-		buffTimeOut_buff_¹«Ô° = dm->GetTime() + BUFF_TIME_¹«Ô°;
+
+		press(index, å…¬å›­, 1, randomUniform(200, 320));
+
+		buffTimeOut_buff_å…¬å›­ = dm->GetTime() + BUFF_TIME_å…¬å›­;
+
 	}
 
-	if (GetExp10() & (buffTimeOut_buff_¾­Ñéexp10 <= dm->GetTime())) {
+
+
+	if (GetExp10() & (buffTimeOut_buff_ç»éªŒexp10 <= dm->GetTime())) {
+
 		dm->SetWindowState(g_info[index].hwnd, 12);
+
 		ScriptDelay(index, 50);
+
 		ScriptDelay(index, 400);
-		press(index, ¼Ò×å1, 1, randomUniform(500, 620));
-		press(index, ¼Ò×å2, 1, randomUniform(200, 320));
-		buffTimeOut_buff_¾­Ñéexp10 = dm->GetTime() + BUFF_TIME_¾­Ñéexp30;
+
+		press(index, å®¶æ—1, 1, randomUniform(500, 620));
+
+		press(index, å®¶æ—2, 1, randomUniform(200, 320));
+
+		buffTimeOut_buff_ç»éªŒexp10 = dm->GetTime() + BUFF_TIME_ç»éªŒexp30;
+
 		guild_skill_count++;
+
 	}
+
 }
 
+
+
 void SpringMap(long index) {
+
 	sptool* dm = g_info[index].dm;
 
+
+
 	CheckUseBuff(index);
-	if (gMonitorInstance.status && dm->GetTime() + 2500 > buffTimeOut_buff_Ğ¡Á¢³¡)
+
+	if (gMonitorInstance.status && dm->GetTime() + 2500 > buffTimeOut_buff_å°ç«‹åœº)
+
 	{
 
+
+
 		int* currentPlayerLocation = gMonitorInstance.getPlayerCoords();
+
 		if (*currentPlayerLocation >= 62 && *currentPlayerLocation <= 72 && *(1 + currentPlayerLocation) == 97) {
+
 			if (gMonitorInstance.status) { ResistCheck(index,false,true); }
+
 			if (gMonitorInstance.status) { ScriptDelay(index, 350); }
+
 			if (gMonitorInstance.status) { goTo(index, 27, 105, 10, true); }
+
 			if (gMonitorInstance.status) { ScriptDelay(index, 100); }
+
 		}
 
+
+
 		if (gMonitorInstance.status) { goTo(index, 133, 108, 5, true, 500, 700); }
+
 		if (gMonitorInstance.status) { goTo(index, 134, 108, 5, true, 500, 700); }
+
 		if (gMonitorInstance.status) { FieldCheck(index, true, false, true); }
 
+
+
 		if (gMonitorInstance.status) { goTo(index, 150, 108, 4, true, 500, 700); }
+
 		if (gMonitorInstance.status) { goTo(index, 150, 108, 4, true, 500, 700); }
+
 		if (gMonitorInstance.status) { ScriptDelay(index, 300); }
+
 		if (gMonitorInstance.status) { keyDown(index, _T("left")); }
+
 		if (gMonitorInstance.status) { ScriptDelay(index, 50); }
-		if (gMonitorInstance.status) { holdKey(index, Ğ±³å, 350); }
+
+		if (gMonitorInstance.status) { holdKey(index, æ–œå†², 350); }
+
 		if (gMonitorInstance.status) { keyUp(index, _T("left")); }
+
 		if (gMonitorInstance.status) { ScriptDelay(index, 300); }
+
+
+
 
 
 		if (gMonitorInstance.status) { goTo(index, 116, 86, 3, true); }
+
 		holdKey(index, _T("left"), 40);
+
 		if (gMonitorInstance.status) { CheckFountain(index); }
+
 		if (gMonitorInstance.status) { ScriptDelay(index, 300); }
 
+
+
 		if (gMonitorInstance.status) { goTo(index, 116, 97, 3, true, 500, 700); }
+
 		if (gMonitorInstance.status) { CheckRoutineBuff(index, false, false, 5); }
 
 
+
+
+
 	}
 
-	if (gMonitorInstance.status &&  dm->GetTime() + 2500 < buffTimeOut_buff_Ğ¡Á¢³¡) {
+
+
+	if (gMonitorInstance.status &&  dm->GetTime() + 2500 < buffTimeOut_buff_å°ç«‹åœº) {
+
 		if (gMonitorInstance.status) { goTo(index, 70, 95, 6, true, 500, 700); }
+
 		if (gMonitorInstance.status) { goTo(index, 67, 97, 3, true, 500, 700); }
+
 		holdKey(index, _T("left"), 30);
+
 	}
 
-	while (gMonitorInstance.status && dm->GetTime() + 2500 < buffTimeOut_buff_Ğ¡Á¢³¡) {
+
+
+	while (gMonitorInstance.status && dm->GetTime() + 2500 < buffTimeOut_buff_å°ç«‹åœº) {
+
 		if (gMonitorInstance.status) { JumpAttack(index, false); }
+
 		ScriptDelay(index, 200);
+
 		if (gMonitorInstance.status) { CheckRoutineBuff(index, false, true, 5); }
+
 		if (gMonitorInstance.status) { CheckUseBuff(index); }
+
 		if (gMonitorInstance.status && dm->GetTime()%10000 < 1000) {
+
 			checkChatPop(index);
+
 		}
-	}
 
 	}
+
+
+
+	}
+
+
 
 void ForestMap(long index) {
+
 	sptool* dm = g_info[index].dm;
-	long ·ÅÖÃÁ÷³ÌºÄÊ± = 5000;
+
+	long æ”¾ç½®æµç¨‹è€—æ—¶ = 5000;
+
+
 
 	if (gMonitorInstance.status) { CheckRoutineBuff(index, false, false, 5); }
+
 	if (gMonitorInstance.status) { CheckUseBuff(index); }
+
 	
-	if (gMonitorInstance.status && dm->GetTime() + ·ÅÖÃÁ÷³ÌºÄÊ± < buffTimeOut_buff_Ğ¡Á¢³¡ && dm->GetTime() < buffTimeOut_buff_´óÁ¢³¡) {
+
+	if (gMonitorInstance.status && dm->GetTime() + æ”¾ç½®æµç¨‹è€—æ—¶ < buffTimeOut_buff_å°ç«‹åœº && dm->GetTime() < buffTimeOut_buff_å¤§ç«‹åœº) {
+
 		if (gMonitorInstance.status) { goTo(index, 46, 126, 6, true, 500, 700); }
+
 		if (gMonitorInstance.status) { goTo(index, 46, 126, 3, true, 500, 700); }
+
 		if (gMonitorInstance.status) {
+
 			ScriptDelay(index, 180);
+
 			holdKey(index, _T("right"), 55);
+
 		}
+
 	}
 
-	while (gMonitorInstance.status && dm->GetTime() + ·ÅÖÃÁ÷³ÌºÄÊ± < buffTimeOut_buff_Ğ¡Á¢³¡ && dm->GetTime() < buffTimeOut_buff_´óÁ¢³¡) {
+
+
+	while (gMonitorInstance.status && dm->GetTime() + æ”¾ç½®æµç¨‹è€—æ—¶ < buffTimeOut_buff_å°ç«‹åœº && dm->GetTime() < buffTimeOut_buff_å¤§ç«‹åœº) {
+
 		if (gMonitorInstance.status) { JumpAttack(index, false); }
+
 		ScriptDelay(index, 200);
+
 		if (gMonitorInstance.status) { CheckRoutineBuff(index, false, true, 5); }
+
 		if (gMonitorInstance.status) { CheckUseBuff(index); }
+
 		//if (gMonitorInstance.status && dm->GetTime() % 10000 < 1000) {
+
 		//	checkChatPop(index);
+
 		//}
+
 	}
 
-	if (gMonitorInstance.status && dm->GetTime() + ·ÅÖÃÁ÷³ÌºÄÊ± > buffTimeOut_buff_Ğ¡Á¢³¡)
+
+
+	if (gMonitorInstance.status && dm->GetTime() + æ”¾ç½®æµç¨‹è€—æ—¶ > buffTimeOut_buff_å°ç«‹åœº)
+
 	{
+
 		int* currentPlayerLocation = gMonitorInstance.getPlayerCoords();
+
 		if (*currentPlayerLocation >= 40 && *currentPlayerLocation <= 60) {
+
 			if (gMonitorInstance.status) { goTo(index, 50, 125, 4, true, 500, 700); }
+
 			if (gMonitorInstance.status) { ResistCheck(index, false, true); }
+
 			if (gMonitorInstance.status) { ScriptDelay(index, 350); }
+
 			if (gMonitorInstance.status) {
+
 				keyDown(index, "left");
+
 				press(index, JUMP_KEY, 1, 90);
+
 				ScriptDelay(index, 320);
+
 				press(index, JUMP_KEY);
+
 				ScriptDelay(index, 50);
+
 				keyUp(index, "left");
+
 				ScriptDelay(index, 450);
+
 			}
+
 			// rope precision: single precise goTo, keep up as separate action
+
  if (gMonitorInstance.status) { goTo(index, 17, 127, 1, true, 500, 600, false, 0, true, 420, 60, 2); }
+
 			if (gMonitorInstance.status) { holdKey(index, "up", 100, 133); }
+
 		}
+
 		if (gMonitorInstance.status) { ScriptDelay(index, 350); }
+
 		if (gMonitorInstance.status) { goTo(index, 141, 123, 7, true, 500, 600); }
+
 		if (gMonitorInstance.status) { goTo(index, 141, 123, 7, true, 500, 600); }
+
 		if (gMonitorInstance.status) { holdKey(index, _T("right"), 40); }
+
 		if (gMonitorInstance.status) { CheckFountain(index); }
+
 		if (gMonitorInstance.status) { ScriptDelay(index, 150); }
+
 		if (gMonitorInstance.status) { holdKey(index, _T("right"), 500); }
+
 		if (gMonitorInstance.status) {
+
 			ScriptDelay(index, 500);
+
 			keyDown(index, "left");
+
 			press(index, JUMP_KEY, 2, 120);
+
 			ScriptDelay(index, 25);
+
 			keyUp(index, "left");
+
 			ScriptDelay(index, 600);
+
 		}
+
+
+
 
 
 		if (gMonitorInstance.status) { goTo(index, 112, 121, 4, true, 500, 600); }
+
 		if (gMonitorInstance.status) { goTo(index, 112, 121, 2, true, 500, 600); }
+
 		if (gMonitorInstance.status) { ScriptDelay(index, 80); }
+
 		if (gMonitorInstance.status) { FieldCheck(index, true, true, true); }
+
 		if (gMonitorInstance.status) {
+
 			ScriptDelay(index, 300);
+
 			keyDown(index, "left");
+
 			press(index, JUMP_KEY, 1, 90);
+
 			ScriptDelay(index, 250);
+
 			press(index, JUMP_KEY);
+
 			ScriptDelay(index, 50);
+
 			keyUp(index, "left");
+
 			ScriptDelay(index, 470);
+
 		}
+
+
 
 		if (gMonitorInstance.status) { goTo(index, 79, 140, 8, true, 500, 600); }
 
+
+
 	}
 
-	if (gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_´óÁ¢³¡) {
+
+
+	if (gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_å¤§ç«‹åœº) {
+
 		if (gMonitorInstance.status) { goTo(index, 49, 138, 6, true, 500, 700); }
+
 		if (gMonitorInstance.status) { 
+
 			ScriptDelay(index, 280);
+
 			holdKey(index, _T("left"), 55);
+
 		}
+
 		if (gMonitorInstance.status) {
-			holdKey(index, ´óÁ¢³¡, 450);
-			buffTimeOut_buff_´óÁ¢³¡ = dm->GetTime() + BUFF_TIME_´óÁ¢³¡;
+
+			holdKey(index, å¤§ç«‹åœº, 450);
+
+			buffTimeOut_buff_å¤§ç«‹åœº = dm->GetTime() + BUFF_TIME_å¤§ç«‹åœº;
+
 			ScriptDelay(index, 530);
+
 		}
+
 	}
+
+
+
+
 
 
 
 }
 
+
+
 void Forest3Map(long index) {
+
 	sptool* dm = g_info[index].dm;
 
+
+
 	if (gMonitorInstance.status) { CheckRoutineBuff(index, false, false, 5); }
+
 	if (gMonitorInstance.status) { CheckUseBuff(index); }
+
 	int count = 1;
 
-	if (gMonitorInstance.status && dm->GetTime() + 4000 < buffTimeOut_buff_ºÚÇò) {
+
+
+	if (gMonitorInstance.status && dm->GetTime() + 4000 < buffTimeOut_buff_é»‘çƒ) {
+
 		if (gMonitorInstance.status) { goTo(index, 153, 124, 5); }
+
 		if (gMonitorInstance.status) { goTo(index, 153, 124, 3); }
+
 		if (gMonitorInstance.status) { holdKey(index, "left", 100, 133); }
+
 		if (gMonitorInstance.status) { holdKey(index, "up", 150, 133); }
+
 	}
 
-	while (gMonitorInstance.status && dm->GetTime() + 4000 < buffTimeOut_buff_ºÚÇò) {
+
+
+	while (gMonitorInstance.status && dm->GetTime() + 4000 < buffTimeOut_buff_é»‘çƒ) {
+
 		if (gMonitorInstance.status) { checkChatPop(index); }
+
 		if (gMonitorInstance.status) { CheckRoutineBuff(index, false); }
+
 		if (gMonitorInstance.status) { CheckUseBuff(index); }
+
 		if (gMonitorInstance.status) { JumpAttack(index, true); }
+
 		if (gMonitorInstance.status) { ScriptDelay(index, 150); }
+
 		if (gMonitorInstance.status && count % 48 == 47) { 
+
 			ScriptDelay(index, 250);
+
 			holdKey(index, "left", 60); 
+
 		}
 
-		if (gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_°¬¶û´ïÏ´Ôè) { 
+
+
+		if (gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_è‰¾å°”è¾¾æ´—æ¾¡) { 
+
 			ScriptDelay(index, 100);
+
 			CheckFountain(index); 
+
 		}
+
 		count++;
+
 	}
 
-	if (gMonitorInstance.status && dm->GetTime() + 4000 > buffTimeOut_buff_ºÚÇò)
+
+
+	if (gMonitorInstance.status && dm->GetTime() + 4000 > buffTimeOut_buff_é»‘çƒ)
+
 	{
 
+
+
 		if (gMonitorInstance.status) { ResistCheck(index); }
+
 		if (gMonitorInstance.status) { ScriptDelay(index, 100); }
+
 		if (gMonitorInstance.status) { goTo(index, 105, 122, 5); }
+
 		if (gMonitorInstance.status) { goTo(index, 105, 122, 3); }
+
 		if (gMonitorInstance.status) {
+
 			if (gMonitorInstance.status) { JumpAttack(index, true); }
+
 			if (gMonitorInstance.status) { JumpAttack(index, true); }
+
 			if (gMonitorInstance.status) { JumpAttack(index, true); }
+
 			if (gMonitorInstance.status) { JumpAttack(index, true); }
+
 			ScriptDelay(index, 450);
+
 			CheckJanus(index, true, 1);
+
 		}
+
 		if (gMonitorInstance.status) {
+
 			ScriptDelay(index, 150);
+
 			keyDown(index, "left");
+
 			press(index, JUMP_KEY, 3, randomUniform(95, 105));
+
 			ScriptDelay(index, 280);
+
 			keyUp(index, "left");
+
 			ScriptDelay(index, 200);
+
 		}
+
 		if (gMonitorInstance.status) { goTo(index, 69, 120, 4); }
+
 		//if (gMonitorInstance.status) { holdKey(index, "up", 150, 133); }
+
 		if (gMonitorInstance.status) { checkChatPop(index); }
+
 		if (gMonitorInstance.status) {
+
 			ScriptDelay(index, 100);
+
 			CheckJanus(index, true, 2);
+
 			if (gMonitorInstance.status) { JumpAttack(index, true); }
+
 			if (gMonitorInstance.status) { JumpAttack(index, true); }
+
 			if (gMonitorInstance.status) { JumpAttack(index, true); }
+
 			if (gMonitorInstance.status) { JumpAttack(index, true); }
+
 			ScriptDelay(index, 450);
+
 		}
+
 		if (gMonitorInstance.status) { goTo(index, 36, 121, 5); }
+
 		if (gMonitorInstance.status) {
+
 			ScriptDelay(index, 100);
+
 			CheckJanus(index, true, 3);
+
 			ScriptDelay(index, 350);
+
 		}
+
+
 
 		// rope precision: single precise goTo, keep up as separate action
+
  if (gMonitorInstance.status) { goTo(index, 26, 124, 1, true, 500, 600, false, 0, true, 420, 60, 2); }
+
 		if (gMonitorInstance.status) { holdKey(index, "up", 100, 133); }
 
+
+
 		if (gMonitorInstance.status) { ScriptDelay(index, 350); }
+
 		if (gMonitorInstance.status) { goTo(index, 152, 124, 7, true, 500, 600); }
+
 	}
 
 
-	//if (gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_Ğ¡Á¢³¡)
+
+
+
+	//if (gMonitorInstance.status && dm->GetTime() > buffTimeOut_buff_å°ç«‹åœº)
+
 	//{
+
 	//	int* currentPlayerLocation = gMonitorInstance.getPlayerCoords();
+
 	//	if (abs(*currentPlayerLocation - 53) <= 8) {
+
 	//		if (gMonitorInstance.status) { ResistCheck(index, false, true); }
+
 	//		if (gMonitorInstance.status) { ScriptDelay(index, 350); }
+
 	//		if (gMonitorInstance.status) { goTo(index, 28, 124, 3, true); }
+
 	//		if (gMonitorInstance.status) { ScriptDelay(index, 30); }
+
 	//		if (gMonitorInstance.status) { goTo(index, 28, 124, 3, true); }
+
 	//		if (gMonitorInstance.status) { ScriptDelay(index, 30); }
+
 	//		if (gMonitorInstance.status) { goTo(index, 28, 124, 1, true); }
+
 	//		if (gMonitorInstance.status) { ScriptDelay(index, 50); }
+
 	//		if (gMonitorInstance.status) { goTo(index, 28, 124, 0, true); }
+
 	//		if (gMonitorInstance.status) { ScriptDelay(index, 100); }
+
 	//		if (gMonitorInstance.status) { goTo(index, 28, 124, 0, true); }
+
 	//		if (gMonitorInstance.status) { holdKey(index, "up", 100, 133); }
+
 	//	}
+
 	//	if (gMonitorInstance.status) { ScriptDelay(index, 350); }
+
 	//	if (gMonitorInstance.status) { goTo(index, 152, 124, 7, true, 500, 600); }
+
 	//	if (gMonitorInstance.status) { goTo(index, 152, 124, 7, true, 500, 600); }
+
 	//	if (gMonitorInstance.status) { holdKey(index, _T("left"), 40); }
+
 	//	if (gMonitorInstance.status) { CheckFountain(index); }
+
 	//	if (gMonitorInstance.status) { JumpAttack(index, false); }
+
 	//	if (gMonitorInstance.status) { ScriptDelay(index, 200); }
+
 	//	if (gMonitorInstance.status) {
+
 	//		ScriptDelay(index, 500);
+
 	//		keyDown(index, "left");
+
 	//		press(index, JUMP_KEY, 2, 120);
+
 	//		ScriptDelay(index, 25);
+
 	//		keyUp(index, "left");
+
 	//		ScriptDelay(index, 300);
+
 	//	}
+
+
+
 
 
 	//	if (gMonitorInstance.status) { goTo(index, 116, 122, 4, true, 500, 600); }
+
 	//	if (gMonitorInstance.status) { goTo(index, 116, 124, 2, true, 500, 600); }
+
 	//	if (gMonitorInstance.status) { ScriptDelay(index, 80); }
+
 	//	if (gMonitorInstance.status) { FieldCheck(index, true, true, true); }
+
 	//	if (gMonitorInstance.status) {
+
 	//		ScriptDelay(index, 300);
+
 	//	}
+
 	//	if (gMonitorInstance.status) { goTo(index, 101, 124, 8, true, 500, 600); }
 
+
+
 	//	if (gMonitorInstance.status) {
+
 	//		keyDown(index, "down");
+
 	//		holdKey(index, JUMP_KEY, 250, 133);
+
 	//		keyUp(index, "down");
+
 	//		ScriptDelay(index, 500);
+
 	//	}
 
+
+
 	//	if (*gMonitorInstance.getRuneCoords() < 0) {
+
 	//		if (gMonitorInstance.status) { goTo(index, 52, 138, 6, true, 500, 600); }
+
 	//		if (gMonitorInstance.status) {
-	//			holdKey(index, ¹³×Ó, randomUniform(925, 975), 133);
+
+	//			holdKey(index, é’©å­, randomUniform(925, 975), 133);
+
 	//			ScriptDelay(index, 300);
+
 	//		}
+
 	//	}
+
+
+
 
 
 	//}
 
+
+
 }
 
+
+
 void UpperDeckMap(long index) {
+
 	sptool* dm = g_info[index].dm;
-	long ·ÅÖÃÁ÷³ÌºÄÊ± = 1000;
+
+	long æ”¾ç½®æµç¨‹è€—æ—¶ = 1000;
+
 	#ifdef Adele
-	·ÅÖÃÁ÷³ÌºÄÊ± = 2500;
+
+	æ”¾ç½®æµç¨‹è€—æ—¶ = 2500;
+
 	#endif 
 
+
+
 	int count = 1;
+
 	if (gMonitorInstance.status) { CheckRoutineBuff(index, false); }
 
-	if (gMonitorInstance.status && dm->GetTime() + ·ÅÖÃÁ÷³ÌºÄÊ± < buffTimeOut_buff_ºÚÇò) {
+
+
+	if (gMonitorInstance.status && dm->GetTime() + æ”¾ç½®æµç¨‹è€—æ—¶ < buffTimeOut_buff_é»‘çƒ) {
+
 		if (gMonitorInstance.status) { goTo(index, 55, 115, 5); }
+
 		if (gMonitorInstance.status) { goTo(index, 55, 115, 5); }
+
 		if (gMonitorInstance.status) { holdKey(index, "left", 200, 133); }
+
 	}
 
-	while (gMonitorInstance.status && dm->GetTime() + 1000 < buffTimeOut_buff_ºÚÇò) {
+
+
+	while (gMonitorInstance.status && dm->GetTime() + 1000 < buffTimeOut_buff_é»‘çƒ) {
+
 		if (gMonitorInstance.status) { CheckRoutineBuff(index, false); }
+
 		if (gMonitorInstance.status) { CheckUseBuff(index); }
+
 		if (gMonitorInstance.status) { JumpAttack(index, true); }
+
 		count++;
+
 	}
 
-	if (gMonitorInstance.status && dm->GetTime() + ·ÅÖÃÁ÷³ÌºÄÊ± > buffTimeOut_buff_ºÚÇò)
+
+
+	if (gMonitorInstance.status && dm->GetTime() + æ”¾ç½®æµç¨‹è€—æ—¶ > buffTimeOut_buff_é»‘çƒ)
+
 	{
 
+
+
 		int* currentPlayerLocation = gMonitorInstance.getPlayerCoords();
+
 		if (abs(*currentPlayerLocation - 55) <= 12 && abs(*(currentPlayerLocation+1) - 123) <= 3) {
+
 			#ifdef Adele
+
 			ScriptDelay(index, 250);
+
 			if (gMonitorInstance.status) { goTo(index, 42, 115, 6); }
+
 			if (gMonitorInstance.status) { goTo(index, 67, 115, 5); }
+
 			#else 
+
 			if (gMonitorInstance.status) { goTo(index, 67, 115, 6); }
+
 			if (gMonitorInstance.status) { ResistCheck(index); }
+
 			#endif 
+
+
 
 		}
 
+
+
 		if (gMonitorInstance.status) { goTo(index, 101, 114, 5); }
+
 		if (gMonitorInstance.status) { goTo(index, 101, 114, 3); }
+
 		if (gMonitorInstance.status) { 
+
 			if (gMonitorInstance.status) { JumpAttack(index, true); }
+
 			if (gMonitorInstance.status) { JumpAttack(index, true); }
+
 			ScriptDelay(index, 750);
+
 			press(index, JUMP_KEY, 1, 40);
+
 			CheckJanus(index, true, 1); 
 
 
+
+
+
 		}
+
 		#ifdef Adele
+
 		if (gMonitorInstance.status) { goTo(index, 101, 114, 3); }
+
 		#endif 
 
+
+
 		if (gMonitorInstance.status) { goTo(index, 139, 114, 5); }
+
 		if (gMonitorInstance.status) {
+
 			ScriptDelay(index, 100);
+
 			press(index, JUMP_KEY, 1, 40);
+
 			CheckJanus(index, true, 2);
+
 			if (gMonitorInstance.status) { JumpAttack(index, true); }
+
 			ScriptDelay(index, 550);
+
 		}
+
 		if (gMonitorInstance.status) { goTo(index, 145, 88, 8); }
+
 		if (gMonitorInstance.status) { holdKey(index, "left", 400, 133); }
 
+
+
 		if (gMonitorInstance.status) { goTo(index, 67, 101, 6); }
+
 		if (gMonitorInstance.status) { CheckFountain(index); }
+
 	}
 
 
 
 
+
+
+
+
+
 }
+
+
 
 void leftRight(long index, int& count) {
+
 	if (count % 2 == 0) {
+
 		holdKey(index, _T("left"), 400);
+
 	}
+
 	else {
+
 		holdKey(index, _T("right"), 400);
+
 	}
+
 }
+
+
+
+
 
 
 

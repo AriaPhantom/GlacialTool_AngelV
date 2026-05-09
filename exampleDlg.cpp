@@ -9504,7 +9504,10 @@ CexampleDlg::CexampleDlg(QWidget* parent)
 
 
 
-	, wyImageMode(NULL)
+		, autoRest(NULL)
+	, autoRestRunMinutes(NULL)
+	, autoRestRestMinutes(NULL)
+, wyImageMode(NULL)
 
 
 
@@ -37913,7 +37916,41 @@ void CexampleDlg::InitUi()
 	autoLoginRow->addWidget(autoLoginDelayLabel);
 	autoLoginRow->addWidget(autoLoginDelay);
 	autoLoginRow->addStretch();
-	detectLayout->addWidget(autoLoginRowWidget);QWidget* backendWidget = new QWidget(pageDetect);
+	detectLayout->addWidget(autoLoginRowWidget);
+
+	QWidget* autoRestRowWidget = new QWidget(pageDetect);
+	QHBoxLayout* autoRestRow = new QHBoxLayout(autoRestRowWidget);
+	autoRestRow->setContentsMargins(0, 2, 0, 0);
+	autoRestRow->setSpacing(6);
+
+	autoRest = createPill(QString::fromLatin1("Rest Cycle"));
+	autoRest->setToolTip(QString::fromLatin1("Requires Auto Login"));
+	autoRestRunMinutes = new QLineEdit(autoRestRowWidget);
+	autoRestRunMinutes->setFixedHeight(kInputHeight);
+	autoRestRunMinutes->setFixedWidth(56);
+	autoRestRunMinutes->setValidator(new QIntValidator(0, 1440, autoRestRunMinutes));
+	autoRestRunMinutes->setPlaceholderText(QString::fromWCharArray(L"X"));
+
+	QLabel* autoRestRunLabel = new QLabel(QString::fromLatin1("Run(min)"), autoRestRowWidget);
+	autoRestRunLabel->setProperty("muted", true);
+	autoRestRestMinutes = new QLineEdit(autoRestRowWidget);
+	autoRestRestMinutes->setFixedHeight(kInputHeight);
+	autoRestRestMinutes->setFixedWidth(56);
+	autoRestRestMinutes->setValidator(new QIntValidator(0, 1440, autoRestRestMinutes));
+	autoRestRestMinutes->setPlaceholderText(QString::fromWCharArray(L"Y"));
+
+	QLabel* autoRestRestLabel = new QLabel(QString::fromLatin1("Rest(min)"), autoRestRowWidget);
+	autoRestRestLabel->setProperty("muted", true);
+
+	autoRestRow->addWidget(autoRest);
+	autoRestRow->addWidget(autoRestRunMinutes);
+	autoRestRow->addWidget(autoRestRunLabel);
+	autoRestRow->addWidget(autoRestRestMinutes);
+	autoRestRow->addWidget(autoRestRestLabel);
+	autoRestRow->addStretch();
+	detectLayout->addWidget(autoRestRowWidget);
+
+	QWidget* backendWidget = new QWidget(pageDetect);
 
 
 
@@ -52350,7 +52387,22 @@ void CexampleDlg::LoadUiState()
         }
         autoLoginMode->setCurrentIndex(mode);
     }
-    if (autoLoginPreset)
+    	if (autoRest) autoRest->setChecked(app->GetProfileInt(kUiStateSection, _T("AutoRestEnabled"), 0) != 0);
+	if (autoRestRunMinutes)
+	{
+		int minutes = app->GetProfileInt(kUiStateSection, _T("AutoRestRunMinutes"), 120);
+		if (minutes < 0) minutes = 0;
+		if (minutes > 1440) minutes = 1440;
+		autoRestRunMinutes->setText(QString::number(minutes));
+	}
+	if (autoRestRestMinutes)
+	{
+		int minutes = app->GetProfileInt(kUiStateSection, _T("AutoRestRestMinutes"), 15);
+		if (minutes < 0) minutes = 0;
+		if (minutes > 1440) minutes = 1440;
+		autoRestRestMinutes->setText(QString::number(minutes));
+	}
+if (autoLoginPreset)
     {
         int presetSel = app->GetProfileInt(kUiStateSection, _T("AutoLoginPresetSel"), 0);
         if (presetSel < 0 || presetSel >= autoLoginPreset->count())
@@ -95258,6 +95310,45 @@ int CexampleDlg::GetAutoLoginMode()
     return autoLoginMode ? autoLoginMode->currentIndex() : 0;
 }
 
+
+int CexampleDlg::GetAutoRestEnabled()
+{
+	return autoRest ? autoRest->isChecked() : 0;
+}
+
+int CexampleDlg::GetAutoRestRunMinutes()
+{
+	if (!autoRestRunMinutes)
+	{
+		return 120;
+	}
+	bool ok = false;
+	int minutes = autoRestRunMinutes->text().trimmed().toInt(&ok);
+	if (!ok)
+	{
+		minutes = 120;
+	}
+	if (minutes < 0) minutes = 0;
+	if (minutes > 1440) minutes = 1440;
+	return minutes;
+}
+
+int CexampleDlg::GetAutoRestRestMinutes()
+{
+	if (!autoRestRestMinutes)
+	{
+		return 15;
+	}
+	bool ok = false;
+	int minutes = autoRestRestMinutes->text().trimmed().toInt(&ok);
+	if (!ok)
+	{
+		minutes = 15;
+	}
+	if (minutes < 0) minutes = 0;
+	if (minutes > 1440) minutes = 1440;
+	return minutes;
+}
 int CexampleDlg::GetWhiteDetect()
 {
     return whiteDetect ? whiteDetect->isChecked() : 0;
@@ -95816,6 +95907,21 @@ int GetAutoLoginMode()
 
 
 
+
+int GetAutoRestEnabled()
+{
+	return g_main_cwnd ? g_main_cwnd->GetAutoRestEnabled() : 0;
+}
+
+int GetAutoRestRunMinutes()
+{
+	return g_main_cwnd ? g_main_cwnd->GetAutoRestRunMinutes() : 0;
+}
+
+int GetAutoRestRestMinutes()
+{
+	return g_main_cwnd ? g_main_cwnd->GetAutoRestRestMinutes() : 0;
+}
 int GetWuyaImageMode()
 {
     return g_main_cwnd ? g_main_cwnd->GetWuyaImageMode() : kWuyaModeNativeOnly;

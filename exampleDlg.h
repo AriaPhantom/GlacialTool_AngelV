@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <QtWidgets/QWidget>
 #include <string>
@@ -56,6 +56,9 @@ int GetExp30();
     int GetAutoLoginDelay();
     int GetAutoLoginChannel();
     int GetAutoLoginMode();
+    int GetAutoRestEnabled();
+    int GetAutoRestRunMinutes();
+    int GetAutoRestRestMinutes();
     int GetWuyaImageMode();
     int GetWuyaInputMode();
 
@@ -114,6 +117,9 @@ QToolButton* whiteDetect;
     QComboBox* autoLoginPreset;
     QComboBox* autoLoginChannel;
     QComboBox* autoLoginMode;
+    QToolButton* autoRest;
+    QLineEdit* autoRestRunMinutes;
+    QLineEdit* autoRestRestMinutes;
     QComboBox* wyImageMode;
     QComboBox* wyInputMode;
     int m_autoLoginPresetIndex;

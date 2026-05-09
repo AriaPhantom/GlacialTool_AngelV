@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 
 #include "AutoLogin.h"
 
@@ -28,6 +28,9 @@ extern std::wstring GetAutoLoginKeys();
 extern int GetAutoLoginDelay();
 extern int GetAutoLoginChannel();
 extern int GetAutoLoginMode();
+extern int GetAutoRestEnabled();
+extern int GetAutoRestRunMinutes();
+extern int GetAutoRestRestMinutes();
 extern void subSoftStart();
 extern void subSoftPause();
 
@@ -106,6 +109,9 @@ std::atomic<long> g_loginPendingSinceMs[MAX_HWND];
 std::atomic<bool> g_loginNeedRestart[MAX_HWND];
 std::atomic<bool> g_forceRelaunch[MAX_HWND];
 std::atomic<unsigned long long> g_disconnectWatcherGeneration[MAX_HWND];
+std::atomic<unsigned long long> g_autoRestAccumulatedMs[MAX_HWND];
+std::atomic<unsigned long long> g_autoRestLastActiveTickMs[MAX_HWND];
+std::atomic<unsigned long long> g_autoRestUntilTickMs[MAX_HWND];
 struct IconFindHint {
 	bool valid = false;
 	std::wstring iconPath;
@@ -117,6 +123,8 @@ struct IconFindHint {
 };
 std::mutex g_iconFindHintMutex;
 IconFindHint g_iconFindHints[MAX_HWND];
+void TriggerAutoLogin(long mainIndex);
+void KillMapleStoryProcesses();
 
 bool ContainsIgnoreCase(const std::wstring& value, const std::wstring& needle) {
 	if (value.empty() || needle.empty()) return false;
@@ -169,6 +177,111 @@ long NormalizeMainIndex(long index) {
 	if (index >= MAX_HWND * 2) index -= MAX_HWND * 2;
 	if (index >= MAX_HWND) index -= MAX_HWND;
 	return index;
+}
+
+void ResetAutoRestState(long mainIndex, bool clearRestUntil = true) {
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
+	g_autoRestAccumulatedMs[mainIndex].store(0);
+	g_autoRestLastActiveTickMs[mainIndex].store(0);
+	if (clearRestUntil) {
+		g_autoRestUntilTickMs[mainIndex].store(0);
+	}
+}
+
+bool TryGetAutoRestConfig(int& runMinutes, int& restMinutes) {
+	if (!GetAutoLogin()) return false;
+	if (!GetAutoRestEnabled()) return false;
+
+	runMinutes = GetAutoRestRunMinutes();
+	restMinutes = GetAutoRestRestMinutes();
+	if (runMinutes <= 0 || restMinutes <= 0) return false;
+	if (runMinutes > 1440) runMinutes = 1440;
+	if (restMinutes > 1440) restMinutes = 1440;
+	return true;
+}
+
+void ClearWindowForAllThreads(long mainIndex) {
+	const long offsets[] = { 0, MAX_HWND, MAX_HWND * 2 };
+	for (long offset : offsets) {
+		long idx = mainIndex + offset;
+		if (idx < 0 || idx >= MAX_HWND * 3) continue;
+		g_info[idx].hwnd = 0;
+		g_info[idx].pid = 0;
+	}
+}
+
+void BeginAutoRest(long mainIndex, unsigned long long nowTick, unsigned long long restMs) {
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
+	ResetAutoRestState(mainIndex, false);
+	g_autoRestUntilTickMs[mainIndex].store(nowTick + restMs);
+	g_forceRelaunch[mainIndex].store(true);
+	subSoftPause();
+	SPUtils::ReleaseAllKeysFastKeyboardOnlySkipEnter();
+	SetTaskState(mainIndex, _T("REST"));
+	KillMapleStoryProcesses();
+	ClearWindowForAllThreads(mainIndex);
+}
+
+bool HandleAutoRest(long mainIndex) {
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) return false;
+
+	int runMinutes = 0;
+	int restMinutes = 0;
+	if (!TryGetAutoRestConfig(runMinutes, restMinutes)) {
+		ResetAutoRestState(mainIndex);
+		return false;
+	}
+
+	unsigned long long nowTick = GetTickCount64();
+	unsigned long long restUntilTick = g_autoRestUntilTickMs[mainIndex].load();
+	if (restUntilTick > nowTick) {
+		ResetAutoRestState(mainIndex, false);
+		return true;
+	}
+
+	if (restUntilTick != 0) {
+		g_autoRestUntilTickMs[mainIndex].store(0);
+		ResetAutoRestState(mainIndex, false);
+		TriggerAutoLogin(mainIndex);
+		return true;
+	}
+
+	if (g_loginRunning[mainIndex].load()) {
+		g_autoRestLastActiveTickMs[mainIndex].store(0);
+		return false;
+	}
+
+	const bool activeEligible =
+		!g_info[mainIndex].is_stop &&
+		!g_info[mainIndex].is_pause &&
+		g_info[mainIndex].handle != NULL &&
+		g_info[mainIndex].thread_state == State_Runing &&
+		gMonitorInstance.status == 1;
+
+	if (!activeEligible) {
+		g_autoRestLastActiveTickMs[mainIndex].store(0);
+		return false;
+	}
+
+	unsigned long long lastTick = g_autoRestLastActiveTickMs[mainIndex].load();
+	if (lastTick == 0 || nowTick < lastTick) {
+		g_autoRestLastActiveTickMs[mainIndex].store(nowTick);
+		return false;
+	}
+
+	unsigned long long deltaMs = nowTick - lastTick;
+	g_autoRestLastActiveTickMs[mainIndex].store(nowTick);
+	unsigned long long accumulatedMs = g_autoRestAccumulatedMs[mainIndex].load() + deltaMs;
+	g_autoRestAccumulatedMs[mainIndex].store(accumulatedMs);
+
+	const unsigned long long runLimitMs = static_cast<unsigned long long>(runMinutes) * 60ULL * 1000ULL;
+	const unsigned long long restMs = static_cast<unsigned long long>(restMinutes) * 60ULL * 1000ULL;
+	if (accumulatedMs < runLimitMs) {
+		return false;
+	}
+
+	BeginAutoRest(mainIndex, nowTick, restMs);
+	return true;
 }
 
 bool FileExists(const std::wstring& path) {
@@ -947,6 +1060,7 @@ void AutoLoginThread(long mainIndex) {
 void TriggerAutoLogin(long mainIndex) {
 	bool expected = false;
 	if (!g_loginRunning[mainIndex].compare_exchange_strong(expected, true)) return;
+	ResetAutoRestState(mainIndex);
 	if (g_loginPendingSinceMs[mainIndex].load() <= 0) {
 		g_loginPendingSinceMs[mainIndex].store(GetTime());
 	}
@@ -1033,6 +1147,7 @@ void AutoLogin_CheckAndTrigger(long index) {
 	long mainIndex = NormalizeMainIndex(index);
 	if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
 	if (g_info[mainIndex].is_stop) return;
+	if (HandleAutoRest(mainIndex)) return;
 	if (!GetAutoLogin()) return;
 	if (g_loginRunning[mainIndex].load()) return;
 
@@ -1094,6 +1209,7 @@ void DisconnectWatcherLoop(long mainIndex, unsigned long long generation) {
 void AutoLogin_StartDisconnectWatcher(long index) {
 	long mainIndex = NormalizeMainIndex(index);
 	if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
+	ResetAutoRestState(mainIndex);
 
 	unsigned long long generation = g_disconnectWatcherGeneration[mainIndex].fetch_add(1) + 1;
 	std::thread([mainIndex, generation]() {
@@ -1104,6 +1220,7 @@ void AutoLogin_StartDisconnectWatcher(long index) {
 void AutoLogin_StopDisconnectWatcher(long index) {
 	long mainIndex = NormalizeMainIndex(index);
 	if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
+	ResetAutoRestState(mainIndex);
 	g_disconnectWatcherGeneration[mainIndex].fetch_add(1);
 }
 
