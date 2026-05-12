@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 
 #include "AutoLogin.h"
 #include "MiaoSender.h"
@@ -101,6 +101,19 @@ constexpr long kIconHintTtlMs = 2000;
 constexpr int kIconHintHalfWidth = 220;
 constexpr int kIconHintHalfHeight = 150;
 constexpr int kIconHintMinSearchArea = 500 * 320;
+constexpr double kStuck2DarkTextSim = 0.985;
+constexpr int kStuck2DarkTextThreshold = 215;
+constexpr int kStuck2DarkTextMinPixels = 1800;
+constexpr int kStuck2DarkTextMaxSearchHeight = 220;
+
+struct DarkTextTemplateCache {
+std::wstring path;
+cv::Mat gray;
+cv::Mat mask;
+};
+
+std::mutex g_darkTextTemplateCacheMutex;
+DarkTextTemplateCache g_stuck2DarkTextTemplateCache;
 
 const wchar_t* kLaunchCommand = L"nxl://launch/10100";
 
@@ -1094,12 +1107,143 @@ if (!FindIconInWindowBmpFirst(mainIndex, kLoginIconPath, kLoginIconFallbackPath,
 return x > 0 && y > 0;
 }
 
+struct DisconnectDarkTextTemplate {
+	std::wstring path;
+	cv::Mat gray;
+	cv::Mat mask;
+};
+
+bool LoadDisconnectDarkTextTemplate(const wchar_t* bmpPath, const wchar_t* pngPath,
+	int threshold, int minPixels, DisconnectDarkTextTemplate& cache) {
+	const wchar_t* selectedPath = nullptr;
+	if (bmpPath && FileExists(bmpPath)) selectedPath = bmpPath;
+	else if (pngPath && FileExists(pngPath)) selectedPath = pngPath;
+	if (selectedPath == nullptr || *selectedPath == L'\0') return false;
+
+	std::wstring selected(selectedPath);
+	if (cache.path == selected && !cache.gray.empty() && !cache.mask.empty()) {
+		return true;
+	}
+
+	std::string narrowPath;
+	narrowPath.reserve(selected.size());
+	for (wchar_t ch : selected) {
+		narrowPath.push_back(static_cast<char>(ch));
+	}
+
+	cv::Mat templateGray = cv::imread(narrowPath, cv::IMREAD_GRAYSCALE);
+	if (templateGray.empty()) return false;
+
+	cv::Mat templateMask;
+	cv::threshold(templateGray, templateMask, threshold, 255, cv::THRESH_BINARY_INV);
+	if (cv::countNonZero(templateMask) < minPixels) return false;
+
+	cache.path = selected;
+	cache.gray = templateGray;
+	cache.mask = templateMask;
+	return true;
+}
+
+bool MatchDisconnectDarkText(const cv::Mat& captureGray, DisconnectDarkTextTemplate& cache,
+	double sim, long& outx, long& outy) {
+	if (cache.gray.empty() || cache.mask.empty()) return false;
+	if (captureGray.cols < cache.gray.cols || captureGray.rows < cache.gray.rows) return false;
+
+	cv::Mat result;
+	cv::matchTemplate(captureGray, cache.gray, result, cv::TM_CCORR_NORMED, cache.mask);
+	if (result.empty()) return false;
+
+	double maxVal = 0.0;
+	cv::Point maxLoc;
+	cv::minMaxLoc(result, nullptr, &maxVal, nullptr, &maxLoc);
+	if (maxVal < sim) return false;
+
+	outx = maxLoc.x;
+	outy = maxLoc.y;
+	return true;
+}
+
 bool IsStuckScreen(long mainIndex) {
-long x = -1, y = -1;
-if (FindIconInWindowBmpFirst(mainIndex, kStuckIconPath, kStuckIconFallbackPath, 0.9, x, y) && x > 0 && y > 0) return true;
-x = -1; y = -1;
-if (!FindIconInWindowBmpFirst(mainIndex, kStuck2IconPath, kStuck2IconFallbackPath, 0.9, x, y)) return false;
-return x > 0 && y > 0;
+	constexpr int kDarkTextThreshold = 215;
+	constexpr int kDarkTextMinPixels = 1800;
+	constexpr int kDarkTextSearchHeight = 220;
+	constexpr double kDarkTextSim = 0.985;
+
+	if (!EnsureWindowBinding(mainIndex)) return false;
+	HWND hwnd = reinterpret_cast<HWND>(static_cast<LONG_PTR>(g_info[mainIndex].hwnd));
+	if (!hwnd || !IsWindow(hwnd)) return false;
+
+	static DisconnectDarkTextTemplate stuckCache;
+	static DisconnectDarkTextTemplate stuck2Cache;
+	if (!LoadDisconnectDarkTextTemplate(kStuckIconPath, kStuckIconFallbackPath,
+		kDarkTextThreshold, kDarkTextMinPixels, stuckCache)) {
+		return false;
+	}
+	if (!LoadDisconnectDarkTextTemplate(kStuck2IconPath, kStuck2IconFallbackPath,
+		kDarkTextThreshold, kDarkTextMinPixels, stuck2Cache)) {
+		return false;
+	}
+
+	long width = 0;
+	long height = 0;
+	if (!GetWindowSizeForSearch(mainIndex, width, height)) return false;
+
+	int minTemplateHeight = stuckCache.gray.rows;
+	if (!stuck2Cache.gray.empty() && (minTemplateHeight <= 0 || stuck2Cache.gray.rows < minTemplateHeight)) {
+		minTemplateHeight = stuck2Cache.gray.rows;
+	}
+	int searchHeight = static_cast<int>(std::min<long>(height,
+		std::max<long>(kDarkTextSearchHeight, minTemplateHeight + 20)));
+	if (searchHeight <= 0 || width <= 0) return false;
+
+	cv::Mat captured;
+	if (!SPUtils::CaptureAndResizeToLogic(hwnd, 0, 0, static_cast<int>(width), searchHeight, captured)) {
+		return false;
+	}
+	if (captured.empty()) return false;
+
+	cv::Mat captureGray;
+	if (captured.channels() == 4) {
+		cv::cvtColor(captured, captureGray, cv::COLOR_BGRA2GRAY);
+	}
+	else if (captured.channels() == 3) {
+		cv::cvtColor(captured, captureGray, cv::COLOR_BGR2GRAY);
+	}
+	else if (captured.channels() == 1) {
+		captureGray = captured;
+	}
+	else {
+		return false;
+	}
+
+	long x = -1;
+	long y = -1;
+	if (MatchDisconnectDarkText(captureGray, stuckCache, kDarkTextSim, x, y)) return true;
+	x = -1;
+	y = -1;
+	if (MatchDisconnectDarkText(captureGray, stuck2Cache, kDarkTextSim, x, y)) return true;
+	return false;
+}
+void DisconnectWatcherLoop(long mainIndex, unsigned long long generation) {
+while (true) {
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) {
+		break;
+	}
+	if (g_disconnectWatcherGeneration[mainIndex].load() != generation) {
+		break;
+	}
+	if (g_info[mainIndex].is_stop) {
+		break;
+	}
+
+	AutoLogin_CheckAndTrigger(mainIndex);
+	if (AutoLogin_IsActive(mainIndex)) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(kDisconnectWatcherActiveIntervalMs));
+	}
+	else {
+		std::this_thread::sleep_for(std::chrono::milliseconds(kDisconnectWatcherIdleIntervalMs));
+	}
+}
 }
 
 }
@@ -1207,28 +1351,6 @@ if (IsOnLoginScreen(mainIndex)) {
 }
 }
 
-void DisconnectWatcherLoop(long mainIndex, unsigned long long generation) {
-while (true) {
-	if (mainIndex < 0 || mainIndex >= MAX_HWND) {
-		break;
-	}
-	if (g_disconnectWatcherGeneration[mainIndex].load() != generation) {
-		break;
-	}
-	if (g_info[mainIndex].is_stop) {
-		break;
-	}
-
-	AutoLogin_CheckAndTrigger(mainIndex);
-	if (AutoLogin_IsActive(mainIndex)) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(kDisconnectWatcherActiveIntervalMs));
-	}
-	else {
-		std::this_thread::sleep_for(std::chrono::milliseconds(kDisconnectWatcherIdleIntervalMs));
-	}
-}
-}
-
 void AutoLogin_StartDisconnectWatcher(long index) {
 long mainIndex = NormalizeMainIndex(index);
 if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
@@ -1246,4 +1368,5 @@ if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
 ResetAutoRestState(mainIndex);
 g_disconnectWatcherGeneration[mainIndex].fetch_add(1);
 }
+
 
