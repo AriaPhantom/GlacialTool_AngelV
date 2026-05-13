@@ -1177,9 +1177,9 @@ void gMonitorCheck(long index, long count)
 
 		int guild_y = -1;
 
-		findMiniMapIcon(friendIcon, 0.95, random_x, random_y);
+		findMiniMapIcon(friendIcon, 0.99, random_x, random_y);
 
-		findMiniMapIcon(guildIcon, 0.95, guild_x, guild_y);
+		findMiniMapIcon(guildIcon, 0.99, guild_x, guild_y);
 
 
 
