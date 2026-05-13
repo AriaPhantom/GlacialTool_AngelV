@@ -97,9 +97,6 @@ constexpr int kDisconnectWatcherActiveIntervalMs = 500;
 constexpr int kDisconnectWatcherIdleIntervalMs = 1000;
 constexpr long kDisconnectWatcherBaseCheckIntervalMs = 1000;
 constexpr long kDisconnectWatcherImageCheckIntervalMs = 3000;
-constexpr long kDisconnectWatcherStartupGraceMs = 15000;
-constexpr long kDisconnectWatcherPostLoginGraceMs = 8000;
-constexpr long kDisconnectWatcherNotifyThrottleMs = 30000;
 constexpr long kIconHintTtlMs = 2000;
 constexpr int kIconHintHalfWidth = 220;
 constexpr int kIconHintHalfHeight = 150;
@@ -124,9 +121,6 @@ std::atomic<bool> g_loginRunning[MAX_HWND];
 std::atomic<long> g_lastCheckMs[MAX_HWND];
 std::atomic<long> g_lastImageCheckMs[MAX_HWND];
 std::atomic<long> g_loginPendingSinceMs[MAX_HWND];
-std::atomic<long> g_lastLoginSuccessMs[MAX_HWND];
-std::atomic<long> g_lastDisconnectNotifyMs[MAX_HWND];
-std::atomic<long> g_disconnectWatcherStartedMs[MAX_HWND];
 std::atomic<bool> g_loginNeedRestart[MAX_HWND];
 std::atomic<bool> g_forceRelaunch[MAX_HWND];
 std::atomic<unsigned long long> g_disconnectWatcherGeneration[MAX_HWND];
@@ -160,53 +154,21 @@ return v.find(n) != std::wstring::npos;
 }
 
 void NotifyDisconnectMiao(const char* reason) {
-	if (reason == nullptr || *reason == '\0') return;
+if (reason == nullptr || *reason == '\0') return;
 
-	const std::string code =
-		!miaoSenderInstance.MiaoCode_others.empty() ? miaoSenderInstance.MiaoCode_others :
-		!miaoSenderInstance.MiaoCode_boss.empty() ? miaoSenderInstance.MiaoCode_boss :
-		!miaoSenderInstance.MiaoCode_white.empty() ? miaoSenderInstance.MiaoCode_white :
-		miaoSenderInstance.Miaocode_huangmen;
-	if (code.empty()) return;
-	const std::string reasonText(reason);
+const std::string code =
+	!miaoSenderInstance.MiaoCode_others.empty() ? miaoSenderInstance.MiaoCode_others :
+	!miaoSenderInstance.MiaoCode_boss.empty() ? miaoSenderInstance.MiaoCode_boss :
+	!miaoSenderInstance.MiaoCode_white.empty() ? miaoSenderInstance.MiaoCode_white :
+	miaoSenderInstance.Miaocode_huangmen;
+if (code.empty()) return;
+const std::string reasonText(reason);
 
-	std::thread([code, reasonText]() {
-		sendMiaoCodeByType(code, "others", reasonText);
-	}).detach();
+std::thread([code, reasonText]() {
+	sendMiaoCodeByType(code, "others", reasonText);
+}).detach();
 }
 
-bool IsDisconnectWatcherInGracePeriod(long mainIndex, long nowMs) {
-	long watcherStarted = g_disconnectWatcherStartedMs[mainIndex].load();
-	if (watcherStarted > 0 && nowMs >= watcherStarted &&
-		nowMs - watcherStarted < kDisconnectWatcherStartupGraceMs) {
-		return true;
-	}
-
-	long pendingSince = g_loginPendingSinceMs[mainIndex].load();
-	if (pendingSince > 0 && nowMs >= pendingSince &&
-		nowMs - pendingSince < kDisconnectWatcherStartupGraceMs) {
-		return true;
-	}
-
-	long lastSuccess = g_lastLoginSuccessMs[mainIndex].load();
-	if (lastSuccess > 0 && nowMs >= lastSuccess &&
-		nowMs - lastSuccess < kDisconnectWatcherPostLoginGraceMs) {
-		return true;
-	}
-
-	return false;
-}
-
-void NotifyDisconnectMiaoThrottled(long mainIndex, long nowMs, const char* reason) {
-	if (reason == nullptr || *reason == '\0') return;
-	long lastNotify = g_lastDisconnectNotifyMs[mainIndex].load();
-	if (lastNotify > 0 && nowMs >= lastNotify &&
-		nowMs - lastNotify < kDisconnectWatcherNotifyThrottleMs) {
-		return;
-	}
-	g_lastDisconnectNotifyMs[mainIndex].store(nowMs);
-	NotifyDisconnectMiao(reason);
-}
 
 struct DisconnectDialogHit {
 DWORD pid;
@@ -1113,8 +1075,6 @@ if (success) {
 	gMonitorInstance.whiteIconUpdate = 1;
 	SetTaskState(mainIndex, _T("AUTO LOGIN OK"));
 	g_loginPendingSinceMs[mainIndex].store(0);
-	g_lastLoginSuccessMs[mainIndex].store(GetTime());
-	g_lastDisconnectNotifyMs[mainIndex].store(0);
 	if (g_loginNeedRestart[mainIndex].load()) {
 		SPUtils::ReleaseAllKeysFastKeyboardOnlySkipEnter();
 		ThreadRestart(mainIndex);
@@ -1321,8 +1281,6 @@ for (int attempt = 0; attempt < 2 && !success; ++attempt) {
 if (success) {
 	gMonitorInstance.whiteIconUpdate = 1;
 	g_loginPendingSinceMs[mainIndex].store(0);
-	g_lastLoginSuccessMs[mainIndex].store(GetTime());
-	g_lastDisconnectNotifyMs[mainIndex].store(0);
 	g_loginNeedRestart[mainIndex].store(false);
 	SetTaskState(mainIndex, _T("AUTO LOGIN OK"));
 	return true;
@@ -1360,17 +1318,16 @@ long nowMs = GetTime();
 long last = g_lastCheckMs[mainIndex].load();
 if (nowMs - last < kDisconnectWatcherBaseCheckIntervalMs) return;
 g_lastCheckMs[mainIndex].store(nowMs);
-if (IsDisconnectWatcherInGracePeriod(mainIndex, nowMs)) return;
 
 HWND hwnd = reinterpret_cast<HWND>(static_cast<LONG_PTR>(g_info[mainIndex].hwnd));
 if (!hwnd || !IsWindow(hwnd)) {
-	NotifyDisconnectMiaoThrottled(mainIndex, nowMs, "window missing");
+	NotifyDisconnectMiao("window missing");
 	TriggerAutoLogin(mainIndex);
 	return;
 }
 
 if (DismissDisconnectDialog(mainIndex)) {
-	NotifyDisconnectMiaoThrottled(mainIndex, nowMs, "disconnect dialog");
+	NotifyDisconnectMiao("disconnect dialog");
 	KillMapleStoryProcesses();
 	g_forceRelaunch[mainIndex].store(true);
 	TriggerAutoLogin(mainIndex);
@@ -1382,14 +1339,14 @@ if (nowMs - lastImageCheck < kDisconnectWatcherImageCheckIntervalMs) return;
 g_lastImageCheckMs[mainIndex].store(nowMs);
 
 if (IsStuckScreen(mainIndex)) {
-	NotifyDisconnectMiaoThrottled(mainIndex, nowMs, "stuck screen");
+	NotifyDisconnectMiao("stuck screen");
 	g_forceRelaunch[mainIndex].store(true);
 	TriggerAutoLogin(mainIndex);
 	return;
 }
 
 if (IsOnLoginScreen(mainIndex)) {
-	NotifyDisconnectMiaoThrottled(mainIndex, nowMs, "login screen");
+	NotifyDisconnectMiao("login screen");
 	TriggerAutoLogin(mainIndex);
 }
 }
@@ -1398,11 +1355,6 @@ void AutoLogin_StartDisconnectWatcher(long index) {
 long mainIndex = NormalizeMainIndex(index);
 if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
 ResetAutoRestState(mainIndex);
-
-g_disconnectWatcherStartedMs[mainIndex].store(GetTime());
-g_lastCheckMs[mainIndex].store(GetTime());
-g_lastImageCheckMs[mainIndex].store(0);
-g_lastDisconnectNotifyMs[mainIndex].store(0);
 
 unsigned long long generation = g_disconnectWatcherGeneration[mainIndex].fetch_add(1) + 1;
 std::thread([mainIndex, generation]() {
@@ -1414,8 +1366,6 @@ void AutoLogin_StopDisconnectWatcher(long index) {
 long mainIndex = NormalizeMainIndex(index);
 if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
 ResetAutoRestState(mainIndex);
-g_disconnectWatcherStartedMs[mainIndex].store(0);
-g_lastDisconnectNotifyMs[mainIndex].store(0);
 g_disconnectWatcherGeneration[mainIndex].fetch_add(1);
 }
 
