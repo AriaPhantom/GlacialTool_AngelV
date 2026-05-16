@@ -1166,7 +1166,7 @@ bool MatchDisconnectDarkText(const cv::Mat& captureGray, DisconnectDarkTextTempl
 bool IsStuckScreen(long mainIndex) {
 	constexpr int kDarkTextThreshold = 215;
 	constexpr int kDarkTextMinPixels = 1800;
-	constexpr int kDarkTextSearchHeight = 220;
+	constexpr int kDarkTextCenterBandHeight = 420;
 	constexpr double kDarkTextSim = 0.985;
 
 	if (!EnsureWindowBinding(mainIndex)) return false;
@@ -1193,11 +1193,14 @@ bool IsStuckScreen(long mainIndex) {
 		minTemplateHeight = stuck2Cache.gray.rows;
 	}
 	int searchHeight = static_cast<int>(std::min<long>(height,
-		std::max<long>(kDarkTextSearchHeight, minTemplateHeight + 20)));
+		std::max<long>(kDarkTextCenterBandHeight, minTemplateHeight + 20)));
 	if (searchHeight <= 0 || width <= 0) return false;
+	long searchTop = std::max<long>(0, (height - searchHeight) / 2);
+	long searchBottom = std::min<long>(height, searchTop + searchHeight);
+	if (searchBottom - searchTop < minTemplateHeight) return false;
 
 	cv::Mat captured;
-	if (!SPUtils::CaptureAndResizeToLogic(hwnd, 0, 0, static_cast<int>(width), searchHeight, captured)) {
+	if (!SPUtils::CaptureAndResizeToLogic(hwnd, 0, static_cast<int>(searchTop), static_cast<int>(width), static_cast<int>(searchBottom), captured)) {
 		return false;
 	}
 	if (captured.empty()) return false;
