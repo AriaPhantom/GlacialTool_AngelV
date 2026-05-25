@@ -127,6 +127,8 @@ std::atomic<unsigned long long> g_disconnectWatcherGeneration[MAX_HWND];
 std::atomic<unsigned long long> g_autoRestAccumulatedMs[MAX_HWND];
 std::atomic<unsigned long long> g_autoRestLastActiveTickMs[MAX_HWND];
 std::atomic<unsigned long long> g_autoRestUntilTickMs[MAX_HWND];
+std::atomic<int> g_stuckScreenConsecutiveCount[MAX_HWND];
+std::atomic<int> g_disconnectDialogConsecutiveCount[MAX_HWND];
 struct IconFindHint {
 bool valid = false;
 std::wstring iconPath;
@@ -170,38 +172,52 @@ std::thread([code, reasonText]() {
 }
 
 
+std::wstring GetDesktopPath() {
+	wchar_t* userProfile = nullptr;
+	size_t len = 0;
+	if (_wdupenv_s(&userProfile, &len, L"USERPROFILE") == 0 && userProfile != nullptr) {
+		std::wstring desktop = std::wstring(userProfile) + L"\\Desktop";
+		free(userProfile);
+		return desktop;
+	}
+	return L"C:\\Users\\AriaP\\Desktop";
+}
+
 struct DisconnectDialogHit {
-DWORD pid;
-bool found;
+	DWORD pid;
+	bool found;
+	HWND hwnd;
 };
 
 BOOL CALLBACK EnumDisconnectDialogProc(HWND hwnd, LPARAM lParam) {
-DisconnectDialogHit* hit = reinterpret_cast<DisconnectDialogHit*>(lParam);
-if (!hit) return TRUE;
+	DisconnectDialogHit* hit = reinterpret_cast<DisconnectDialogHit*>(lParam);
+	if (!hit) return TRUE;
 
-wchar_t cls[64] = {};
-if (!GetClassNameW(hwnd, cls, static_cast<int>(std::size(cls)))) return TRUE;
-if (wcscmp(cls, L"#32770") != 0) return TRUE;
+	wchar_t cls[64] = {};
+	if (!GetClassNameW(hwnd, cls, static_cast<int>(std::size(cls)))) return TRUE;
+	if (wcscmp(cls, L"#32770") != 0) return TRUE;
 
-DWORD pid = 0;
-GetWindowThreadProcessId(hwnd, &pid);
-if (hit->pid != 0 && pid != hit->pid) return TRUE;
+	DWORD pid = 0;
+	GetWindowThreadProcessId(hwnd, &pid);
+	if (hit->pid != 0 && pid != hit->pid) return TRUE;
 
-wchar_t title[256] = {};
-GetWindowTextW(hwnd, title, static_cast<int>(std::size(title)));
-std::wstring titleStr(title);
-if (!ContainsIgnoreCase(titleStr, L"MapleStory")) return TRUE;
+	wchar_t title[256] = {};
+	GetWindowTextW(hwnd, title, static_cast<int>(std::size(title)));
+	std::wstring titleStr(title);
+	if (!ContainsIgnoreCase(titleStr, L"MapleStory")) return TRUE;
 
-hit->found = true;
-return TRUE;
+	hit->found = true;
+	hit->hwnd = hwnd;
+	return TRUE;
 }
 
-bool DismissDisconnectDialog(long mainIndex) {
-DisconnectDialogHit hit = {};
-hit.pid = static_cast<DWORD>(g_info[mainIndex].pid);
-hit.found = false;
-EnumWindows(EnumDisconnectDialogProc, reinterpret_cast<LPARAM>(&hit));
-return hit.found;
+HWND DismissDisconnectDialog(long mainIndex) {
+	DisconnectDialogHit hit = {};
+	hit.pid = static_cast<DWORD>(g_info[mainIndex].pid);
+	hit.found = false;
+	hit.hwnd = nullptr;
+	EnumWindows(EnumDisconnectDialogProc, reinterpret_cast<LPARAM>(&hit));
+	return hit.hwnd;
 }
 
 long NormalizeMainIndex(long index) {
@@ -1158,6 +1174,12 @@ bool MatchDisconnectDarkText(const cv::Mat& captureGray, DisconnectDarkTextTempl
 	cv::minMaxLoc(result, nullptr, &maxVal, nullptr, &maxLoc);
 	if (maxVal < sim) return false;
 
+	// Verify that the matched region is actually light (stuck screen has light/white background)
+	// and not a black/dark screen (e.g. character blinded).
+	cv::Mat matchedRegion = captureGray(cv::Rect(maxLoc.x, maxLoc.y, cache.gray.cols, cache.gray.rows));
+	cv::Scalar meanVal = cv::mean(matchedRegion);
+	if (meanVal[0] < 120) return false;
+
 	outx = maxLoc.x;
 	outy = maxLoc.y;
 	return true;
@@ -1300,53 +1322,86 @@ g_loginPendingSinceMs[mainIndex].store(0);
 }
 
 void AutoLogin_CheckAndTrigger(long index) {
-long mainIndex = NormalizeMainIndex(index);
-if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
-if (g_info[mainIndex].is_stop) return;
-if (HandleAutoRest(mainIndex)) return;
-if (!GetAutoLogin()) return;
-if (g_loginRunning[mainIndex].load()) return;
+	long mainIndex = NormalizeMainIndex(index);
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
+	if (g_info[mainIndex].is_stop) return;
+	if (HandleAutoRest(mainIndex)) return;
+	if (!GetAutoLogin()) return;
+	if (g_loginRunning[mainIndex].load()) return;
 
-long nowMs = GetTime();
-long last = g_lastCheckMs[mainIndex].load();
-if (nowMs - last < kDisconnectWatcherBaseCheckIntervalMs) return;
-g_lastCheckMs[mainIndex].store(nowMs);
+	long nowMs = GetTime();
+	long last = g_lastCheckMs[mainIndex].load();
+	if (nowMs - last < kDisconnectWatcherBaseCheckIntervalMs) return;
+	g_lastCheckMs[mainIndex].store(nowMs);
 
-HWND hwnd = reinterpret_cast<HWND>(static_cast<LONG_PTR>(g_info[mainIndex].hwnd));
-if (!hwnd || !IsWindow(hwnd)) {
-	NotifyDisconnectMiao("window missing");
-	TriggerAutoLogin(mainIndex);
-	return;
+	HWND hwnd = reinterpret_cast<HWND>(static_cast<LONG_PTR>(g_info[mainIndex].hwnd));
+	if (!hwnd || !IsWindow(hwnd)) {
+		g_stuckScreenConsecutiveCount[mainIndex].store(0);
+		g_disconnectDialogConsecutiveCount[mainIndex].store(0);
+		NotifyDisconnectMiao("window missing");
+		TriggerAutoLogin(mainIndex);
+		return;
+	}
+
+	HWND dialogHwnd = DismissDisconnectDialog(mainIndex);
+	if (dialogHwnd != nullptr) {
+		int count = g_disconnectDialogConsecutiveCount[mainIndex].fetch_add(1) + 1;
+		if (count >= 2) {
+			g_disconnectDialogConsecutiveCount[mainIndex].store(0);
+			g_stuckScreenConsecutiveCount[mainIndex].store(0);
+
+			// Save screenshot of the dialog window to desktop
+			std::wstring desktopPath = GetDesktopPath();
+			std::wstring filename = desktopPath + L"\\DisconnectDialog_" + std::to_wstring(mainIndex) + L"_" + std::to_wstring(GetTime()) + L".png";
+			#ifdef UNICODE
+			SPUtils::CapturePng(dialogHwnd, 0, 0, 0, 0, filename.c_str());
+			#else
+			std::string filenameA(filename.begin(), filename.end());
+			SPUtils::CapturePng(dialogHwnd, 0, 0, 0, 0, filenameA.c_str());
+			#endif
+
+			NotifyDisconnectMiao("disconnect dialog");
+			KillMapleStoryProcesses();
+			g_forceRelaunch[mainIndex].store(true);
+			TriggerAutoLogin(mainIndex);
+			return;
+		}
+	} else {
+		g_disconnectDialogConsecutiveCount[mainIndex].store(0);
+	}
+
+	long lastImageCheck = g_lastImageCheckMs[mainIndex].load();
+	if (nowMs - lastImageCheck < kDisconnectWatcherImageCheckIntervalMs) return;
+	g_lastImageCheckMs[mainIndex].store(nowMs);
+
+	if (IsStuckScreen(mainIndex)) {
+		int count = g_stuckScreenConsecutiveCount[mainIndex].fetch_add(1) + 1;
+		if (count >= 3) {
+			g_stuckScreenConsecutiveCount[mainIndex].store(0);
+			g_disconnectDialogConsecutiveCount[mainIndex].store(0);
+			NotifyDisconnectMiao("stuck screen");
+			g_forceRelaunch[mainIndex].store(true);
+			TriggerAutoLogin(mainIndex);
+			return;
+		}
+	} else {
+		g_stuckScreenConsecutiveCount[mainIndex].store(0);
+	}
+
+	if (IsOnLoginScreen(mainIndex)) {
+		g_stuckScreenConsecutiveCount[mainIndex].store(0);
+		g_disconnectDialogConsecutiveCount[mainIndex].store(0);
+		NotifyDisconnectMiao("login screen");
+		TriggerAutoLogin(mainIndex);
+	}
 }
 
-if (DismissDisconnectDialog(mainIndex)) {
-	NotifyDisconnectMiao("disconnect dialog");
-	KillMapleStoryProcesses();
-	g_forceRelaunch[mainIndex].store(true);
-	TriggerAutoLogin(mainIndex);
-	return;
-}
-
-long lastImageCheck = g_lastImageCheckMs[mainIndex].load();
-if (nowMs - lastImageCheck < kDisconnectWatcherImageCheckIntervalMs) return;
-g_lastImageCheckMs[mainIndex].store(nowMs);
-
-if (IsStuckScreen(mainIndex)) {
-	NotifyDisconnectMiao("stuck screen");
-	g_forceRelaunch[mainIndex].store(true);
-	TriggerAutoLogin(mainIndex);
-	return;
-}
-
-if (IsOnLoginScreen(mainIndex)) {
-	NotifyDisconnectMiao("login screen");
-	TriggerAutoLogin(mainIndex);
-}
-}
 
 void AutoLogin_StartDisconnectWatcher(long index) {
-long mainIndex = NormalizeMainIndex(index);
-if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
+	long mainIndex = NormalizeMainIndex(index);
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
+	g_stuckScreenConsecutiveCount[mainIndex].store(0);
+	g_disconnectDialogConsecutiveCount[mainIndex].store(0);
 ResetAutoRestState(mainIndex);
 
 unsigned long long generation = g_disconnectWatcherGeneration[mainIndex].fetch_add(1) + 1;
@@ -1356,8 +1411,10 @@ std::thread([mainIndex, generation]() {
 }
 
 void AutoLogin_StopDisconnectWatcher(long index) {
-long mainIndex = NormalizeMainIndex(index);
-if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
+	long mainIndex = NormalizeMainIndex(index);
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
+	g_stuckScreenConsecutiveCount[mainIndex].store(0);
+	g_disconnectDialogConsecutiveCount[mainIndex].store(0);
 ResetAutoRestState(mainIndex);
 g_disconnectWatcherGeneration[mainIndex].fetch_add(1);
 }
