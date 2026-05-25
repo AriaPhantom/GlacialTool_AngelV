@@ -1376,7 +1376,7 @@ void AutoLogin_CheckAndTrigger(long index) {
 
 	if (IsStuckScreen(mainIndex)) {
 		int count = g_stuckScreenConsecutiveCount[mainIndex].fetch_add(1) + 1;
-		if (count >= 3) {
+		if (count >= 2) {
 			g_stuckScreenConsecutiveCount[mainIndex].store(0);
 			g_disconnectDialogConsecutiveCount[mainIndex].store(0);
 			NotifyDisconnectMiao("stuck screen");
