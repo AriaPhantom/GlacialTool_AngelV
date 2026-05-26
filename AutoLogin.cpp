@@ -1188,7 +1188,7 @@ bool MatchDisconnectDarkText(const cv::Mat& captureGray, DisconnectDarkTextTempl
 bool IsStuckScreen(long mainIndex) {
 	constexpr int kDarkTextThreshold = 215;
 	constexpr int kDarkTextMinPixels = 1800;
-	constexpr double kDarkTextSim = 0.985;
+	constexpr double kDarkTextSim = 0.995;
 
 	if (!EnsureWindowBinding(mainIndex)) return false;
 	HWND hwnd = reinterpret_cast<HWND>(static_cast<LONG_PTR>(g_info[mainIndex].hwnd));
