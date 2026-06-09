@@ -9545,6 +9545,7 @@ CexampleDlg::CexampleDlg(QWidget* parent)
 		, autoRest(NULL)
 	, autoRestRunMinutes(NULL)
 	, autoRestRestMinutes(NULL)
+	, netchGuard(NULL)
 , wyImageMode(NULL)
 
 
@@ -39876,6 +39877,10 @@ void CexampleDlg::InitUi()
 
 
 
+
+	netchGuard = createPill(QString::fromLatin1("Netch Guard"));
+	netchGuard->setToolTip(QString::fromLatin1("External via SOCKS 127.0.0.1:2801: 5s pause, 10s relogin"));
+	detectGrid->addWidget(netchGuard, 2, 0, 1, 2);
 	detectGrid->setColumnStretch(0, 1);
 	detectGrid->setColumnStretch(1, 1);
 	detectGrid->setColumnStretch(2, 1);
@@ -52426,6 +52431,7 @@ void CexampleDlg::LoadUiState()
         autoLoginMode->setCurrentIndex(mode);
     }
     	if (autoRest) autoRest->setChecked(app->GetProfileInt(kUiStateSection, _T("AutoRestEnabled"), 0) != 0);
+	if (netchGuard) netchGuard->setChecked(app->GetProfileInt(kUiStateSection, _T("NetchGuard"), 0) != 0);
 	if (autoRestRunMinutes)
 	{
 		int minutes = app->GetProfileInt(kUiStateSection, _T("AutoRestRunMinutes"), 120);
@@ -56034,6 +56040,7 @@ void CexampleDlg::SaveUiState()
         app->WriteProfileInt(kUiStateSection, _T("AutoLoginMode"), mode);
     }
     SaveAutoLoginPreset(m_autoLoginPresetIndex);
+    if (netchGuard) app->WriteProfileInt(kUiStateSection, _T("NetchGuard"), netchGuard->isChecked());
 
 
 
@@ -95644,6 +95651,11 @@ int CexampleDlg::GetWhiteDetect()
 
 
 
+int CexampleDlg::GetNetchGuard()
+{
+	return netchGuard ? netchGuard->isChecked() : 0;
+}
+
 
 int CexampleDlg::GetWuyaImageMode()
 {
@@ -95960,6 +95972,13 @@ int GetAutoRestRestMinutes()
 {
 	return g_main_cwnd ? g_main_cwnd->GetAutoRestRestMinutes() : 0;
 }
+
+int GetNetchGuard()
+{
+	return g_main_cwnd ? g_main_cwnd->GetNetchGuard() : 0;
+}
+
+
 int GetWuyaImageMode()
 {
     return g_main_cwnd ? g_main_cwnd->GetWuyaImageMode() : kWuyaModeNativeOnly;

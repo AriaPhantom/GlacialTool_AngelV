@@ -59,6 +59,7 @@ int GetExp30();
     int GetAutoRestEnabled();
     int GetAutoRestRunMinutes();
     int GetAutoRestRestMinutes();
+    int GetNetchGuard();
     int GetWuyaImageMode();
     int GetWuyaInputMode();
 
@@ -120,6 +121,7 @@ QToolButton* whiteDetect;
     QToolButton* autoRest;
     QLineEdit* autoRestRunMinutes;
     QLineEdit* autoRestRestMinutes;
+    QToolButton* netchGuard;
     QComboBox* wyImageMode;
     QComboBox* wyInputMode;
     int m_autoLoginPresetIndex;

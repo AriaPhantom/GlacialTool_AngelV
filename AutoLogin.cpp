@@ -23,6 +23,8 @@
 #include <shellapi.h>
 #include <tlhelp32.h>
 
+#include <curl/curl.h>
+
 extern gMonitor gMonitorInstance;
 extern int GetAutoLogin();
 extern std::wstring GetAutoLoginKeys();
@@ -32,6 +34,7 @@ extern int GetAutoLoginMode();
 extern int GetAutoRestEnabled();
 extern int GetAutoRestRunMinutes();
 extern int GetAutoRestRestMinutes();
+extern int GetNetchGuard();
 extern void subSoftStart();
 extern void subSoftPause();
 extern MiaoSender miaoSenderInstance;
@@ -97,6 +100,11 @@ constexpr int kDisconnectWatcherActiveIntervalMs = 500;
 constexpr int kDisconnectWatcherIdleIntervalMs = 1000;
 constexpr long kDisconnectWatcherBaseCheckIntervalMs = 1000;
 constexpr long kDisconnectWatcherImageCheckIntervalMs = 3000;
+constexpr long kNetchGuardCheckIntervalMs = 1000;
+constexpr long kNetchGuardSoftPauseMs = 5000;
+constexpr long kNetchGuardHardCloseMs = 10000;
+constexpr long kNetchGuardConnectTimeoutMs = 800;
+constexpr long kNetchGuardTimeoutMs = 1500;
 constexpr long kIconHintTtlMs = 2000;
 constexpr int kIconHintHalfWidth = 220;
 constexpr int kIconHintHalfHeight = 150;
@@ -129,6 +137,10 @@ std::atomic<unsigned long long> g_autoRestLastActiveTickMs[MAX_HWND];
 std::atomic<unsigned long long> g_autoRestUntilTickMs[MAX_HWND];
 std::atomic<int> g_stuckScreenConsecutiveCount[MAX_HWND];
 std::atomic<int> g_disconnectDialogConsecutiveCount[MAX_HWND];
+std::atomic<long> g_netchLastCheckMs[MAX_HWND];
+std::atomic<long> g_netchDownSinceMs[MAX_HWND];
+std::atomic<bool> g_netchSoftPaused[MAX_HWND];
+std::atomic<bool> g_netchHardClosed[MAX_HWND];
 struct IconFindHint {
 bool valid = false;
 std::wstring iconPath;
@@ -142,6 +154,124 @@ std::mutex g_iconFindHintMutex;
 IconFindHint g_iconFindHints[MAX_HWND];
 void TriggerAutoLogin(long mainIndex);
 void KillMapleStoryProcesses();
+
+size_t NetchGuardDiscardWrite(char* ptr, size_t size, size_t nmemb, void* userdata) {
+	UNREFERENCED_PARAMETER(ptr);
+	UNREFERENCED_PARAMETER(userdata);
+	return size * nmemb;
+}
+
+void ResetNetchGuardState(long mainIndex) {
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
+	g_netchLastCheckMs[mainIndex].store(0);
+	g_netchDownSinceMs[mainIndex].store(0);
+	g_netchSoftPaused[mainIndex].store(false);
+	g_netchHardClosed[mainIndex].store(false);
+}
+
+bool IsNetchSocksHealthy() {
+	static std::once_flag curlInitFlag;
+	std::call_once(curlInitFlag, []() {
+		curl_global_init(CURL_GLOBAL_DEFAULT);
+	});
+
+	CURL* curl = curl_easy_init();
+	if (curl == nullptr) return false;
+
+	// Probe an external endpoint through Netch. A local-only 127.0.0.1:2801 listener is not enough.
+	// This mirrors maple.watch-style remote reachability checks instead of a localhost port check.
+	curl_easy_setopt(curl, CURLOPT_URL, "http://1.1.1.1/");
+	curl_easy_setopt(curl, CURLOPT_PROXY, "127.0.0.1:2801");
+	curl_easy_setopt(curl, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5_HOSTNAME);
+	curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, kNetchGuardConnectTimeoutMs);
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, kNetchGuardTimeoutMs);
+	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, NetchGuardDiscardWrite);
+
+	CURLcode code = curl_easy_perform(curl);
+	curl_easy_cleanup(curl);
+	return code == CURLE_OK;
+}
+
+bool HandleNetchGuard(long mainIndex) {
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) return true;
+	if (g_info[mainIndex].is_stop) return true;
+
+	if (!GetNetchGuard()) {
+		bool softPaused = g_netchSoftPaused[mainIndex].exchange(false);
+		bool hardClosed = g_netchHardClosed[mainIndex].exchange(false);
+		g_netchDownSinceMs[mainIndex].store(0);
+		g_netchLastCheckMs[mainIndex].store(0);
+		if (softPaused && !hardClosed) {
+			Log(_T("[NETCH] guard disabled, soft start idx=%ld"), mainIndex);
+			subSoftStart();
+		}
+		return true;
+	}
+
+	long nowMs = GetTime();
+	long lastCheckMs = g_netchLastCheckMs[mainIndex].load();
+	if (nowMs - lastCheckMs < kNetchGuardCheckIntervalMs) {
+		return !g_netchSoftPaused[mainIndex].load() && !g_netchHardClosed[mainIndex].load();
+	}
+	g_netchLastCheckMs[mainIndex].store(nowMs);
+
+	bool healthy = IsNetchSocksHealthy();
+	nowMs = GetTime();
+	if (healthy) {
+		long downSinceMs = g_netchDownSinceMs[mainIndex].exchange(0);
+		bool softPaused = g_netchSoftPaused[mainIndex].exchange(false);
+		bool hardClosed = g_netchHardClosed[mainIndex].exchange(false);
+		long downMs = (downSinceMs > 0 && nowMs >= downSinceMs) ? (nowMs - downSinceMs) : 0;
+
+		if (hardClosed) {
+			Log(_T("[NETCH] external probe recovered after hard close idx=%ld downMs=%ld"), mainIndex, downMs);
+			SetTaskState(mainIndex, _T("NETCH RECOVER"));
+			g_forceRelaunch[mainIndex].store(true);
+			TriggerAutoLogin(mainIndex);
+			return false;
+		}
+
+		if (softPaused) {
+			Log(_T("[NETCH] external probe recovered, soft start idx=%ld downMs=%ld"), mainIndex, downMs);
+			SetTaskState(mainIndex, _T("NETCH OK"));
+			subSoftStart();
+		}
+		return true;
+	}
+
+	long downSinceMs = g_netchDownSinceMs[mainIndex].load();
+	if (downSinceMs <= 0) {
+		downSinceMs = nowMs;
+		g_netchDownSinceMs[mainIndex].store(downSinceMs);
+		Log(_T("[NETCH] external probe via SOCKS 127.0.0.1:2801 down idx=%ld"), mainIndex);
+	}
+
+	long downMs = nowMs >= downSinceMs ? (nowMs - downSinceMs) : 0;
+	if (downMs >= kNetchGuardHardCloseMs) {
+		if (!g_netchHardClosed[mainIndex].exchange(true)) {
+			g_netchSoftPaused[mainIndex].store(true);
+			subSoftPause();
+			SetTaskState(mainIndex, _T("NETCH WAIT"));
+			Log(_T("[NETCH] external probe down %ldms, kill Maple and wait recovery idx=%ld"), downMs, mainIndex);
+			KillMapleStoryProcesses();
+			g_forceRelaunch[mainIndex].store(true);
+		}
+		return false;
+	}
+
+	if (downMs >= kNetchGuardSoftPauseMs) {
+		if (!g_netchSoftPaused[mainIndex].exchange(true)) {
+			subSoftPause();
+			SetTaskState(mainIndex, _T("NETCH PAUSE"));
+			Log(_T("[NETCH] external probe down %ldms, soft pause idx=%ld"), downMs, mainIndex);
+		}
+		return false;
+	}
+
+	return true;
+}
 
 bool ContainsIgnoreCase(const std::wstring& value, const std::wstring& needle) {
 if (value.empty() || needle.empty()) return false;
@@ -1251,7 +1381,9 @@ while (true) {
 		break;
 	}
 
-	AutoLogin_CheckAndTrigger(mainIndex);
+	if (HandleNetchGuard(mainIndex)) {
+		AutoLogin_CheckAndTrigger(mainIndex);
+	}
 	if (AutoLogin_IsActive(mainIndex)) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(kDisconnectWatcherActiveIntervalMs));
 	}
@@ -1403,6 +1535,7 @@ void AutoLogin_StartDisconnectWatcher(long index) {
 	g_stuckScreenConsecutiveCount[mainIndex].store(0);
 	g_disconnectDialogConsecutiveCount[mainIndex].store(0);
 ResetAutoRestState(mainIndex);
+ResetNetchGuardState(mainIndex);
 
 unsigned long long generation = g_disconnectWatcherGeneration[mainIndex].fetch_add(1) + 1;
 std::thread([mainIndex, generation]() {
@@ -1416,6 +1549,7 @@ void AutoLogin_StopDisconnectWatcher(long index) {
 	g_stuckScreenConsecutiveCount[mainIndex].store(0);
 	g_disconnectDialogConsecutiveCount[mainIndex].store(0);
 ResetAutoRestState(mainIndex);
+ResetNetchGuardState(mainIndex);
 g_disconnectWatcherGeneration[mainIndex].fetch_add(1);
 }
 
