@@ -169,29 +169,42 @@ void ResetNetchGuardState(long mainIndex) {
 	g_netchHardClosed[mainIndex].store(false);
 }
 
+bool ProbeNetchEndpoint(const char* url) {
+	CURL* curl = curl_easy_init();
+	if (curl == nullptr) return false;
+
+	curl_easy_setopt(curl, CURLOPT_URL, url);
+	curl_easy_setopt(curl, CURLOPT_PROXY, "127.0.0.1:2801");
+	curl_easy_setopt(curl, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5_HOSTNAME);
+	curl_easy_setopt(curl, CURLOPT_CONNECT_ONLY, 1L);
+	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, kNetchGuardConnectTimeoutMs);
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, kNetchGuardTimeoutMs);
+	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+
+	CURLcode code = curl_easy_perform(curl);
+	curl_easy_cleanup(curl);
+	return code == CURLE_OK;
+}
+
 bool IsNetchSocksHealthy() {
 	static std::once_flag curlInitFlag;
 	std::call_once(curlInitFlag, []() {
 		curl_global_init(CURL_GLOBAL_DEFAULT);
 	});
 
-	CURL* curl = curl_easy_init();
-	if (curl == nullptr) return false;
-
-	// Probe an external endpoint through Netch. A local-only 127.0.0.1:2801 listener is not enough.
-	// This mirrors maple.watch-style remote reachability checks instead of a localhost port check.
-	curl_easy_setopt(curl, CURLOPT_URL, "http://1.1.1.1/");
-	curl_easy_setopt(curl, CURLOPT_PROXY, "127.0.0.1:2801");
-	curl_easy_setopt(curl, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5_HOSTNAME);
-	curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
-	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, kNetchGuardConnectTimeoutMs);
-	curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, kNetchGuardTimeoutMs);
-	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, NetchGuardDiscardWrite);
-
-	CURLcode code = curl_easy_perform(curl);
-	curl_easy_cleanup(curl);
-	return code == CURLE_OK;
+	// Probe real MapleStory Scania game-server endpoints through Netch.
+	// maple.watch currently checks Scania channel 9 at 34.215.85.101:8585 and channel 11 at 54.191.254.95:8585.
+	// A local-only 127.0.0.1:2801 listener is not enough; either game endpoint must be reachable through the SOCKS path.
+	const char* endpoints[] = {
+		"http://34.215.85.101:8585/",
+		"http://54.191.254.95:8585/",
+	};
+	for (const char* endpoint : endpoints) {
+		if (ProbeNetchEndpoint(endpoint)) {
+			return true;
+		}
+	}
+	return false;
 }
 
 bool HandleNetchGuard(long mainIndex) {
@@ -226,7 +239,7 @@ bool HandleNetchGuard(long mainIndex) {
 		long downMs = (downSinceMs > 0 && nowMs >= downSinceMs) ? (nowMs - downSinceMs) : 0;
 
 		if (hardClosed) {
-			Log(_T("[NETCH] external probe recovered after hard close idx=%ld downMs=%ld"), mainIndex, downMs);
+			Log(_T("[NETCH] Scania probe recovered after hard close idx=%ld downMs=%ld"), mainIndex, downMs);
 			SetTaskState(mainIndex, _T("NETCH RECOVER"));
 			g_forceRelaunch[mainIndex].store(true);
 			TriggerAutoLogin(mainIndex);
@@ -234,7 +247,7 @@ bool HandleNetchGuard(long mainIndex) {
 		}
 
 		if (softPaused) {
-			Log(_T("[NETCH] external probe recovered, soft start idx=%ld downMs=%ld"), mainIndex, downMs);
+			Log(_T("[NETCH] Scania probe recovered, soft start idx=%ld downMs=%ld"), mainIndex, downMs);
 			SetTaskState(mainIndex, _T("NETCH OK"));
 			subSoftStart();
 		}
@@ -245,7 +258,7 @@ bool HandleNetchGuard(long mainIndex) {
 	if (downSinceMs <= 0) {
 		downSinceMs = nowMs;
 		g_netchDownSinceMs[mainIndex].store(downSinceMs);
-		Log(_T("[NETCH] external probe via SOCKS 127.0.0.1:2801 down idx=%ld"), mainIndex);
+		Log(_T("[NETCH] Scania probe via SOCKS 127.0.0.1:2801 down idx=%ld"), mainIndex);
 	}
 
 	long downMs = nowMs >= downSinceMs ? (nowMs - downSinceMs) : 0;
@@ -254,7 +267,7 @@ bool HandleNetchGuard(long mainIndex) {
 			g_netchSoftPaused[mainIndex].store(true);
 			subSoftPause();
 			SetTaskState(mainIndex, _T("NETCH WAIT"));
-			Log(_T("[NETCH] external probe down %ldms, kill Maple and wait recovery idx=%ld"), downMs, mainIndex);
+			Log(_T("[NETCH] Scania probe down %ldms, kill Maple and wait recovery idx=%ld"), downMs, mainIndex);
 			KillMapleStoryProcesses();
 			g_forceRelaunch[mainIndex].store(true);
 		}
@@ -265,7 +278,7 @@ bool HandleNetchGuard(long mainIndex) {
 		if (!g_netchSoftPaused[mainIndex].exchange(true)) {
 			subSoftPause();
 			SetTaskState(mainIndex, _T("NETCH PAUSE"));
-			Log(_T("[NETCH] external probe down %ldms, soft pause idx=%ld"), downMs, mainIndex);
+			Log(_T("[NETCH] Scania probe down %ldms, soft pause idx=%ld"), downMs, mainIndex);
 		}
 		return false;
 	}

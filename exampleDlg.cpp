@@ -39879,7 +39879,7 @@ void CexampleDlg::InitUi()
 
 
 	netchGuard = createPill(QString::fromLatin1("Netch Guard"));
-	netchGuard->setToolTip(QString::fromLatin1("External via SOCKS 127.0.0.1:2801: 5s pause, 10s relogin"));
+	netchGuard->setToolTip(QString::fromLatin1("Scania CH9/11 via SOCKS 127.0.0.1:2801"));
 	detectGrid->addWidget(netchGuard, 2, 0, 1, 2);
 	detectGrid->setColumnStretch(0, 1);
 	detectGrid->setColumnStretch(1, 1);
