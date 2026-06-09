@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$OutDir,
-    [string]$InstalledBin = "F:\\vcpkg\\installed\\x64-windows\\bin"
+    [string]$InstalledBin = "C:\\vcpkg\\installed\\x64-windows\\bin"
 )
 
 $OutDir = $OutDir.Trim('"')

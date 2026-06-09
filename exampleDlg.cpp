@@ -577,6 +577,7 @@ HWND findMSWindow();
 
 
 
+#include <QtCore/QByteArray>
 #include <QtCore/QEvent>
 
 
@@ -7570,6 +7571,29 @@ QString CStringToQString(const CString& value)
 
 
 
+bool LooksLikeUtf8TaskText(const QString& text)
+{
+	if (text.isEmpty())
+	{
+		return false;
+	}
+
+	int cjkCount = 0;
+	for (int i = 0; i < text.size(); ++i)
+	{
+		const ushort ch = text.at(i).unicode();
+		if (ch == 0xFFFD)
+		{
+			return false;
+		}
+		if ((ch >= 0x3400 && ch <= 0x9FFF) || (ch >= 0xF900 && ch <= 0xFAFF))
+		{
+			++cjkCount;
+		}
+	}
+
+	return cjkCount > 0;
+}
 QString TCharToQString(const TCHAR* value)
 
 
@@ -7698,7 +7722,21 @@ QString TCharToQString(const TCHAR* value)
 
 
 
-	return CStringToQString(CString(value));
+	if (value == NULL)
+	{
+		return QString();
+	}
+#ifdef UNICODE
+	return QString::fromWCharArray(value);
+#else
+	const QByteArray raw(value);
+	const QString utf8Text = QString::fromUtf8(raw.constData(), raw.size());
+	if (LooksLikeUtf8TaskText(utf8Text))
+	{
+		return utf8Text;
+	}
+	return QString::fromLocal8Bit(raw.constData(), raw.size());
+#endif
 
 
 
