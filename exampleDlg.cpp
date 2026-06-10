@@ -37897,6 +37897,7 @@ void CexampleDlg::InitUi()
 
 	autoLoginModeRow->addWidget(autoLoginModeLabel);
 	autoLoginModeRow->addWidget(autoLoginMode);
+	autoLoginModeRow->addWidget(netchGuard);
 	autoLoginModeRow->addStretch();
 	detectLayout->addWidget(autoLoginModeWidget);
 
@@ -39878,9 +39879,10 @@ void CexampleDlg::InitUi()
 
 
 
-	netchGuard = createPill(QString::fromLatin1("Netch Guard"));
+	netchGuard = createPill(QString::fromLatin1("Netch"));
 	netchGuard->setToolTip(QString::fromLatin1("Scania CH9/11 via SOCKS 127.0.0.1:2801"));
-	detectGrid->addWidget(netchGuard, 2, 0, 1, 2);
+	netchGuard->setFixedWidth(76);
+	netchGuard->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 	detectGrid->setColumnStretch(0, 1);
 	detectGrid->setColumnStretch(1, 1);
 	detectGrid->setColumnStretch(2, 1);
