@@ -186,6 +186,7 @@ constexpr ULONGLONG kPlayerCoordCheckIntervalMs = 50;
 constexpr ULONGLONG kPlayerCoordCheckIdleIntervalMs = 250;
 
 constexpr ULONGLONG kWhiteCheckIntervalMs = 200;
+constexpr ULONGLONG kLieCheckIntervalMs = 1000;
 
 ULONGLONG g_lastOtherPlayerCheckMs[MAX_HWND] = {};
 
@@ -200,6 +201,7 @@ ULONGLONG g_lastRuneCheckMs[MAX_HWND] = {};
 ULONGLONG g_lastPlayerCoordCheckMs[MAX_HWND] = {};
 
 ULONGLONG g_lastWhiteCheckMs[MAX_HWND] = {};
+ULONGLONG g_lastLieCheckMs[MAX_HWND] = {};
 
 volatile LONG g_isGoToActive[MAX_HWND] = {};
 
@@ -748,6 +750,7 @@ void gMonitorCheck(long index, long count)
 	bool runPlayerCoordCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastPlayerCoordCheckMs, playerCoordIntervalMs, nowMs);
 
 	bool runWhiteCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastWhiteCheckMs, kWhiteCheckIntervalMs, nowMs);
+	bool runLieCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastLieCheckMs, kLieCheckIntervalMs, nowMs);
 
 
 
@@ -1150,6 +1153,31 @@ void gMonitorCheck(long index, long count)
 	}
 
 
+
+	if (whiteDetectEnabled && runLieCheck) {
+		long topLeftX, topLeftY, bottomRightX, bottomRightY;
+		long windowRet = dm->GetWindowRect(g_info[index].hwnd, &topLeftX, &topLeftY, &bottomRightX, &bottomRightY);
+		long mapleWindowWidth = bottomRightX - topLeftX;
+		long mapleWindowHeight = bottomRightY - topLeftY;
+		if (mapleWindowWidth > 1400) {
+			mapleWindowWidth = long(mapleWindowWidth / 2);
+			mapleWindowHeight = long(mapleWindowHeight / 2);
+		}
+
+		long lieX = -1, lieY = -1;
+		long findPicRet = dm->FindPic(0, 0, mapleWindowWidth, mapleWindowHeight, lieIcon, _T("000000"), 0.98, 0, &lieX, &lieY);
+		if (lieX > 0 && lieY > 0) {
+			Log(_T("detect Lie, trigger white"));
+			miaoSenderInstance.setWhite(1);
+			string s = "C:\\sptool\\WhitePic";
+			long a = dm->GetTime() % 10000;
+			string s_type = ".png";
+			string filePath = s + to_string(a) + s_type;
+			CString filePathT(filePath.c_str());
+			dm->CapturePng(0, 0, 2000, 1200, filePathT);
+			subSoftPause();
+		}
+	}
 
 	if (huangmenEnabled && runHuangmenCheck) {
 

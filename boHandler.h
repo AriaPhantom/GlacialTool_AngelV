@@ -13,6 +13,7 @@ using namespace std;
 #define runeIcon _T("C:\\sptool\\Rune.bmp")
 #define randomIcon _T("C:\\sptool\\Others.bmp")
 #define whiteIcon _T("C:\\sptool\\White.bmp")
+#define lieIcon _T("C:\\sptool\\Lie.bmp")
 #define mapBorderIcon _T("C:\\sptool\\MapBorder.bmp")
 #define bossIcon _T("C:\\sptool\\Eb1.bmp")
 #define deadOKIcon _T("C:\\sptool\\DeadOK.bmp")
