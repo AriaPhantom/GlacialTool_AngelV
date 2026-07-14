@@ -304,7 +304,15 @@ unsigned WINAPI SubThread(PVOID pParam)
 		// 检测一些异常,比如突然弹出的对话框，目标窗口被关闭或者掉线等突发情况
 		// 比如检测到掉线，可考虑通知UI,然后重新运行
         if (AutoLogin_IsActive(index)) { ScriptDelay(index, 200); continue; }
-gMonitorCheck(index, count);
+try {
+	gMonitorCheck(index, count);
+} catch (const cv::Exception&) {
+	Log(_T("[gMonitorCheck] cv::Exception suppressed"));
+} catch (const std::exception&) {
+	Log(_T("[gMonitorCheck] std::exception suppressed"));
+} catch (...) {
+	Log(_T("[gMonitorCheck] unknown exception suppressed"));
+}
 		ScriptDelay(index,50);
 		count++;
 		if (count > 20) { count = 0; }

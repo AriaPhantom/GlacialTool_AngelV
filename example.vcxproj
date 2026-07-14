@@ -142,7 +142,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\GlacialTool_Common;$(ProjectDir)third_party\wyhkm\include;$(ProjectDir)third_party\wycp\include;C:\vcpkg\installed\x64-windows\include;C:\vcpkg\installed\x64-windows\include\qt5;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\GlacialTool_Common;$(ProjectDir)third_party\wyhkm\include;$(ProjectDir)third_party\wycp\include;$(VcpkgRoot)\installed\x64-windows\include;$(VcpkgRoot)\installed\x64-windows\include\qt5;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <ResourceCompile>
@@ -153,12 +153,12 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>$(ProjectDir)third_party\wyhkm\x64;$(ProjectDir)third_party\wycp\x64;C:\vcpkg\installed\x64-windows\lib;C:\vcpkg\installed\x64-windows\lib\manual-link</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)third_party\wyhkm\x64;$(ProjectDir)third_party\wycp\x64;$(VcpkgRoot)\installed\x64-windows\lib;$(VcpkgRoot)\installed\x64-windows\lib\manual-link</AdditionalLibraryDirectories>
       <AdditionalDependencies>wyhkm.lib;wycp.lib;User32.lib;Advapi32.lib;cpr.lib;libcurl.lib;opencv_core4.lib;opencv_imgproc4.lib;opencv_imgcodecs4.lib;Qt5Widgetsd.lib;Qt5Guid.lib;Qt5Cored.lib;Dwmapi.lib;Gdiplus.lib;Imm32.lib;Comctl32.lib;UxTheme.lib;Msimg32.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>Qt5AxServer.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
-      <Command>powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)copy_vcpkg_deps.ps1" -OutDir "$(OutDir)" &amp; xcopy /E /I /Y &quot;$(ProjectDir)skin&quot; &quot;$(OutDir)skin&quot; &amp; if not exist &quot;$(OutDir)platforms&quot; mkdir &quot;$(OutDir)platforms&quot; &amp; xcopy /Y &quot;C:\vcpkg\installed\x64-windows\debug\plugins\platforms\qwindowsd.dll&quot; &quot;$(OutDir)platforms\\&quot; &amp; if not exist &quot;$(OutDir)imageformats&quot; mkdir &quot;$(OutDir)imageformats&quot; &amp; xcopy /Y &quot;C:\vcpkg\installed\x64-windows\debug\plugins\imageformats\qjpegd.dll&quot; &quot;$(OutDir)imageformats\\&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wyhkm\\x64\\wyhkm.dll&quot; &quot;$(OutDir)wyhkm.dll&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wycp\\x64\\wycp.dll&quot; &quot;$(OutDir)wycp.dll&quot;</Command>
+      <Command>powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)copy_vcpkg_deps.ps1" -OutDir "$(OutDir)\" -InstalledBin "$(VcpkgRoot)\installed\x64-windows\bin" &amp; xcopy /E /I /Y &quot;$(ProjectDir)skin&quot; &quot;$(OutDir)skin&quot; &amp; if not exist &quot;$(OutDir)platforms&quot; mkdir &quot;$(OutDir)platforms&quot; &amp; xcopy /Y &quot;$(VcpkgRoot)\installed\x64-windows\debug\plugins\platforms\qwindowsd.dll&quot; &quot;$(OutDir)platforms\\&quot; &amp; if not exist &quot;$(OutDir)imageformats&quot; mkdir &quot;$(OutDir)imageformats&quot; &amp; xcopy /Y &quot;$(VcpkgRoot)\installed\x64-windows\debug\plugins\imageformats\qjpegd.dll&quot; &quot;$(OutDir)imageformats\\&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wyhkm\\x64\\wyhkm.dll&quot; &quot;$(OutDir)wyhkm.dll&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wycp\\x64\\wycp.dll&quot; &quot;$(OutDir)wycp.dll&quot;</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -205,7 +205,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\GlacialTool_Common;$(ProjectDir)third_party\wyhkm\include;$(ProjectDir)third_party\wycp\include;C:\vcpkg\installed\x64-windows\include;C:\vcpkg\installed\x64-windows\include\qt5;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\GlacialTool_Common;$(ProjectDir)third_party\wyhkm\include;$(ProjectDir)third_party\wycp\include;$(VcpkgRoot)\installed\x64-windows\include;$(VcpkgRoot)\installed\x64-windows\include\qt5;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <ResourceCompile>
@@ -218,12 +218,12 @@
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <AdditionalLibraryDirectories>$(ProjectDir)third_party\wyhkm\x64;$(ProjectDir)third_party\wycp\x64;C:\vcpkg\installed\x64-windows\lib;C:\vcpkg\installed\x64-windows\lib\manual-link</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)third_party\wyhkm\x64;$(ProjectDir)third_party\wycp\x64;$(VcpkgRoot)\installed\x64-windows\lib;$(VcpkgRoot)\installed\x64-windows\lib\manual-link</AdditionalLibraryDirectories>
       <AdditionalDependencies>wyhkm.lib;wycp.lib;User32.lib;Advapi32.lib;cpr.lib;libcurl.lib;opencv_core4.lib;opencv_imgproc4.lib;opencv_imgcodecs4.lib;Qt5Widgets.lib;Qt5Gui.lib;Qt5Core.lib;Dwmapi.lib;Gdiplus.lib;Imm32.lib;Comctl32.lib;UxTheme.lib;Msimg32.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>Qt5AxServer.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
-      <Command>powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)copy_vcpkg_deps.ps1" -OutDir "$(OutDir)" &amp; xcopy /E /I /Y &quot;$(ProjectDir)skin&quot; &quot;$(OutDir)skin&quot; &amp; if not exist &quot;$(OutDir)platforms&quot; mkdir &quot;$(OutDir)platforms&quot; &amp; xcopy /Y &quot;C:\vcpkg\installed\x64-windows\plugins\platforms\qwindows.dll&quot; &quot;$(OutDir)platforms\\&quot; &amp; if not exist &quot;$(OutDir)imageformats&quot; mkdir &quot;$(OutDir)imageformats&quot; &amp; xcopy /Y &quot;C:\vcpkg\installed\x64-windows\plugins\imageformats\qjpeg.dll&quot; &quot;$(OutDir)imageformats\\&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wyhkm\\x64\\wyhkm.dll&quot; &quot;$(OutDir)wyhkm.dll&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wycp\\x64\\wycp.dll&quot; &quot;$(OutDir)wycp.dll&quot;</Command>
+      <Command>powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)copy_vcpkg_deps.ps1" -OutDir "$(OutDir)\" -InstalledBin "$(VcpkgRoot)\installed\x64-windows\bin" &amp; xcopy /E /I /Y &quot;$(ProjectDir)skin&quot; &quot;$(OutDir)skin&quot; &amp; if not exist &quot;$(OutDir)platforms&quot; mkdir &quot;$(OutDir)platforms&quot; &amp; xcopy /Y &quot;$(VcpkgRoot)\installed\x64-windows\plugins\platforms\qwindows.dll&quot; &quot;$(OutDir)platforms\\&quot; &amp; if not exist &quot;$(OutDir)imageformats&quot; mkdir &quot;$(OutDir)imageformats&quot; &amp; xcopy /Y &quot;$(VcpkgRoot)\installed\x64-windows\plugins\imageformats\qjpeg.dll&quot; &quot;$(OutDir)imageformats\\&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wyhkm\\x64\\wyhkm.dll&quot; &quot;$(OutDir)wyhkm.dll&quot; &amp; copy /Y &quot;$(ProjectDir)third_party\\wycp\\x64\\wycp.dll&quot; &quot;$(OutDir)wycp.dll&quot;</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

@@ -3,10 +3,31 @@ setlocal
 chcp 65001 >nul
 cd /d "%~dp0"
 
-set "MSBUILD=C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe"
-set "MSBUILD_PROPS=/p:WindowsTargetPlatformVersion=10.0.26100.0 /p:PlatformToolset=v145 /p:VcpkgRoot=C:\vcpkg\ /p:VcpkgInstalledDir=C:\vcpkg\installed\"
-if not exist "%MSBUILD%" goto msbuild_missing
-
+set "MSBUILD="
+set "TOOLSET=v145"
+set "SDK_VERSION=10.0.26100.0"
+if exist "C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe" set "MSBUILD=C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe"
+if not defined MSBUILD if exist "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe" (
+  set "MSBUILD=C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe"
+  set "TOOLSET=v142"
+  set "SDK_VERSION=10.0"
+)
+if not defined MSBUILD (
+  echo ERROR: MSBuild.exe not found.
+  if /I not "%CI%"=="1" pause
+  endlocal
+  exit /b 1
+)
+set "VCPKG_ROOT="
+if exist "C:\vcpkg\installed" set "VCPKG_ROOT=C:\vcpkg"
+if not defined VCPKG_ROOT if exist "F:\vcpkg\installed" set "VCPKG_ROOT=F:\vcpkg"
+if not defined VCPKG_ROOT (
+  echo ERROR: vcpkg installed tree not found under C:\vcpkg or F:\vcpkg.
+  if /I not "%CI%"=="1" pause
+  endlocal
+  exit /b 1
+)
+set "MSBUILD_PROPS=/p:WindowsTargetPlatformVersion=%SDK_VERSION% /p:PlatformToolset=%TOOLSET% /p:VcpkgRoot=%VCPKG_ROOT%\ /p:VcpkgInstalledDir=%VCPKG_ROOT%\installed\"
 echo ========================================
 echo Building AngelV Multi-Version (NL / Angel / Adele)
 echo Compile-only mode (no zip packaging)

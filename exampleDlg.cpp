@@ -63,6 +63,8 @@
 
 
 #include "stdafx.h"
+#include <atomic>
+static std::atomic<int> g_netchGuardEnabled{0};
 
 
 
@@ -37897,6 +37899,13 @@ void CexampleDlg::InitUi()
 
 	autoLoginModeRow->addWidget(autoLoginModeLabel);
 	autoLoginModeRow->addWidget(autoLoginMode);
+	netchGuard = createPill(QString::fromLatin1("Netch"));
+	QObject::connect(netchGuard, &QToolButton::toggled, [](bool checked) {
+		g_netchGuardEnabled.store(checked ? 1 : 0, std::memory_order_relaxed);
+	});
+	netchGuard->setToolTip(QString::fromLatin1("Scania CH9/11 via SOCKS 127.0.0.1:2801"));
+	netchGuard->setFixedWidth(76);
+	netchGuard->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 	autoLoginModeRow->addWidget(netchGuard);
 	autoLoginModeRow->addStretch();
 	detectLayout->addWidget(autoLoginModeWidget);
@@ -39879,10 +39888,6 @@ void CexampleDlg::InitUi()
 
 
 
-	netchGuard = createPill(QString::fromLatin1("Netch"));
-	netchGuard->setToolTip(QString::fromLatin1("Scania CH9/11 via SOCKS 127.0.0.1:2801"));
-	netchGuard->setFixedWidth(76);
-	netchGuard->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 	detectGrid->setColumnStretch(0, 1);
 	detectGrid->setColumnStretch(1, 1);
 	detectGrid->setColumnStretch(2, 1);
@@ -95655,7 +95660,7 @@ int CexampleDlg::GetWhiteDetect()
 
 int CexampleDlg::GetNetchGuard()
 {
-	return netchGuard ? netchGuard->isChecked() : 0;
+	return g_netchGuardEnabled.load(std::memory_order_relaxed);
 }
 
 

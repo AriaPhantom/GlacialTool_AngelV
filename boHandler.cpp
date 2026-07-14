@@ -711,7 +711,7 @@ void gMonitorCheck(long index, long count)
 
 	sptool* dm = g_info[index].dm;
 
-
+	if (dm == nullptr) return;
 
 	if (Gethunt() != 1 || gMonitorInstance.detectionStatus == 0)
 
@@ -1155,8 +1155,9 @@ void gMonitorCheck(long index, long count)
 
 
 	if (whiteDetectEnabled && runLieCheck) {
-		long topLeftX, topLeftY, bottomRightX, bottomRightY;
+		long topLeftX = 0, topLeftY = 0, bottomRightX = 0, bottomRightY = 0;
 		long windowRet = dm->GetWindowRect(g_info[index].hwnd, &topLeftX, &topLeftY, &bottomRightX, &bottomRightY);
+		if (windowRet != 1) return;
 		long mapleWindowWidth = bottomRightX - topLeftX;
 		long mapleWindowHeight = bottomRightY - topLeftY;
 		if (mapleWindowWidth > 1400) {
@@ -1165,8 +1166,8 @@ void gMonitorCheck(long index, long count)
 		}
 
 		long lieX = -1, lieY = -1;
-		long findPicRet = dm->FindPic(0, 0, mapleWindowWidth, mapleWindowHeight, lieIcon, _T("000000"), 0.98, 0, &lieX, &lieY);
-		if (lieX > 0 && lieY > 0) {
+		long findPicRet = dm->FindPic(0, 0, mapleWindowWidth, mapleWindowHeight, lieIcon, _T("000000"), 0.96, 0, &lieX, &lieY);
+		if (findPicRet == 1 && lieX >= 0 && lieY >= 0) {
 			Log(_T("detect Lie, trigger white"));
 			miaoSenderInstance.setWhite(1);
 			string s = "C:\\sptool\\WhitePic";
@@ -1244,6 +1245,10 @@ void gMonitorCheck(long index, long count)
 int* findCoordsOnMiniMap(long index, const TCHAR* innerIcon, double sim) {
 
 	sptool* dm = g_info[index].dm;
+	if (dm == nullptr) {
+		static int s_empty[2] = { -1, -1 };
+		return s_empty;
+	}
 
 	long x, y;
 
