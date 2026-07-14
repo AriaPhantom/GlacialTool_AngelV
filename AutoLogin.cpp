@@ -48,8 +48,12 @@ int size = WideCharToMultiByte(CP_ACP, 0, value, -1, nullptr, 0, nullptr, nullpt
 if (size <= 1) {
 	return std::string();
 }
-std::string result(static_cast<size_t>(size - 1), '\0');
-WideCharToMultiByte(CP_ACP, 0, value, -1, &result[0], size, nullptr, nullptr);
+std::string result(static_cast<size_t>(size), '\0');
+int converted = WideCharToMultiByte(CP_ACP, 0, value, -1, &result[0], size, nullptr, nullptr);
+if (converted <= 1) {
+	return std::string();
+}
+result.resize(static_cast<size_t>(converted - 1));
 return result;
 }
 
@@ -1501,7 +1505,7 @@ void AutoLogin_CheckAndTrigger(long index) {
 			#ifdef UNICODE
 			SPUtils::CapturePng(dialogHwnd, 0, 0, 0, 0, filename.c_str());
 			#else
-			std::string filenameA(filename.begin(), filename.end());
+			std::string filenameA = WideToAnsiLocal(filename.c_str());
 			SPUtils::CapturePng(dialogHwnd, 0, 0, 0, 0, filenameA.c_str());
 			#endif
 

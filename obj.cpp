@@ -408,7 +408,14 @@ long sptool::ForceUnBindWindow(long hwnd) {
 }
 
 long sptool::IsBind(long hwnd) {
-	return (m_boundHwnd != 0 && m_boundHwnd == hwnd) ? 1 : 0;
+	if (m_boundHwnd == 0 || m_boundHwnd != hwnd) return 0;
+
+	HWND boundHwnd = LongToHwnd(m_boundHwnd);
+	if (boundHwnd == nullptr || !IsWindow(boundHwnd)) return 0;
+
+	DWORD pid = 0;
+	GetWindowThreadProcessId(boundHwnd, &pid);
+	return (m_boundPid != 0 && pid != 0 && static_cast<long>(pid) == m_boundPid) ? 1 : 0;
 }
 
 long sptool::GetTime() {

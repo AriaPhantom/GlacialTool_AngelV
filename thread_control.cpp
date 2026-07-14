@@ -320,6 +320,9 @@ static void ThreadInternalStop(long index)
 	ThreadSetExitState(index);
 
 	DWORD wait_time = 30 * 1000;
+	bool mainForcedTermination = false;
+	bool subForcedTermination = false;
+	bool miaoForcedTermination = false;
 
 	// 主
 	if (g_info[index].handle)
@@ -328,6 +331,7 @@ static void ThreadInternalStop(long index)
 		{
 			// 等待线程自然结束失败了,逼不得已我们使用强制结束线程
 			Log(_T("主:等待线程失败,强制结束线程"));
+			mainForcedTermination = true;
 			TerminateThread(g_info[index].handle,0);
 		}
 		CloseHandle(g_info[index].handle);
@@ -340,6 +344,7 @@ static void ThreadInternalStop(long index)
 		{
 			// 等待线程自然结束失败了,逼不得已我们使用强制结束线程
 			Log(_T("副:等待线程失败,强制结束线程"));
+			subForcedTermination = true;
 			TerminateThread(g_info[index+MAX_HWND].handle,0);
 		}
 		CloseHandle(g_info[index+MAX_HWND].handle);
@@ -352,6 +357,7 @@ static void ThreadInternalStop(long index)
 		{
 			// 等待线程自然结束失败了,逼不得已我们使用强制结束线程
 			Log(_T("副:等待线程失败,强制结束线程"));
+			miaoForcedTermination = true;
 			TerminateThread(g_info[index + MAX_HWND * 2].handle, 0);
 		}
 		CloseHandle(g_info[index + MAX_HWND * 2].handle);
@@ -364,23 +370,41 @@ static void ThreadInternalStop(long index)
 	// 所以我们在释放对象前,强制把引用计数释放到正确的值
 	if (g_info[index].dm)
 	{
-		g_info[index].dm->ReleaseRef();
-		delete g_info[index].dm;
+		sptool* dm = g_info[index].dm;
 		g_info[index].dm = NULL;
+		if (mainForcedTermination) {
+			Log(_T("Main thread was force-terminated; skip dm destruction to avoid corrupt cleanup"));
+		}
+		else {
+			dm->ReleaseRef();
+			delete dm;
+		}
 	}
 
 	if (g_info[index+MAX_HWND].dm)
 	{
-		g_info[index+MAX_HWND].dm->ReleaseRef();
-		delete g_info[index+MAX_HWND].dm;
+		sptool* dm = g_info[index+MAX_HWND].dm;
 		g_info[index+MAX_HWND].dm = NULL;
+		if (subForcedTermination) {
+			Log(_T("Sub thread was force-terminated; skip dm destruction to avoid corrupt cleanup"));
+		}
+		else {
+			dm->ReleaseRef();
+			delete dm;
+		}
 	}
 
 	if (g_info[index + MAX_HWND * 2].dm)
 	{
-		g_info[index + MAX_HWND * 2].dm->ReleaseRef();
-		delete g_info[index + MAX_HWND * 2].dm;
+		sptool* dm = g_info[index + MAX_HWND * 2].dm;
 		g_info[index + MAX_HWND * 2].dm = NULL;
+		if (miaoForcedTermination) {
+			Log(_T("Notification thread was force-terminated; skip dm destruction to avoid corrupt cleanup"));
+		}
+		else {
+			dm->ReleaseRef();
+			delete dm;
+		}
 	}
 }
 

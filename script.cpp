@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <atomic>
 #include "script.h"
 #include "thread_control.h"
 #include "log.h"
@@ -6,6 +7,28 @@
 #include "boHandler.h"
 #include "AutoLogin.h"
 #include "SPUtils.h"
+
+namespace {
+constexpr ULONGLONG kMonitorExceptionLogIntervalMs = 5000;
+std::atomic<ULONGLONG> g_lastMonitorExceptionLogTick[MAX_HWND * 3] = {};
+
+void LogMonitorExceptionRateLimited(long index, const TCHAR* message) {
+	if (index < 0 || index >= MAX_HWND * 3) return;
+
+	const ULONGLONG now = GetTickCount64();
+	ULONGLONG previous = g_lastMonitorExceptionLogTick[index].load(std::memory_order_relaxed);
+	for (;;) {
+		if (previous != 0 && now - previous < kMonitorExceptionLogIntervalMs) return;
+		if (g_lastMonitorExceptionLogTick[index].compare_exchange_weak(
+			previous, now, std::memory_order_relaxed, std::memory_order_relaxed)) {
+			break;
+		}
+	}
+
+	Log(_T("[gMonitorCheck] index=%ld %s"), index, message);
+}
+}
+
 
 extern int GetAutoLogin();
 
@@ -307,11 +330,11 @@ unsigned WINAPI SubThread(PVOID pParam)
 try {
 	gMonitorCheck(index, count);
 } catch (const cv::Exception&) {
-	Log(_T("[gMonitorCheck] cv::Exception suppressed"));
+	LogMonitorExceptionRateLimited(index, _T("cv::Exception suppressed"));
 } catch (const std::exception&) {
-	Log(_T("[gMonitorCheck] std::exception suppressed"));
+	LogMonitorExceptionRateLimited(index, _T("std::exception suppressed"));
 } catch (...) {
-	Log(_T("[gMonitorCheck] unknown exception suppressed"));
+	LogMonitorExceptionRateLimited(index, _T("unknown exception suppressed"));
 }
 		ScriptDelay(index,50);
 		count++;

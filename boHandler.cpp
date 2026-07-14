@@ -711,7 +711,7 @@ void gMonitorCheck(long index, long count)
 
 	sptool* dm = g_info[index].dm;
 
-	if (dm == nullptr) return;
+	if (dm == nullptr || dm->IsBind(g_info[index].hwnd) != 1) return;
 
 	if (Gethunt() != 1 || gMonitorInstance.detectionStatus == 0)
 
@@ -1166,7 +1166,7 @@ void gMonitorCheck(long index, long count)
 		}
 
 		long lieX = -1, lieY = -1;
-		long findPicRet = dm->FindPic(0, 0, mapleWindowWidth, mapleWindowHeight, lieIcon, _T("000000"), 0.96, 0, &lieX, &lieY);
+		long findPicRet = dm->FindPic(0, 0, mapleWindowWidth, mapleWindowHeight, lieIcon, _T("000000"), 0.98, 0, &lieX, &lieY);
 		if (findPicRet == 1 && lieX >= 0 && lieY >= 0) {
 			Log(_T("detect Lie, trigger white"));
 			miaoSenderInstance.setWhite(1);

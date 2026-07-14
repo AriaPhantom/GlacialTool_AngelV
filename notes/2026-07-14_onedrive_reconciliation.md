@@ -4,7 +4,7 @@
 
 - Reconciled the reviewed OneDrive conflict-copy changes into the canonical sources rather than keeping machine-suffixed copies.
 - Hardened the monitoring path where applicable: null `dm` checks, mini-map snapshot validity checks, guarded Lie-window coordinates/results, and a `gMonitorCheck` exception boundary.
-- Kept Lie detection local to its existing path at similarity `0.96`; the global external `FindPic` similarity behavior was not relaxed.
+- The initial reconciliation kept Lie detection local at `0.96`; after the exact asset and 82 complete screenshots were found, the follow-up hardening restored it to the validated `0.98` threshold. The global external `FindPic` behavior remains unchanged.
 - Cached the Netch toggle in an atomic value so worker threads no longer read a Qt widget directly.
 - Ensured the Netch widget is constructed and connected before it is inserted into the layout.
 - Made the build choose the available VS18/VS2019 toolset and `C:\vcpkg`/`F:\vcpkg` installation, with project paths based on `$(VcpkgRoot)`.
@@ -20,9 +20,9 @@
 - Runtime output verification found the common CPR/OpenCV/Qt DLLs, Wuya DLLs, `skin/main.xml`, `qwindows.dll`, and `qjpeg.dll` in every active variant output.
 - `git diff --check`, scripted-edit escape checks, Netch create-before-add checks, and `git fsck --full --no-dangling` were included in the reconciliation gate.
 
-## Deployment dependency
+## Lie asset deployment
 
-All active variants map the Lie image to the exact file `C:\sptool\Lie.bmp`. That exact `.bmp` file is absent from this workstation and from the workspace. Do not substitute a guessed extension or another image; Lie-image detection remains unavailable until the exact asset is deployed.
+The exact mapped asset `C:\sptool\Lie.bmp` was deployed on 2026-07-14 from `F:\OneDrive\Software\tmp\Lie.bmp`. The copied file is an 83 x 13, 24-bit BMP with SHA-256 `6169EBCB9757F6B01E75D86A759F29E1DC587C97E41B2B020ACAA054F8E505D2`.
 
 ## Residual limitations
 
