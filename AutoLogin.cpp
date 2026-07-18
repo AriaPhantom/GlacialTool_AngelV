@@ -793,9 +793,8 @@ return _wcsicmp(name.c_str(), L"nexon_launcher.exe") == 0
 	|| _wcsicmp(name.c_str(), L"nexon_client.exe") == 0;
 }
 
-BOOL CALLBACK HideNexonWindowProc(HWND hwnd, LPARAM) {
+BOOL CALLBACK CleanupNexonWindowProc(HWND hwnd, LPARAM) {
 if (!IsWindow(hwnd)) return TRUE;
-if (GetWindow(hwnd, GW_OWNER) != nullptr) return TRUE;
 if (!IsWindowVisible(hwnd)) return TRUE;
 
 DWORD pid = 0;
@@ -806,12 +805,28 @@ std::wstring procName;
 if (!GetProcessNameByPid(pid, procName)) return TRUE;
 if (!IsNexonProcessName(procName)) return TRUE;
 
+wchar_t className[64] = {};
+if (GetClassNameW(hwnd, className, static_cast<int>(sizeof(className) / sizeof(className[0])))
+	&& wcscmp(className, L"#32770") == 0) {
+	PostMessageW(hwnd, WM_CLOSE, 0, 0);
+	return TRUE;
+}
+
 ShowWindow(hwnd, SW_HIDE);
 return TRUE;
 }
 
-void HideNexonWindows() {
-EnumWindows(HideNexonWindowProc, 0);
+void CleanupNexonWindows() {
+EnumWindows(CleanupNexonWindowProc, 0);
+}
+
+void CleanupNexonWindowsFor(std::chrono::milliseconds duration) {
+const auto end = std::chrono::steady_clock::now() + duration;
+do {
+	CleanupNexonWindows();
+	std::this_thread::sleep_for(std::chrono::milliseconds(200));
+} while (std::chrono::steady_clock::now() < end);
+CleanupNexonWindows();
 }
 
 void UpdateWindowForAllThreads(long mainIndex, HWND hwnd) {
@@ -1174,7 +1189,7 @@ return true;
 bool LaunchGameAndWaitForWindow(long mainIndex, const std::chrono::steady_clock::time_point& deadline) {
 KillMapleStoryProcesses();
 std::this_thread::sleep_for(std::chrono::seconds(3));
-HideNexonWindows();
+CleanupNexonWindows();
 
 HINSTANCE hInstance = ShellExecuteW(nullptr, L"open", kLaunchCommand, nullptr, nullptr, SW_SHOWNORMAL);
 if ((intptr_t)hInstance <= 32) {
@@ -1188,19 +1203,18 @@ if ((intptr_t)hInstance <= 32) return false;
 int waitSec = 120;
 while (waitSec > 0) {
 	if (std::chrono::steady_clock::now() > deadline) return false;
-	HideNexonWindows();
+	CleanupNexonWindows();
 	HWND found = findMSWindow();
 	if (found && IsWindow(found)) {
 		UpdateWindowForAllThreads(mainIndex, found);
 		g_loginNeedRestart[mainIndex].store(true);
-		HideNexonWindows();
-		std::this_thread::sleep_for(std::chrono::seconds(5));
+		CleanupNexonWindowsFor(std::chrono::seconds(5));
 		return true;
 	}
 	std::this_thread::sleep_for(std::chrono::seconds(2));
 	waitSec -= 2;
 }
-HideNexonWindows();
+CleanupNexonWindows();
 
 return false;
 }
