@@ -1,0 +1,18 @@
+# 2026-07-18 OK dialog retry hardening
+
+## Problem
+
+- Useful-item handling performed a single OK-image lookup immediately after the key hold.
+- A delayed dialog or a missed first Esc press could leave the OK dialog open.
+
+## Change
+
+- `OKDetector` now polls up to 12 times at 150 ms intervals.
+- After finding the dialog, it presses Esc up to three times and verifies that the OK image disappeared.
+- Null plugin pointers and failed window-rectangle queries are rejected before scanning where applicable.
+- The ignite/oil branches, where present, now wait 400-500 ms after the key hold and run the same detector.
+
+## Validation
+
+- `build_all_versions.bat`: PASS (`Release|x64`, all variants, exit code 0).
+- `git diff --check`: PASS.

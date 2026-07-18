@@ -3374,12 +3374,14 @@ void CheckRoutineBuff(long index, bool left = true, bool spider = false, int job
 void OKDetector(long index) {
 
 	sptool* dm = g_info[index].dm;
+	if (dm == nullptr) return;
 
 
 
 	long topLeftX, topLeftY, bottomRightX, bottomRightY;
 
 	long windowRet = dm->GetWindowRect(g_info[index].hwnd, &topLeftX, &topLeftY, &bottomRightX, &bottomRightY);
+	if (windowRet != 1) return;
 
 	long mapleWindowWidth = bottomRightX - topLeftX;
 
@@ -3405,16 +3407,23 @@ void OKDetector(long index) {
 
 	long bossBottomRightY = long(120 + (mapleWindowHeight / 2));
 
-	long x, y;
+	auto findOk = [&]() {
+		long x = -1;
+		long y = -1;
+		dm->FindPic(bossTopLeftX, bossTopLeftY, bossBottomRightX, bossBottomRightY, okIcon, _T("000000"), 0.95, 0, &x, &y);
+		return x > 0 && y > 0;
+	};
 
-
-
-	int findPicRet = dm->FindPic(bossTopLeftX, bossTopLeftY, bossBottomRightX, bossBottomRightY, okIcon, _T("000000"), 0.95, 0, &x, &y);
-
-	if (x > 0 && y > 0) {
-
-		press(index, "esc", 1, randomUniform(300, 410));
-
+	for (int detectAttempt = 0; detectAttempt < 12; ++detectAttempt) {
+		if (findOk()) {
+			for (int closeAttempt = 0; closeAttempt < 3; ++closeAttempt) {
+				press(index, "esc", 1, randomUniform(300, 410));
+				ScriptDelay(index, 150);
+				if (!findOk()) return;
+			}
+			return;
+		}
+		ScriptDelay(index, 150);
 	}
 
 }
@@ -3440,6 +3449,8 @@ void CheckUseBuff(long index) {
 		ScriptDelay(index, 50);
 
 		holdKey(index, 点火, randomUniform(500, 610), 233);
+		ScriptDelay(index, randomUniform(400, 500));
+		OKDetector(index);
 
 		buffTimeOut_buff_点火 = dm->GetTime() + 1810000;
 
@@ -3450,6 +3461,8 @@ void CheckUseBuff(long index) {
 	if (GetautoOil() && IsAutoOilReady(index)) {
 
 		holdKey(index, 汽油, randomUniform(200, 220));
+		ScriptDelay(index, randomUniform(400, 500));
+		OKDetector(index);
 
 		ArmAutoOilCooldown(index, 3700000);
 
@@ -4372,8 +4385,6 @@ void leftRight(long index, int& count) {
 	}
 
 }
-
-
 
 
 
