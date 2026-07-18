@@ -3407,19 +3407,23 @@ void OKDetector(long index) {
 
 	long bossBottomRightY = long(120 + (mapleWindowHeight / 2));
 
-	auto findOk = [&]() {
-		long x = -1;
-		long y = -1;
-		dm->FindPic(bossTopLeftX, bossTopLeftY, bossBottomRightX, bossBottomRightY, okIcon, _T("000000"), 0.95, 0, &x, &y);
-		return x > 0 && y > 0;
+	auto findOk = [&](long& foundX, long& foundY) {
+		foundX = -1;
+		foundY = -1;
+		dm->FindPic(bossTopLeftX, bossTopLeftY, bossBottomRightX, bossBottomRightY, okIcon, _T("000000"), 0.95, 0, &foundX, &foundY);
+		return foundX > 0 && foundY > 0;
 	};
 
 	for (int detectAttempt = 0; detectAttempt < 12; ++detectAttempt) {
-		if (findOk()) {
-			for (int closeAttempt = 0; closeAttempt < 3; ++closeAttempt) {
-				press(index, "esc", 1, randomUniform(300, 410));
-				ScriptDelay(index, 150);
-				if (!findOk()) return;
+		long okX = -1;
+		long okY = -1;
+		if (findOk(okX, okY)) {
+			press(index, "esc", 1, randomUniform(300, 410));
+			ScriptDelay(index, 400);
+			if (findOk(okX, okY)) {
+				dm->MoveTo(okX, okY);
+				ScriptDelay(index, 50);
+				dm->LeftClick();
 			}
 			return;
 		}
@@ -4385,7 +4389,6 @@ void leftRight(long index, int& count) {
 	}
 
 }
-
 
 
 
