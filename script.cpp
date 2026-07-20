@@ -336,7 +336,7 @@ try {
 } catch (...) {
 	LogMonitorExceptionRateLimited(index, _T("unknown exception suppressed"));
 }
-		ScriptDelay(index,50);
+		ScriptDelay(index, static_cast<long>(SPUtils::SelectImageModeIntervalMs(50, 100)));
 		count++;
 		if (count > 20) { count = 0; }
 	}

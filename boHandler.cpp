@@ -188,6 +188,11 @@ constexpr ULONGLONG kPlayerCoordCheckIdleIntervalMs = 250;
 constexpr ULONGLONG kWhiteCheckIntervalMs = 200;
 constexpr ULONGLONG kLieCheckIntervalMs = 1000;
 
+// External image mode cadence; Lie remains at 1000ms to preserve detection latency.
+constexpr ULONGLONG kPlayerCoordCheckIntervalExtMs = 100;
+constexpr ULONGLONG kPlayerCoordCheckIdleExtMs = 300;
+constexpr ULONGLONG kWhiteCheckIntervalExtMs = 350;
+
 ULONGLONG g_lastOtherPlayerCheckMs[MAX_HWND] = {};
 
 ULONGLONG g_lastFriendGuildCheckMs[MAX_HWND] = {};
@@ -739,17 +744,17 @@ void gMonitorCheck(long index, long count)
 
 	bool runRuneCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastRuneCheckMs, kRuneCheckIntervalMs, nowMs);
 
-	ULONGLONG playerCoordIntervalMs = kPlayerCoordCheckIdleIntervalMs;
+	ULONGLONG playerCoordIntervalMs = SPUtils::SelectImageModeIntervalMs(kPlayerCoordCheckIdleIntervalMs, kPlayerCoordCheckIdleExtMs);
 
 	if (mainIndex >= 0 && mainIndex < MAX_HWND && InterlockedCompareExchange(&g_isGoToActive[mainIndex], 0, 0) != 0) {
 
-		playerCoordIntervalMs = kPlayerCoordCheckIntervalMs;
+		playerCoordIntervalMs = SPUtils::SelectImageModeIntervalMs(kPlayerCoordCheckIntervalMs, kPlayerCoordCheckIntervalExtMs);
 
 	}
 
 	bool runPlayerCoordCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastPlayerCoordCheckMs, playerCoordIntervalMs, nowMs);
 
-	bool runWhiteCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastWhiteCheckMs, kWhiteCheckIntervalMs, nowMs);
+	bool runWhiteCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastWhiteCheckMs, SPUtils::SelectImageModeIntervalMs(kWhiteCheckIntervalMs, kWhiteCheckIntervalExtMs), nowMs);
 	bool runLieCheck = ShouldRunMonitorPeriodicCheck(mainIndex, g_lastLieCheckMs, kLieCheckIntervalMs, nowMs);
 
 
