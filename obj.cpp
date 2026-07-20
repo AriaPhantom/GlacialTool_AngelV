@@ -436,71 +436,16 @@ long sptool::FindPic(long x1, long y1, long x2, long y2, const TCHAR* pic_name, 
 	HWND hwnd = LongToHwnd(m_boundHwnd);
 	if (hwnd == nullptr || !IsWindow(hwnd)) return 0;
 
-	int mode = GetWuyaImageModeSafe();
-	if (mode != kWuyaModeNativeOnly && EnsureCpContext()) {
-		g_lastImageBackend.store(kWuyaBackendExternal);
-		long left = x1;
-		long top = y1;
-		long right = x2;
-		long bottom = y2;
-		if (right == 0 || bottom == 0) {
-			RECT rc = {};
-			if (GetClientRect(hwnd, &rc)) {
-				if (right == 0) right = rc.right;
-				if (bottom == 0) bottom = rc.bottom;
-			}
-		}
-
-		POINT physLT = {};
-		POINT physRB = {};
-		if (LogicalClientToPhysicalScreen(hwnd, left, top, physLT) &&
-			LogicalClientToPhysicalScreen(hwnd, right, bottom, physRB)) {
-			left = physLT.x;
-			top = physLT.y;
-			right = physRB.x;
-			bottom = physRB.y;
-		}
-
-		float simValue = static_cast<float>(std::max(0.0, std::min(1.0, sim)));
-		constexpr float kExternalSimBias = 0.03f;
-		simValue = std::min(0.999f, simValue);
-		if (simValue < 0.999f) simValue = std::min(0.999f, simValue + kExternalSimBias);
-		CPSetFPSimilar(m_cpData, simValue);
-
-		auto names = SplitPicNames(ToWString(pic_name));
-		for (const auto& name : names) {
-			if (!EnsureCpPicLoaded(name)) continue;
-			long outx = -1;
-			long outy = -1;
-			if (CPFindPic(m_cpData, left, top, right, bottom, m_cpPicTable, name.c_str(), 0, &outx, &outy)) {
-				g_lastImageBackend.store(kWuyaBackendExternal);
-				long rawx = outx;
-				long rawy = outy;
-				POINT logical = {};
-				if (PhysicalScreenToLogicalClient(hwnd, rawx, rawy, logical)) {
-					outx = logical.x;
-					outy = logical.y;
-				}
-				if (x) *x = outx;
-				if (y) *y = outy;
-				return 1;
-			}
-		}
-		if (mode == kWuyaModeExternalOnly) return 0;
-	}
-	else if (mode == kWuyaModeExternalOnly) {
+	long outx = -1;
+	long outy = -1;
+	if (!SPUtils::FindPic(hwnd, static_cast<int>(x1), static_cast<int>(y1),
+		static_cast<int>(x2), static_cast<int>(y2), ToWString(pic_name), sim, outx, outy)) {
 		return 0;
 	}
 
-	g_lastImageBackend.store(kWuyaBackendNative);
-	long outx = -1, outy = -1;
-	bool found = SPUtils::FindPic(hwnd, static_cast<int>(x1), static_cast<int>(y1), static_cast<int>(x2), static_cast<int>(y2), ToWString(pic_name), sim, outx, outy);
-	if (found) {
-		if (x) *x = outx;
-		if (y) *y = outy;
-		return 1;
-	}
-	return 0;
+	if (x) *x = outx;
+	if (y) *y = outy;
+	return 1;
 }
 
 CString sptool::GetColor(long x, long y) {
@@ -627,9 +572,9 @@ CString sptool::EnumWindow(long /*parent*/, const TCHAR* title, const TCHAR* cla
 }
 
 int GetWuyaImageBackend() {
-	return g_lastImageBackend.load();
+	return SPUtils::GetImageBackend();
 }
 
 int GetWuyaImageContextReady() {
-	return g_cpContextReady.load();
+	return SPUtils::GetImageContextReady();
 }

@@ -113,20 +113,6 @@ constexpr long kIconHintTtlMs = 2000;
 constexpr int kIconHintHalfWidth = 220;
 constexpr int kIconHintHalfHeight = 150;
 constexpr int kIconHintMinSearchArea = 500 * 320;
-constexpr double kStuck2DarkTextSim = 0.985;
-constexpr int kStuck2DarkTextThreshold = 215;
-constexpr int kStuck2DarkTextMinPixels = 1800;
-constexpr int kStuck2DarkTextMaxSearchHeight = 220;
-
-struct DarkTextTemplateCache {
-std::wstring path;
-cv::Mat gray;
-cv::Mat mask;
-};
-
-std::mutex g_darkTextTemplateCacheMutex;
-DarkTextTemplateCache g_stuck2DarkTextTemplateCache;
-
 const wchar_t* kLaunchCommand = L"nxl://launch/10100";
 
 std::atomic<bool> g_loginRunning[MAX_HWND];
@@ -1287,121 +1273,31 @@ if (!FindIconInWindowBmpFirst(mainIndex, kLoginIconPath, kLoginIconFallbackPath,
 return x > 0 && y > 0;
 }
 
-struct DisconnectDarkTextTemplate {
-	std::wstring path;
-	cv::Mat gray;
-	cv::Mat mask;
-};
-
-bool LoadDisconnectDarkTextTemplate(const wchar_t* bmpPath, const wchar_t* pngPath,
-	int threshold, int minPixels, DisconnectDarkTextTemplate& cache) {
-	const wchar_t* selectedPath = nullptr;
-	if (bmpPath && FileExists(bmpPath)) selectedPath = bmpPath;
-	else if (pngPath && FileExists(pngPath)) selectedPath = pngPath;
-	if (selectedPath == nullptr || *selectedPath == L'\0') return false;
-
-	std::wstring selected(selectedPath);
-	if (cache.path == selected && !cache.gray.empty() && !cache.mask.empty()) {
-		return true;
-	}
-
-	std::string narrowPath;
-	narrowPath.reserve(selected.size());
-	for (wchar_t ch : selected) {
-		narrowPath.push_back(static_cast<char>(ch));
-	}
-
-	cv::Mat templateGray = cv::imread(narrowPath, cv::IMREAD_GRAYSCALE);
-	if (templateGray.empty()) return false;
-
-	cv::Mat templateMask;
-	cv::threshold(templateGray, templateMask, threshold, 255, cv::THRESH_BINARY_INV);
-	if (cv::countNonZero(templateMask) < minPixels) return false;
-
-	cache.path = selected;
-	cache.gray = templateGray;
-	cache.mask = templateMask;
-	return true;
-}
-
-bool MatchDisconnectDarkText(const cv::Mat& captureGray, DisconnectDarkTextTemplate& cache,
-	double sim, long& outx, long& outy) {
-	if (cache.gray.empty() || cache.mask.empty()) return false;
-	if (captureGray.cols < cache.gray.cols || captureGray.rows < cache.gray.rows) return false;
-
-	cv::Mat result;
-	cv::matchTemplate(captureGray, cache.gray, result, cv::TM_CCORR_NORMED, cache.mask);
-	if (result.empty()) return false;
-
-	double maxVal = 0.0;
-	cv::Point maxLoc;
-	cv::minMaxLoc(result, nullptr, &maxVal, nullptr, &maxLoc);
-	if (maxVal < sim) return false;
-
-	// Verify that the matched region is actually light (stuck screen has light/white background)
-	// and not a black/dark screen (e.g. character blinded).
-	cv::Mat matchedRegion = captureGray(cv::Rect(maxLoc.x, maxLoc.y, cache.gray.cols, cache.gray.rows));
-	cv::Scalar meanVal = cv::mean(matchedRegion);
-	if (meanVal[0] < 120) return false;
-
-	outx = maxLoc.x;
-	outy = maxLoc.y;
-	return true;
-}
-
 bool IsStuckScreen(long mainIndex) {
-	constexpr int kDarkTextThreshold = 215;
-	constexpr int kDarkTextMinPixels = 1800;
 	constexpr double kDarkTextSim = 0.995;
 
 	if (!EnsureWindowBinding(mainIndex)) return false;
 	HWND hwnd = reinterpret_cast<HWND>(static_cast<LONG_PTR>(g_info[mainIndex].hwnd));
 	if (!hwnd || !IsWindow(hwnd)) return false;
 
-	static DisconnectDarkTextTemplate stuckCache;
-	static DisconnectDarkTextTemplate stuck2Cache;
-	if (!LoadDisconnectDarkTextTemplate(kStuckIconPath, kStuckIconFallbackPath,
-		kDarkTextThreshold, kDarkTextMinPixels, stuckCache)) {
-		return false;
-	}
-	if (!LoadDisconnectDarkTextTemplate(kStuck2IconPath, kStuck2IconFallbackPath,
-		kDarkTextThreshold, kDarkTextMinPixels, stuck2Cache)) {
-		return false;
-	}
+	auto selectExistingPath = [](const wchar_t* bmpPath, const wchar_t* pngPath) {
+		if (bmpPath && FileExists(bmpPath)) return std::wstring(bmpPath);
+		if (pngPath && FileExists(pngPath)) return std::wstring(pngPath);
+		return std::wstring();
+	};
+	const std::wstring stuckPath = selectExistingPath(kStuckIconPath, kStuckIconFallbackPath);
+	const std::wstring stuck2Path = selectExistingPath(kStuck2IconPath, kStuck2IconFallbackPath);
+	if (stuckPath.empty() || stuck2Path.empty()) return false;
 
 	long width = 0;
 	long height = 0;
-	if (!GetWindowSizeForSearch(mainIndex, width, height)) return false;
+	if (!GetWindowSizeForSearch(mainIndex, width, height) || width <= 0 || height <= 0) return false;
 
-	if (width <= 0 || height <= 0) return false;
-
-	cv::Mat captured;
-	if (!SPUtils::CaptureAndResizeToLogic(hwnd, 0, 0, static_cast<int>(width), static_cast<int>(height), captured)) {
-		return false;
-	}
-	if (captured.empty()) return false;
-
-	cv::Mat captureGray;
-	if (captured.channels() == 4) {
-		cv::cvtColor(captured, captureGray, cv::COLOR_BGRA2GRAY);
-	}
-	else if (captured.channels() == 3) {
-		cv::cvtColor(captured, captureGray, cv::COLOR_BGR2GRAY);
-	}
-	else if (captured.channels() == 1) {
-		captureGray = captured;
-	}
-	else {
-		return false;
-	}
-
+	const std::wstring iconPaths = stuckPath + L"|" + stuck2Path;
 	long x = -1;
 	long y = -1;
-	if (MatchDisconnectDarkText(captureGray, stuckCache, kDarkTextSim, x, y)) return true;
-	x = -1;
-	y = -1;
-	if (MatchDisconnectDarkText(captureGray, stuck2Cache, kDarkTextSim, x, y)) return true;
-	return false;
+	return SPUtils::FindPicNative(hwnd, 0, 0, static_cast<int>(width), static_cast<int>(height),
+		iconPaths, kDarkTextSim, x, y);
 }
 void DisconnectWatcherLoop(long mainIndex, unsigned long long generation) {
 while (true) {

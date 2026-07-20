@@ -210,13 +210,6 @@ ULONGLONG g_lastLieCheckMs[MAX_HWND] = {};
 
 volatile LONG g_isGoToActive[MAX_HWND] = {};
 
-struct MiniMapSnapshot {
-
-	bool valid = false;
-
-	cv::Mat image;
-
-};
 
 
 
@@ -246,242 +239,40 @@ std::wstring ToWideStringLocal(const TCHAR* value) {
 
 
 
-std::string WideToAnsiLocal(const std::wstring& value) {
 
-	if (value.empty()) return std::string();
 
-	int size = WideCharToMultiByte(CP_ACP, 0, value.c_str(), -1, nullptr, 0, nullptr, nullptr);
 
-	if (size <= 1) return std::string();
 
-	std::string result(static_cast<size_t>(size - 1), '\0');
 
-	WideCharToMultiByte(CP_ACP, 0, value.c_str(), -1, &result[0], size, nullptr, nullptr);
 
-	return result;
 
-}
 
 
-
-std::vector<std::wstring> SplitIconPaths(const TCHAR* iconPathList) {
-
-	std::vector<std::wstring> paths;
-
-	std::wstring raw = ToWideStringLocal(iconPathList);
-
-	if (raw.empty()) return paths;
-
-
-
-	std::wstringstream ss(raw);
-
-	std::wstring singlePath;
-
-	while (std::getline(ss, singlePath, L'|')) {
-
-		if (!singlePath.empty()) {
-
-			paths.push_back(singlePath);
-
-		}
-
-	}
-
-	return paths;
-
-}
-
-
-
-bool GetMiniMapTemplateCached(const std::wstring& path, cv::Mat& outTemplate) {
-
-	outTemplate.release();
-
-	if (path.empty()) return false;
-
-
-
-	static std::mutex s_templateCacheMutex;
-
-	static std::map<std::wstring, cv::Mat> s_templateCache;
-
-
-
-	{
-
-		std::lock_guard<std::mutex> lock(s_templateCacheMutex);
-
-		auto it = s_templateCache.find(path);
-
-		if (it != s_templateCache.end() && !it->second.empty()) {
-
-			outTemplate = it->second;
-
-			return true;
-
-		}
-
-	}
-
-
-
-	std::string pathAnsi = WideToAnsiLocal(path);
-
-	cv::Mat loaded = cv::imread(pathAnsi, cv::IMREAD_UNCHANGED);
-
-	if (loaded.empty()) return false;
-
-	if (loaded.channels() == 4) {
-
-		cv::cvtColor(loaded, loaded, cv::COLOR_BGRA2BGR);
-
-	}
-
-	else if (loaded.channels() == 1) {
-
-		cv::cvtColor(loaded, loaded, cv::COLOR_GRAY2BGR);
-
-	}
-
-
-
-	{
-
-		std::lock_guard<std::mutex> lock(s_templateCacheMutex);
-
-		auto& entry = s_templateCache[path];
-
-		entry = std::move(loaded);
-
-		outTemplate = entry;
-
-	}
-
-	return !outTemplate.empty();
-
-}
-
-
-
-bool CaptureMiniMapSnapshot(long index, MiniMapSnapshot& outSnapshot) {
-
-	outSnapshot.valid = false;
-
-	outSnapshot.image.release();
-
-
+bool CaptureMiniMapSnapshot(long index, SPUtils::ImageSnapshot& outSnapshot) {
+	outSnapshot = SPUtils::ImageSnapshot{};
 
 	HWND hwnd = reinterpret_cast<HWND>(static_cast<LONG_PTR>(g_info[index].hwnd));
-
 	if (!hwnd || !IsWindow(hwnd)) return false;
 
-
-
-	cv::Mat captured;
-
-	if (!SPUtils::CaptureAndResizeToLogic(hwnd,
-
-		kMiniMapTopLeftX, kMiniMapTopLeftY, kMiniMapBottomRightX, kMiniMapBottomRightY, captured)) {
-
-		return false;
-
-	}
-
-	if (captured.empty()) return false;
-
-
-
-	if (captured.channels() == 4) {
-
-		cv::cvtColor(captured, captured, cv::COLOR_BGRA2BGR);
-
-	}
-
-	else if (captured.channels() == 1) {
-
-		cv::cvtColor(captured, captured, cv::COLOR_GRAY2BGR);
-
-	}
-
-
-
-	outSnapshot.image = std::move(captured);
-
-	outSnapshot.valid = !outSnapshot.image.empty() && outSnapshot.image.channels() == 3;
-
-	return outSnapshot.valid;
-
+	return SPUtils::CaptureSnapshot(hwnd,
+		kMiniMapTopLeftX, kMiniMapTopLeftY, kMiniMapBottomRightX, kMiniMapBottomRightY, outSnapshot);
 }
 
 
 
-bool FindIconInMiniMapSnapshot(const MiniMapSnapshot& snapshot, const TCHAR* iconPathList, double sim, int& outX, int& outY) {
-
+bool FindIconInMiniMapSnapshot(const SPUtils::ImageSnapshot& snapshot, const TCHAR* iconPathList, double sim, int& outX, int& outY) {
 	outX = -1;
-
 	outY = -1;
 
-	if (!snapshot.valid || snapshot.image.empty()) return false;
-
-
-
-	thread_local cv::Mat s_miniMapMatchResult;
-
-
-
-	std::vector<std::wstring> iconPaths = SplitIconPaths(iconPathList);
-
-	for (const std::wstring& iconPath : iconPaths) {
-
-		cv::Mat templateMat;
-
-		if (!GetMiniMapTemplateCached(iconPath, templateMat)) continue;
-
-		if (templateMat.empty()) continue;
-
-		if (snapshot.image.cols < templateMat.cols || snapshot.image.rows < templateMat.rows) continue;
-
-		if (snapshot.image.channels() != templateMat.channels()) continue;
-
-
-
-		const int resultRows = snapshot.image.rows - templateMat.rows + 1;
-
-		const int resultCols = snapshot.image.cols - templateMat.cols + 1;
-
-		s_miniMapMatchResult.create(resultRows, resultCols, CV_32FC1);
-
-		cv::matchTemplate(snapshot.image, templateMat, s_miniMapMatchResult, cv::TM_CCOEFF_NORMED);
-
-
-
-		double minVal = 0.0;
-
-		double maxVal = 0.0;
-
-		cv::Point minLoc;
-
-		cv::Point maxLoc;
-
-		cv::minMaxLoc(s_miniMapMatchResult, &minVal, &maxVal, &minLoc, &maxLoc);
-
-		if (maxVal >= sim) {
-
-			outX = maxLoc.x + kMiniMapTopLeftX;
-
-			outY = maxLoc.y + kMiniMapTopLeftY;
-
-			return true;
-
-		}
-
+	long matchX = -1;
+	long matchY = -1;
+	if (!SPUtils::FindPicInSnapshot(snapshot, ToWideStringLocal(iconPathList), sim, matchX, matchY)) {
+		return false;
 	}
 
-
-
-	return false;
-
+	outX = static_cast<int>(matchX);
+	outY = static_cast<int>(matchY);
+	return true;
 }
 
 int NormalizeMonitorMainIndex(long index) {
@@ -769,7 +560,7 @@ void gMonitorCheck(long index, long count)
 
 
 
-	MiniMapSnapshot miniMapSnapshot;
+	SPUtils::ImageSnapshot miniMapSnapshot;
 
 	const bool needMiniMapSnapshot =
 
@@ -795,7 +586,7 @@ void gMonitorCheck(long index, long count)
 
 	auto findMiniMapIcon = [&](const TCHAR* iconPath, double sim, int& outX, int& outY) -> bool {
 
-		if (miniMapSnapshot.valid) {
+		if (miniMapSnapshot.IsValid()) {
 
 			return FindIconInMiniMapSnapshot(miniMapSnapshot, iconPath, sim, outX, outY);
 
@@ -821,7 +612,7 @@ void gMonitorCheck(long index, long count)
 
 	auto detectWhiteRoom = [&](long& outWhiteX, long& outWhiteY) -> bool {
 
-		if (miniMapSnapshot.valid) {
+		if (miniMapSnapshot.IsValid()) {
 
 			int sx = -1;
 
@@ -4394,7 +4185,6 @@ void leftRight(long index, int& count) {
 	}
 
 }
-
 
 
 
