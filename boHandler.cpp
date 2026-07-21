@@ -3182,6 +3182,7 @@ void OKDetector(long index) {
 	long mapleWindowWidth = bottomRightX - topLeftX;
 
 	long mapleWindowHeight = bottomRightY - topLeftY;
+	if (mapleWindowWidth <= 0 || mapleWindowHeight <= 0) return;
 
 	if (mapleWindowWidth > 1400) {
 
@@ -3207,6 +3208,13 @@ void OKDetector(long index) {
 		foundX = -1;
 		foundY = -1;
 		dm->FindPic(bossTopLeftX, bossTopLeftY, bossBottomRightX, bossBottomRightY, okIcon, _T("000000"), 0.95, 0, &foundX, &foundY);
+		if (foundX > 0 && foundY > 0) {
+			return true;
+		}
+
+		foundX = -1;
+		foundY = -1;
+		dm->FindPic(bossTopLeftX, bossTopLeftY, bossBottomRightX, bossBottomRightY, okIcon, _T("000000"), 0.90, 0, &foundX, &foundY);
 		return foundX > 0 && foundY > 0;
 	};
 
