@@ -235,7 +235,7 @@ constexpr ULONGLONG kWhiteCheckIntervalMs = 200;
 constexpr ULONGLONG kLieCheckIntervalMs = 1000;
 
 // External image mode cadence; Lie remains at 1000ms to preserve detection latency.
-constexpr ULONGLONG kPlayerCoordCheckIntervalExtMs = 100;
+constexpr ULONGLONG kPlayerCoordCheckIntervalExtMs = 50;
 constexpr ULONGLONG kPlayerCoordCheckIdleExtMs = 300;
 constexpr ULONGLONG kWhiteCheckIntervalExtMs = 350;
 
