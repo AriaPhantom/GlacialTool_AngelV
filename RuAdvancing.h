@@ -1,4 +1,4 @@
-#include <opencv2/opencv.hpp>
+ï»¿#include <opencv2/opencv.hpp>
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -7,7 +7,7 @@
 
 using namespace std;
 
-// ¼ÆËãÁ½ÌõÏß¶ÎµÄ½»µã
+// è®¡ç®—ä¸¤æ¡çº¿æ®µçš„äº¤ç‚¹
 bool calculateIntersection(cv::Point2f o1, cv::Point2f p1, cv::Point2f o2, cv::Point2f p2, cv::Point2f& r) {
     cv::Point2f x = o2 - o1;
     cv::Point2f d1 = p1 - o1;
@@ -23,13 +23,13 @@ bool calculateIntersection(cv::Point2f o1, cv::Point2f p1, cv::Point2f o2, cv::P
     return true;
 }
 
-// ¼ÆËã¶à±ßĞÎµÄÖĞĞÄ
+// è®¡ç®—å¤šè¾¹å½¢çš„ä¸­å¿ƒ
 cv::Point2f calculatePolygonCenter(const vector<cv::Point>& polygon) {
     cv::Moments m = cv::moments(polygon);
     return cv::Point2f(static_cast<float>(m.m10 / m.m00), static_cast<float>(m.m01 / m.m00));
 }
 
-// ¼ì²â¼ıÍ··½ÏòµÄº¯Êı
+// æ£€æµ‹ç®­å¤´æ–¹å‘çš„å‡½æ•°
 string getArrowDirection(cv::Point2f intersection, cv::Point2f polyCenter) {
     float dx = intersection.x - polyCenter.x;
     float dy = intersection.y - polyCenter.y;
@@ -43,7 +43,7 @@ string getArrowDirection(cv::Point2f intersection, cv::Point2f polyCenter) {
 }
 
 vector<string> getArrowDirections(int blurKernelSize, const cv::Mat& image) {
-    // È·±£¸ßË¹Ä£ºıºËµÄ´óĞ¡ÎªÆæÊı²¢ÇÒ´óÓÚ1
+    // ç¡®ä¿é«˜æ–¯æ¨¡ç³Šæ ¸çš„å¤§å°ä¸ºå¥‡æ•°å¹¶ä¸”å¤§äº1
     if (blurKernelSize % 2 == 0) {
         blurKernelSize++;
     }
@@ -55,52 +55,52 @@ vector<string> getArrowDirections(int blurKernelSize, const cv::Mat& image) {
     int upperH = 143, upperS = 255, upperV = 220;
     int cannyLowThreshold = 50, cannyHighThreshold = 150;
 
-    // ×ª»»ÎªHSVÑÕÉ«¿Õ¼ä
+    // è½¬æ¢ä¸ºHSVé¢œè‰²ç©ºé—´
     cv::Mat hsvImage;
     cv::cvtColor(image, hsvImage, cv::COLOR_BGR2HSV);
 
-    // ¶¨ÒåHSVÑÕÉ«ãĞÖµ
+    // å®šä¹‰HSVé¢œè‰²é˜ˆå€¼
     cv::Scalar lowerBound(lowerH, lowerS, lowerV);
     cv::Scalar upperBound(upperH, upperS, upperV);
 
-    // ÑÕÉ«·¶Î§É¸Ñ¡
+    // é¢œè‰²èŒƒå›´ç­›é€‰
     cv::Mat mask1;
     cv::inRange(hsvImage, lowerBound, upperBound, mask1);
 
-    // ¸ßË¹Ä£ºı
+    // é«˜æ–¯æ¨¡ç³Š
     cv::Mat blur1;
     cv::GaussianBlur(mask1, blur1, cv::Size(blurKernelSize, blurKernelSize), 0);
 
-    // Canny±ßÔµ¼ì²â
+    // Cannyè¾¹ç¼˜æ£€æµ‹
     cv::Mat edge1;
     cv::Canny(blur1, edge1, cannyLowThreshold, cannyHighThreshold);
 
-    // Ñ°ÕÒÂÖÀª
+    // å¯»æ‰¾è½®å»“
     vector<vector<cv::Point>> contours;
     cv::findContours(edge1, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
 
-    vector<cv::Rect> arrowBoxes; // ÓÃÓÚ±£´æ¼ıÍ·µÄÍâ½Ó¾ØĞÎ
-    vector<cv::Vec4i> longestLines1; // ÓÃÓÚ±£´æ×î³¤µÄ±ß1
-    vector<cv::Vec4i> longestLines2; // ÓÃÓÚ±£´æ×î³¤µÄ±ß2
-    vector<cv::Point2f> intersections; // ÓÃÓÚ±£´æ½»µã
-    vector<cv::Point2f> polyCenters; // ÓÃÓÚ±£´æ¶à±ßĞÎÖĞĞÄ
-    vector<string> directions; // ÓÃÓÚ±£´æ¼ıÍ··½Ïò
+    vector<cv::Rect> arrowBoxes; // ç”¨äºä¿å­˜ç®­å¤´çš„å¤–æ¥çŸ©å½¢
+    vector<cv::Vec4i> longestLines1; // ç”¨äºä¿å­˜æœ€é•¿çš„è¾¹1
+    vector<cv::Vec4i> longestLines2; // ç”¨äºä¿å­˜æœ€é•¿çš„è¾¹2
+    vector<cv::Point2f> intersections; // ç”¨äºä¿å­˜äº¤ç‚¹
+    vector<cv::Point2f> polyCenters; // ç”¨äºä¿å­˜å¤šè¾¹å½¢ä¸­å¿ƒ
+    vector<string> directions; // ç”¨äºä¿å­˜ç®­å¤´æ–¹å‘
 
-    // É¸Ñ¡Ö¸¶¨Ãæ»ıµÄÂÖÀª
+    // ç­›é€‰æŒ‡å®šé¢ç§¯çš„è½®å»“
     for (size_t i = 0; i < contours.size(); i++) {
         cv::Rect boundingBox = cv::boundingRect(contours[i]);
         if (boundingBox.width >= 23 && boundingBox.width <= 32 &&
             boundingBox.height >= 23 && boundingBox.height <= 32) {
-            // ¶à±ßĞÎ½üËÆ
+            // å¤šè¾¹å½¢è¿‘ä¼¼
             vector<cv::Point> polygon;
             cv::approxPolyDP(contours[i], polygon, 0.01 * cv::arcLength(contours[i], true), true);
 
-            // ¼ì²é¶à±ßĞÎÃæ»ıÊÇ·ñ´óÓÚ300
+            // æ£€æŸ¥å¤šè¾¹å½¢é¢ç§¯æ˜¯å¦å¤§äº300
             if (cv::contourArea(polygon) <= 300) {
                 continue;
             }
 
-            // ÕÒ³ö×î³¤µÄÁ½Ìõ±ß
+            // æ‰¾å‡ºæœ€é•¿çš„ä¸¤æ¡è¾¹
             cv::Vec4i longestLine1, longestLine2;
             double maxLen1 = 0, maxLen2 = 0;
 
@@ -120,77 +120,77 @@ vector<string> getArrowDirections(int blurKernelSize, const cv::Mat& image) {
                 }
             }
 
-            // ¼ÆËã¶à±ßĞÎÖĞĞÄ
+            // è®¡ç®—å¤šè¾¹å½¢ä¸­å¿ƒ
             cv::Point2f polyCenter = calculatePolygonCenter(polygon);
 
-            // ¼ÆËãÁ½Ìõ×î³¤±ßµÄ½»µã
+            // è®¡ç®—ä¸¤æ¡æœ€é•¿è¾¹çš„äº¤ç‚¹
             cv::Point2f intersection;
             if (calculateIntersection(cv::Point2f(static_cast<float>(longestLine1[0]), static_cast<float>(longestLine1[1])), cv::Point2f(static_cast<float>(longestLine1[2]), static_cast<float>(longestLine1[3])),
                 cv::Point2f(static_cast<float>(longestLine2[0]), static_cast<float>(longestLine2[1])), cv::Point2f(static_cast<float>(longestLine2[2]), static_cast<float>(longestLine2[3])), intersection)) {
 
-                // ¼ì²é½»µãµ½¶à±ßĞÎÖĞĞÄµÄ¾àÀë
+                // æ£€æŸ¥äº¤ç‚¹åˆ°å¤šè¾¹å½¢ä¸­å¿ƒçš„è·ç¦»
                 double distanceToCenter = cv::norm(intersection - polyCenter);
 
-                // Èç¹û¾àÀë´óÓÚ17ÏñËØ£¬ÔòÉáÆú´Ë¶à±ßĞÎ
+                // å¦‚æœè·ç¦»å¤§äº17åƒç´ ï¼Œåˆ™èˆå¼ƒæ­¤å¤šè¾¹å½¢
                 if (distanceToCenter > 17) {
                     continue;
                 }
 
-                // ¼ì²é¶à±ßĞÎÖĞĞÄµãÖ®¼äµÄ¾àÀë£¬È¥µôÌ«½üµÄ¶à±ßĞÎ
+                // æ£€æŸ¥å¤šè¾¹å½¢ä¸­å¿ƒç‚¹ä¹‹é—´çš„è·ç¦»ï¼Œå»æ‰å¤ªè¿‘çš„å¤šè¾¹å½¢
                 if (!polyCenters.empty() && cv::norm(polyCenter - polyCenters.back()) < 10) {
                     continue;
                 }
 
-                // Ìí¼Ó¼ıÍ·ĞÅÏ¢
-                polyCenters.push_back(polyCenter); // Ìí¼Ó¶à±ßĞÎÖĞĞÄ
-                intersections.push_back(intersection); // Ìí¼Ó½»µã
+                // æ·»åŠ ç®­å¤´ä¿¡æ¯
+                polyCenters.push_back(polyCenter); // æ·»åŠ å¤šè¾¹å½¢ä¸­å¿ƒ
+                intersections.push_back(intersection); // æ·»åŠ äº¤ç‚¹
                 arrowBoxes.push_back(boundingBox);
                 longestLines1.push_back(longestLine1);
                 longestLines2.push_back(longestLine2);
 
                 string direction = getArrowDirection(intersection, polyCenter);
-                directions.push_back(direction); // Ìí¼Ó¼ıÍ··½Ïò
+                directions.push_back(direction); // æ·»åŠ ç®­å¤´æ–¹å‘
             }
         }
     }
 
-    // Èç¹û¼ıÍ·ÊıÁ¿Îª5»ò6£¬±£ÁôYÖá×î½Ó½üÆ½¾ùÖµµÄËÄ¸ö¼ıÍ·
+    // å¦‚æœç®­å¤´æ•°é‡ä¸º5æˆ–6ï¼Œä¿ç•™Yè½´æœ€æ¥è¿‘å¹³å‡å€¼çš„å››ä¸ªç®­å¤´
     if (directions.size() == 5 || directions.size() == 6) {
         double meanY = accumulate(polyCenters.begin(), polyCenters.end(), 0.0,
             [](double sum, const cv::Point2f& p) { return sum + p.y; }) / polyCenters.size();
 
         vector<int> indices(directions.size());
-        iota(indices.begin(), indices.end(), 0); // Éú³ÉË÷Òı
+        iota(indices.begin(), indices.end(), 0); // ç”Ÿæˆç´¢å¼•
 
-        // °´ÓëÆ½¾ùYÖµµÄ¾àÀëÅÅĞò
+        // æŒ‰ä¸å¹³å‡Yå€¼çš„è·ç¦»æ’åº
         sort(indices.begin(), indices.end(), [&](int a, int b) {
             return fabs(polyCenters[a].y - meanY) < fabs(polyCenters[b].y - meanY);
             });
 
-        // Ñ¡ÔñÓëÆ½¾ùYÖµ×î½Ó½üµÄËÄ¸ö¼ıÍ·
+        // é€‰æ‹©ä¸å¹³å‡Yå€¼æœ€æ¥è¿‘çš„å››ä¸ªç®­å¤´
         indices.resize(4);
 
-        // °´Ë÷ÒıµÄXÖµ´ÓĞ¡µ½´óÅÅĞò
+        // æŒ‰ç´¢å¼•çš„Xå€¼ä»å°åˆ°å¤§æ’åº
         sort(indices.begin(), indices.end(), [&](int a, int b) {
             return polyCenters[a].x < polyCenters[b].x;
             });
 
-        // ¾«¼ò directions
+        // ç²¾ç®€ directions
         vector<string> filteredDirections;
         for (int idx : indices) {
             filteredDirections.push_back(directions[idx]);
         }
-        directions = filteredDirections; // ¸üĞÂ directions
+        directions = filteredDirections; // æ›´æ–° directions
     }
     else {
-        // °´¶à±ßĞÎÖĞĞÄµãµÄXÖµÅÅĞò
+        // æŒ‰å¤šè¾¹å½¢ä¸­å¿ƒç‚¹çš„Xå€¼æ’åº
         vector<int> indices(directions.size());
-        iota(indices.begin(), indices.end(), 0); // Éú³ÉË÷Òı
+        iota(indices.begin(), indices.end(), 0); // ç”Ÿæˆç´¢å¼•
         sort(indices.begin(), indices.end(), [&](int a, int b) {
             return polyCenters[a].x < polyCenters[b].x;
             });
 
-        // ¸üĞÂ directions Îª°´XÖµÅÅĞòºóµÄË³Ğò
+        // æ›´æ–° directions ä¸ºæŒ‰Xå€¼æ’åºåçš„é¡ºåº
         vector<string> sortedDirections;
         for (int idx : indices) {
             sortedDirections.push_back(directions[idx]);

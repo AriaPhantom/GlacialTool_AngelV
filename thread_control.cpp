@@ -1,4 +1,4 @@
-#include "stdafx.h"
+ï»¿#include "stdafx.h"
 #include "thread_control.h"
 #include "log.h"
 #include "script.h"
@@ -37,7 +37,7 @@ static void ThreadReset(long index)
 	ZeroMemory(&g_info[index],sizeof(ThreadInfo));
 	g_info[index].thread_state = State_Inactive;
 	_tcscpy(g_info[index].task_state ,_T(""));
-	_tcscpy(g_info[index].excep_state,_T("ÎŞÒì³£"));
+	_tcscpy(g_info[index].excep_state,_T("æ— å¼‚å¸¸"));
 }
 
 static long ThreadGetPos()
@@ -81,26 +81,26 @@ BOOL   ThreadStart(long hwnd)
 {
 	if (hwnd == 0)
 	{
-		Log(_T("ÎŞĞ§µÄ´°¿Ú¾ä±ú"));
+		Log(_T("æ— æ•ˆçš„çª—å£å¥æŸ„"));
 		return FALSE;
 	}
 
 	if (ThreadIsStart(hwnd))
 	{
-		Log(_T("ÒÑ¾­Æô¶¯ÁË"));
+		Log(_T("å·²ç»å¯åŠ¨äº†"));
 		return TRUE;
 	}
 
 	long index = ThreadGetPos();
 	if (index == -1)
 	{
-		Log(_T("Ã»ÓĞ¶àÓàÎ»ÖÃÁË"));
+		Log(_T("æ²¡æœ‰å¤šä½™ä½ç½®äº†"));
 		return FALSE;
 	}
 
-	// ¸üĞÂÏß³ÌĞÅÏ¢,×¢ÒâÕâÀï´´½¨¶ÔÏóµÄ²Ù×÷²»ÄÜÔÚÕâÀï×ö
-	// Ö®Ç°Ìáµ½ÁË,¶ÔÏóµÄÏß³ÌÄ£ĞÍµÈÓÚ´´½¨Ê±ËùÔÚÏß³ÌµÄÏß³ÌÄ£ĞÍ
-	// ÓÉÓÚUIÏß³Ì²»Ò»¶¨ÊÇMTAÄ£ĞÍ,ËùÒÔÎÒÃÇ°Ñ´´½¨¶ÔÏóµÄ²Ù×÷·Åµ½Ïß³ÌÄÚ²¿È¥
+	// æ›´æ–°çº¿ç¨‹ä¿¡æ¯,æ³¨æ„è¿™é‡Œåˆ›å»ºå¯¹è±¡çš„æ“ä½œä¸èƒ½åœ¨è¿™é‡Œåš
+	// ä¹‹å‰æåˆ°äº†,å¯¹è±¡çš„çº¿ç¨‹æ¨¡å‹ç­‰äºåˆ›å»ºæ—¶æ‰€åœ¨çº¿ç¨‹çš„çº¿ç¨‹æ¨¡å‹
+	// ç”±äºUIçº¿ç¨‹ä¸ä¸€å®šæ˜¯MTAæ¨¡å‹,æ‰€ä»¥æˆ‘ä»¬æŠŠåˆ›å»ºå¯¹è±¡çš„æ“ä½œæ”¾åˆ°çº¿ç¨‹å†…éƒ¨å»
 	g_info[index].handle = NULL;
 	g_info[index].hwnd = hwnd;
 	g_info[index].pid = g_dm->GetWindowProcessId(hwnd);
@@ -122,10 +122,10 @@ BOOL   ThreadStart(long hwnd)
 	g_info[index + MAX_HWND * 2].is_stop = FALSE;
 	g_info[index + MAX_HWND * 2].thread_state = State_Inactive;
 
-	// Í¨ÖªUI¸üĞÂ
+	// é€šçŸ¥UIæ›´æ–°
 	UpdateUI(index,UI_ADD);
 
-	// ´´½¨Ïß³Ì,ÕâÀïÎÒÃÇÖ»´´½¨Ö÷Ïß³Ì,¸±Ïß³Ì½»¸øÖ÷Ïß³ÌÈ¥´´½¨
+	// åˆ›å»ºçº¿ç¨‹,è¿™é‡Œæˆ‘ä»¬åªåˆ›å»ºä¸»çº¿ç¨‹,å‰¯çº¿ç¨‹äº¤ç»™ä¸»çº¿ç¨‹å»åˆ›å»º
 	g_info[index].handle = (HANDLE)_beginthreadex(0, 0, MainThread, (PVOID)(DWORD_PTR)index, 0, 0);
 	if (g_info[index].handle == NULL)
 	{
@@ -133,11 +133,11 @@ BOOL   ThreadStart(long hwnd)
 		ThreadReset(index);
 		ThreadReset(index + MAX_HWND);
 		ThreadReset(index + MAX_HWND * 2);
-		Log(_T("´´½¨Ïß³ÌÊ§°Ü"));
+		Log(_T("åˆ›å»ºçº¿ç¨‹å¤±è´¥"));
 		return FALSE;
 	}
 
-	Log(_T("Æô¶¯ hwnd = %d,Ö÷ĞòºÅ:%d"),hwnd,index);
+	Log(_T("å¯åŠ¨ hwnd = %d,ä¸»åºå·:%d"),hwnd,index);
 	return TRUE;
 }
 
@@ -203,14 +203,14 @@ void ThreadPause(long index)
 		return;
 	}
 
-	// Ö÷
+	// ä¸»
 	if (g_info[index].thread_state == State_Runing || g_info[index].thread_state == State_Resuming)
 	{
 		g_info[index].is_pause = TRUE;
 		g_info[index].thread_state = State_Pausing;
 	}
 
-	// ¸±
+	// å‰¯
 	if (g_info[index+MAX_HWND].thread_state == State_Runing || g_info[index+MAX_HWND].thread_state == State_Resuming)
 	{
 		g_info[index+MAX_HWND].is_pause = TRUE;
@@ -220,7 +220,7 @@ void ThreadPause(long index)
 	// Mark pause first to minimize the race window where a script can still inject one more key.
 	SPUtils::ReleaseAllKeysFastKeyboardOnlySkipEnter();
 
-	Log(_T("ÔİÍ£ Ö÷ĞòºÅ:%d"),index);
+	Log(_T("æš‚åœ ä¸»åºå·:%d"),index);
 	ThreadSignalStateChanged(index);
 	ThreadSignalStateChanged(index + MAX_HWND);
 
@@ -240,21 +240,21 @@ void ThreadResume(long index)
 	}
 
 
-	// Ö÷
+	// ä¸»
 	if (g_info[index].thread_state == State_Pause || g_info[index].thread_state == State_Pausing)
 	{
 		g_info[index].is_pause = FALSE;
 		g_info[index].thread_state = State_Resuming;
 	}
 
-	// ¸±
+	// å‰¯
 	if (g_info[index+MAX_HWND].thread_state == State_Pause || g_info[index+MAX_HWND].thread_state == State_Pausing)
 	{
 		g_info[index+MAX_HWND].is_pause = FALSE;
 		g_info[index+MAX_HWND].thread_state = State_Resuming;
 	}
 
-	Log(_T("»Ö¸´ Ö÷ĞòºÅ:%d"),index);
+	Log(_T("æ¢å¤ ä¸»åºå·:%d"),index);
 	ThreadSignalStateChanged(index);
 	ThreadSignalStateChanged(index + MAX_HWND);
 
@@ -274,22 +274,22 @@ void ThreadSetExitState(long index)
 	}
 
 
-	// Ö÷
+	// ä¸»
 	g_info[index].is_stop = TRUE;
 	g_info[index].thread_state = State_Stoping;
 	AutoLogin_StopDisconnectWatcher(index);
 
-	// ¸±
+	// å‰¯
 	g_info[index+MAX_HWND].is_stop = TRUE;
 	g_info[index+MAX_HWND].thread_state = State_Stoping;
 
-	// ß÷
+	// å–µ
 	g_info[index + MAX_HWND * 2].is_stop = TRUE;
 	g_info[index + MAX_HWND * 2].thread_state = State_Stoping;
 
 	SPUtils::ReleaseAllKeysFastKeyboardOnlySkipEnter();
 
-	// ²å¼şÍ¬ÑùÒ²ÉèÖÃ½áÊø±ê¼Ç
+	// æ’ä»¶åŒæ ·ä¹Ÿè®¾ç½®ç»“æŸæ ‡è®°
 	if (g_info[index].dm)
 	{
 		g_info[index].dm->SetExitThread(1);
@@ -308,14 +308,14 @@ void ThreadSetExitState(long index)
 	ThreadSignalStateChanged(index + MAX_HWND);
 	ThreadSignalStateChanged(index + MAX_HWND * 2);
 
-	
+
 	UpdateUI(index,UI_UPDATE);
 }
 
-// Õâ¸ö½Ó¿Ú²»¸øÍâÃæµ÷ÓÃ
+// è¿™ä¸ªæ¥å£ä¸ç»™å¤–é¢è°ƒç”¨
 static void ThreadInternalStop(long index)
 {
-	Log(_T("½áÊø Ö÷ĞòºÅ:%d"),index);
+	Log(_T("ç»“æŸ ä¸»åºå·:%d"),index);
 
 	ThreadSetExitState(index);
 
@@ -324,39 +324,39 @@ static void ThreadInternalStop(long index)
 	bool subForcedTermination = false;
 	bool miaoForcedTermination = false;
 
-	// Ö÷
+	// ä¸»
 	if (g_info[index].handle)
 	{
 		if (WaitForSingleObject(g_info[index].handle,wait_time) != 0)
 		{
-			// µÈ´ıÏß³Ì×ÔÈ»½áÊøÊ§°ÜÁË,±Æ²»µÃÒÑÎÒÃÇÊ¹ÓÃÇ¿ÖÆ½áÊøÏß³Ì
-			Log(_T("Ö÷:µÈ´ıÏß³ÌÊ§°Ü,Ç¿ÖÆ½áÊøÏß³Ì"));
+			// ç­‰å¾…çº¿ç¨‹è‡ªç„¶ç»“æŸå¤±è´¥äº†,é€¼ä¸å¾—å·²æˆ‘ä»¬ä½¿ç”¨å¼ºåˆ¶ç»“æŸçº¿ç¨‹
+			Log(_T("ä¸»:ç­‰å¾…çº¿ç¨‹å¤±è´¥,å¼ºåˆ¶ç»“æŸçº¿ç¨‹"));
 			mainForcedTermination = true;
 			TerminateThread(g_info[index].handle,0);
 		}
 		CloseHandle(g_info[index].handle);
 	}
 
-	// ¸±
+	// å‰¯
 	if (g_info[index+MAX_HWND].handle)
 	{
 		if (WaitForSingleObject(g_info[index+MAX_HWND].handle,wait_time) != 0)
 		{
-			// µÈ´ıÏß³Ì×ÔÈ»½áÊøÊ§°ÜÁË,±Æ²»µÃÒÑÎÒÃÇÊ¹ÓÃÇ¿ÖÆ½áÊøÏß³Ì
-			Log(_T("¸±:µÈ´ıÏß³ÌÊ§°Ü,Ç¿ÖÆ½áÊøÏß³Ì"));
+			// ç­‰å¾…çº¿ç¨‹è‡ªç„¶ç»“æŸå¤±è´¥äº†,é€¼ä¸å¾—å·²æˆ‘ä»¬ä½¿ç”¨å¼ºåˆ¶ç»“æŸçº¿ç¨‹
+			Log(_T("å‰¯:ç­‰å¾…çº¿ç¨‹å¤±è´¥,å¼ºåˆ¶ç»“æŸçº¿ç¨‹"));
 			subForcedTermination = true;
 			TerminateThread(g_info[index+MAX_HWND].handle,0);
 		}
 		CloseHandle(g_info[index+MAX_HWND].handle);
 	}
 
-	// ß÷Âë
+	// å–µç 
 	if (g_info[index + MAX_HWND * 2].handle)
 	{
 		if (WaitForSingleObject(g_info[index + MAX_HWND * 2].handle, wait_time) != 0)
 		{
-			// µÈ´ıÏß³Ì×ÔÈ»½áÊøÊ§°ÜÁË,±Æ²»µÃÒÑÎÒÃÇÊ¹ÓÃÇ¿ÖÆ½áÊøÏß³Ì
-			Log(_T("¸±:µÈ´ıÏß³ÌÊ§°Ü,Ç¿ÖÆ½áÊøÏß³Ì"));
+			// ç­‰å¾…çº¿ç¨‹è‡ªç„¶ç»“æŸå¤±è´¥äº†,é€¼ä¸å¾—å·²æˆ‘ä»¬ä½¿ç”¨å¼ºåˆ¶ç»“æŸçº¿ç¨‹
+			Log(_T("å‰¯:ç­‰å¾…çº¿ç¨‹å¤±è´¥,å¼ºåˆ¶ç»“æŸçº¿ç¨‹"));
 			miaoForcedTermination = true;
 			TerminateThread(g_info[index + MAX_HWND * 2].handle, 0);
 		}
@@ -364,10 +364,10 @@ static void ThreadInternalStop(long index)
 	}
 
 
-	// ÊÍ·Å¶ÔÏó
-	// ÓÉÓÚÎÒÃÇÊ¹ÓÃÁËSetExitThread£¬ÁíÍâÒ²¿ÉÄÜµ÷ÓÃÁËÇ¿ÖÆ½áÊøÏß³Ì,»¹ÓĞÎÒÃÇÔÚ½Å±¾ÄÚ²¿ÓĞ¶ÔÏó¸´ÖÆµÄ²Ù×÷
-	// Õâ¶¼»áµ¼ÖÂ¶ÔÏóÄÚ²¿ÒıÓÃ¼ÆÊı´íÎó,µ¼ÖÂ¶ÔÏóÎŞ·¨±»ÊÍ·Åµô
-	// ËùÒÔÎÒÃÇÔÚÊÍ·Å¶ÔÏóÇ°,Ç¿ÖÆ°ÑÒıÓÃ¼ÆÊıÊÍ·Åµ½ÕıÈ·µÄÖµ
+	// é‡Šæ”¾å¯¹è±¡
+	// ç”±äºæˆ‘ä»¬ä½¿ç”¨äº†SetExitThreadï¼Œå¦å¤–ä¹Ÿå¯èƒ½è°ƒç”¨äº†å¼ºåˆ¶ç»“æŸçº¿ç¨‹,è¿˜æœ‰æˆ‘ä»¬åœ¨è„šæœ¬å†…éƒ¨æœ‰å¯¹è±¡å¤åˆ¶çš„æ“ä½œ
+	// è¿™éƒ½ä¼šå¯¼è‡´å¯¹è±¡å†…éƒ¨å¼•ç”¨è®¡æ•°é”™è¯¯,å¯¼è‡´å¯¹è±¡æ— æ³•è¢«é‡Šæ”¾æ‰
+	// æ‰€ä»¥æˆ‘ä»¬åœ¨é‡Šæ”¾å¯¹è±¡å‰,å¼ºåˆ¶æŠŠå¼•ç”¨è®¡æ•°é‡Šæ”¾åˆ°æ­£ç¡®çš„å€¼
 	if (g_info[index].dm)
 	{
 		sptool* dm = g_info[index].dm;
@@ -421,7 +421,7 @@ void   ThreadStop(long index)
 		return;
 	}
 
-	
+
 
 ThreadInternalStop(index);
 
@@ -431,7 +431,7 @@ ThreadInternalStop(index);
 
 	UpdateUI(index,UI_DELETE);
 
-	Log(_T("½áÊø³É¹¦ Ö÷ĞòºÅ:%d"),index);
+	Log(_T("ç»“æŸæˆåŠŸ ä¸»åºå·:%d"),index);
 }
 
 
@@ -447,7 +447,7 @@ BOOL   ThreadRestart(long index)
 		return FALSE;
 	}
 
-	// ÏÈ½áÊø
+	// å…ˆç»“æŸ
 	ThreadInternalStop(index);
 
 	AutoLogin_StopDisconnectWatcher(index);
@@ -474,7 +474,7 @@ BOOL   ThreadRestart(long index)
 
 	UpdateUI(index,UI_UPDATE);
 
-	// ´´½¨Ïß³Ì,ÕâÀïÎÒÃÇÖ»´´½¨Ö÷Ïß³Ì,¸±Ïß³Ì½»¸øÖ÷Ïß³ÌÈ¥´´½¨
+	// åˆ›å»ºçº¿ç¨‹,è¿™é‡Œæˆ‘ä»¬åªåˆ›å»ºä¸»çº¿ç¨‹,å‰¯çº¿ç¨‹äº¤ç»™ä¸»çº¿ç¨‹å»åˆ›å»º
 	g_info[index].handle = (HANDLE)_beginthreadex(0, 0, MainThread, (PVOID)(DWORD_PTR)index, 0, 0);
 	if (g_info[index].handle == NULL)
 	{
@@ -482,11 +482,11 @@ BOOL   ThreadRestart(long index)
 		ThreadReset(index);
 		ThreadReset(index+MAX_HWND);
 		ThreadReset(index + MAX_HWND * 2);
-		Log(_T("´´½¨Ïß³ÌÊ§°Ü"));
+		Log(_T("åˆ›å»ºçº¿ç¨‹å¤±è´¥"));
 		return FALSE;
 	}
-	
-	Log(_T("ÖØĞÂÔËĞĞ hwnd = %d,Ö÷ĞòºÅ:%d"),g_info[index].hwnd,index);
+
+	Log(_T("é‡æ–°è¿è¡Œ hwnd = %d,ä¸»åºå·:%d"),g_info[index].hwnd,index);
 	return TRUE;
 }
 

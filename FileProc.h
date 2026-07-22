@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <iostream>
 #include <filesystem>
 
@@ -6,16 +6,16 @@ namespace fs = std::filesystem;
 
 void copy_and_rename_file(const std::string& original_path, const std::string& new_filename) {
     try {
-        // ´´½¨Ò»¸öÂ·¾¶¶ÔÏó
+        // åˆ›å»ºä¸€ä¸ªè·¯å¾„å¯¹è±¡
         fs::path original_file(original_path);
 
-        // »ñÈ¡Ô­ÎÄ¼şËùÔÚµÄÄ¿Â¼
+        // è·å–åŸæ–‡ä»¶æ‰€åœ¨çš„ç›®å½•
         fs::path target_directory = original_file.parent_path();
 
-        // ´´½¨ĞÂÎÄ¼şµÄÍêÕûÂ·¾¶
+        // åˆ›å»ºæ–°æ–‡ä»¶çš„å®Œæ•´è·¯å¾„
         fs::path new_file = target_directory / new_filename;
 
-        // ¸´ÖÆÎÄ¼ş
+        // å¤åˆ¶æ–‡ä»¶
         fs::copy_file(original_file, new_file, fs::copy_options::overwrite_existing);
 
         std::cout << "File copied and renamed successfully!" << std::endl;

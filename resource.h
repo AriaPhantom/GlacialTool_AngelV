@@ -1,6 +1,6 @@
-//{{NO_DEPENDENCIES}}
-// Microsoft Visual C++ Éú³ÉµÄ°üº¬ÎÄ¼ş¡£
-// ¹© example.rc Ê¹ÓÃ
+ï»¿//{{NO_DEPENDENCIES}}
+// Microsoft Visual C++ ç”Ÿæˆçš„åŒ…å«æ–‡ä»¶ã€‚
+// ä¾› example.rc ä½¿ç”¨
 //
 #define IDD_EXAMPLE_DIALOG              102
 #define IDR_MAINFRAME                   128
@@ -43,7 +43,7 @@
 #define IDC_CHECK9                      1030
 
 // Next default values for new objects
-// 
+//
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        133

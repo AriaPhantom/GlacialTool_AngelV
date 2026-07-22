@@ -1,4 +1,4 @@
-#include "stdafx.h"
+ï»¿#include "stdafx.h"
 #include <atomic>
 #include "script.h"
 #include "thread_control.h"
@@ -37,13 +37,13 @@ void DoWork(long index);
 unsigned WINAPI SubThread(PVOID pParam);
 unsigned WINAPI MiaoThread(PVOID pParam);
 
-// ÎÒÃÇ×öÔÝÍ£ºÍ»Ö¸´²Ù×÷,¾ÍÖ÷Òª¿¿Õâ¸öÑÓÊ±º¯Êý,ÒªÇó½Å±¾ËùÓÐÓÃµ½ÑÓÊ±µÄµØ·½£¬È«²¿ÓÃÕâ¸ö£¬ÕâÑùÎÒÃÇ¿ÉÒÔÓÐºÜ¶à»ú»áÈ¥ÔÝÍ£Ïß³Ì
+// æˆ‘ä»¬åšæš‚åœå’Œæ¢å¤æ“ä½œ,å°±ä¸»è¦é è¿™ä¸ªå»¶æ—¶å‡½æ•°,è¦æ±‚è„šæœ¬æ‰€æœ‰ç”¨åˆ°å»¶æ—¶çš„åœ°æ–¹ï¼Œå…¨éƒ¨ç”¨è¿™ä¸ªï¼Œè¿™æ ·æˆ‘ä»¬å¯ä»¥æœ‰å¾ˆå¤šæœºä¼šåŽ»æš‚åœçº¿ç¨‹
 void ScriptDelay(long index,long time)
 {
-	// ÅÐ¶ÏÊÇ·ñÓÐÔÝÍ£ºÍ½áÊø±ê¼Ç
+	// åˆ¤æ–­æ˜¯å¦æœ‰æš‚åœå’Œç»“æŸæ ‡è®°
 	if (g_info[index].is_stop)
 	{
-		// Ö±½ÓÍË³öµ±Ç°Ïß³Ì,ÍË³öÇ°Ò»¶¨ÒªÔÚ±¾Ïß³ÌÄÚ½â°ó,ÒòÎª°ó¶¨Ä£Ê½0ºÍ2ÔÚÏß³ÌÍâ½â°óµÄ»°»áÊ§°Ü,µ¼ÖÂ½â°óÊ§°Ü.
+		// ç›´æŽ¥é€€å‡ºå½“å‰çº¿ç¨‹,é€€å‡ºå‰ä¸€å®šè¦åœ¨æœ¬çº¿ç¨‹å†…è§£ç»‘,å› ä¸ºç»‘å®šæ¨¡å¼0å’Œ2åœ¨çº¿ç¨‹å¤–è§£ç»‘çš„è¯ä¼šå¤±è´¥,å¯¼è‡´è§£ç»‘å¤±è´¥.
 		if (g_info[index].dm)
 		{
 			g_info[index].dm->UnBindWindow();
@@ -56,24 +56,24 @@ void ScriptDelay(long index,long time)
 		g_info[index].thread_state = State_Pause;
 		ThreadNotifyUI_Post(NOTIFY_UPDATE,index);
 
-		
+
 		SPUtils::ReleaseAllKeysFastKeyboardOnlySkipEnter();
-// Èç¹ûÄãÏëÒªÔÚÔÝÍ£Ê±ÈÃÓÃ»§¿ÉÒÔ²Ù×÷,ÄÇÃ´¿ÉÒÔµ÷ÓÃEnableBind,µ«ÊÇ²»ÒªÈ¥µ÷ÓÃLockInput,LockInput²»ÊÇÓÃÀ´½â³ýºóÌ¨µÄ,¾ßÌå²Î¿¼LockInputµÄËµÃ÷
+// å¦‚æžœä½ æƒ³è¦åœ¨æš‚åœæ—¶è®©ç”¨æˆ·å¯ä»¥æ“ä½œ,é‚£ä¹ˆå¯ä»¥è°ƒç”¨EnableBind,ä½†æ˜¯ä¸è¦åŽ»è°ƒç”¨LockInput,LockInputä¸æ˜¯ç”¨æ¥è§£é™¤åŽå°çš„,å…·ä½“å‚è€ƒLockInputçš„è¯´æ˜Ž
 		if (g_info[index].dm)
 		{
-			
+
 		}
 
-		// ÎÒÃÇÔÝÍ£µÄ·½·¨ÊÇËÀÑ­»·,È»ºóÑÓÊ±,¶ø²»ÊÇµ÷ÓÃÏµÍ³µÄ½Ó¿Ú
-		// ÕâÑù¿ªÏú×îÐ¡,²¢ÇÒÐ§ÂÊÒ²»¹²»´í
+		// æˆ‘ä»¬æš‚åœçš„æ–¹æ³•æ˜¯æ­»å¾ªçŽ¯,ç„¶åŽå»¶æ—¶,è€Œä¸æ˜¯è°ƒç”¨ç³»ç»Ÿçš„æŽ¥å£
+		// è¿™æ ·å¼€é”€æœ€å°,å¹¶ä¸”æ•ˆçŽ‡ä¹Ÿè¿˜ä¸é”™
 		while (1)
 		{
 			if (!g_info[index].is_pause)
 			{
 				g_info[index].thread_state = State_Runing;
 				ThreadNotifyUI_Post(NOTIFY_UPDATE,index);
-				
-				// ¿ªÆôºóÌ¨
+
+				// å¼€å¯åŽå°
 				if (g_info[index].dm)
 				{
 					//g_info[index].dm->EnableBind(1);
@@ -83,7 +83,7 @@ void ScriptDelay(long index,long time)
 
 			if (g_info[index].is_stop)
 			{
-				// Ö±½ÓÍË³öµ±Ç°Ïß³Ì,ÍË³öÇ°Ò»¶¨ÒªÔÚ±¾Ïß³ÌÄÚ½â°ó,ÒòÎª°ó¶¨Ä£Ê½0ºÍ2ÔÚÏß³ÌÍâ½â°óµÄ»°»áÊ§°Ü,µ¼ÖÂ½â°óÊ§°Ü.
+				// ç›´æŽ¥é€€å‡ºå½“å‰çº¿ç¨‹,é€€å‡ºå‰ä¸€å®šè¦åœ¨æœ¬çº¿ç¨‹å†…è§£ç»‘,å› ä¸ºç»‘å®šæ¨¡å¼0å’Œ2åœ¨çº¿ç¨‹å¤–è§£ç»‘çš„è¯ä¼šå¤±è´¥,å¯¼è‡´è§£ç»‘å¤±è´¥.
 				if (g_info[index].dm)
 				{
 					g_info[index].dm->UnBindWindow();
@@ -95,13 +95,13 @@ void ScriptDelay(long index,long time)
 		}
 	}
 
-	// ¿ÉÄÜÔÝÍ£,»Ö¸´Ê±»áÈÃ×´Ì¬´íÂÒ,ÕâÀïÔÙÅÐ¶ÏÒ»´Î
+	// å¯èƒ½æš‚åœ,æ¢å¤æ—¶ä¼šè®©çŠ¶æ€é”™ä¹±,è¿™é‡Œå†åˆ¤æ–­ä¸€æ¬¡
 	if (g_info[index].thread_state != State_Runing)
 	{
 		g_info[index].thread_state = State_Runing;
 		ThreadNotifyUI_Post(NOTIFY_UPDATE,index);
 
-		// ¿ªÆôºóÌ¨
+		// å¼€å¯åŽå°
 		if (g_info[index].dm)
 		{
 			g_info[index].dm->EnableBind(1);
@@ -117,35 +117,35 @@ void SetTaskState(long index,const TCHAR * state)
 	ThreadNotifyUI_Post(NOTIFY_UPDATE,index);
 }
 
-// ½Å±¾Ö÷Ïß³Ì,½Å±¾µÄÖ÷ÒªÂß¼­ÔÚÕâÀï´¦Àí
+// è„šæœ¬ä¸»çº¿ç¨‹,è„šæœ¬çš„ä¸»è¦é€»è¾‘åœ¨è¿™é‡Œå¤„ç†
 unsigned WINAPI MainThread(PVOID pParam)
 {
 	long index = (long)(DWORD_PTR)pParam;
 	sptool* dm;
 	bool startupAutoLogin = false;
 
-	// ³õÊ¼»¯µ±Ç°Ïß³Ìcom×é¼þÎªMTAÄ£Ê½
+	// åˆå§‹åŒ–å½“å‰çº¿ç¨‹comç»„ä»¶ä¸ºMTAæ¨¡å¼
 	CoInitializeEx (NULL,0);
 
 	g_info[index].thread_state = State_Runing;
 	ThreadNotifyUI_Post(NOTIFY_UPDATE,index);
 
-	// ´´½¨¶ÔÏó
+	// åˆ›å»ºå¯¹è±¡
 	g_info[index].dm = new sptool;
 	dm = g_info[index].dm;
 
-	// ¼ì²â¶ÔÏóÊÇ·ñ´´½¨³É¹¦,ËäÈ»Õâ¸öÒ»°ã²»»áÊ§°Ü,µ«ÎªÁË³ÌÐò½¡×³ÐÔ¿¼ÂÇ»¹ÊÇ¼ÓÉÏ,Èç¹ûÄÚ´æ³Ô½ô£¬»¹ÊÇ¿ÉÄÜ»áÊ§°Ü
+	// æ£€æµ‹å¯¹è±¡æ˜¯å¦åˆ›å»ºæˆåŠŸ,è™½ç„¶è¿™ä¸ªä¸€èˆ¬ä¸ä¼šå¤±è´¥,ä½†ä¸ºäº†ç¨‹åºå¥å£®æ€§è€ƒè™‘è¿˜æ˜¯åŠ ä¸Š,å¦‚æžœå†…å­˜åƒç´§ï¼Œè¿˜æ˜¯å¯èƒ½ä¼šå¤±è´¥
 	if (dm == NULL || dm->Ver().GetLength() == 0)
 	{
-		Log(_T("¶ÔÏó´´½¨Ê§°Ü"));
+		Log(_T("å¯¹è±¡åˆ›å»ºå¤±è´¥"));
 		ThreadNotifyUI_Post(NOTIFY_STOP,index);
 		return 0;
 	}
 
-	// ¿ªÆôÈ«¾Ö¹²Ïí×Ö¿â
+	// å¼€å¯å…¨å±€å…±äº«å­—åº“
 	dm->EnableShareDict(1);
 
-	// ÆäËûÉèÖÃ,±ÈÈçÂ·¾¶µÈµÈ
+	// å…¶ä»–è®¾ç½®,æ¯”å¦‚è·¯å¾„ç­‰ç­‰
 	dm->SetPath(_T("c:\\sptool"));
 	dm->EnableRealMouse(2, 6, 62);
 	dm->SetShowErrorMsg(0);
@@ -170,10 +170,10 @@ unsigned WINAPI MainThread(PVOID pParam)
 		return 0;
 	}
 
-	// Ç¿ÖÆ½â°ó
+	// å¼ºåˆ¶è§£ç»‘
 	// dm->ForceUnBindWindow(dm->IsBind(g_info[index].hwnd));
 
-	// ¿ªÊ¼°ó¶¨,Ö÷°ó¶¨Ò»¶¨ÒªµÚÒ»¸ö°ó¶¨,²¢ÇÒÖ÷°ó¶¨ËùÔÚµÄÏß³Ì¾ø¶Ô²»ÄÜ½áÊø,·ñÔò»áÔì³É°ó¶¨Ê§Ð§
+	// å¼€å§‹ç»‘å®š,ä¸»ç»‘å®šä¸€å®šè¦ç¬¬ä¸€ä¸ªç»‘å®š,å¹¶ä¸”ä¸»ç»‘å®šæ‰€åœ¨çš„çº¿ç¨‹ç»å¯¹ä¸èƒ½ç»“æŸ,å¦åˆ™ä¼šé€ æˆç»‘å®šå¤±æ•ˆ
 	dm->SetWindowState(g_info[index].hwnd, 12);
 	ScriptDelay(index, 50);
 	//long dm_ret = dm->BindWindowEx(g_info[index].hwnd, _T("dx.graphic.3d.10plus"), _T("dx.mouse.position.lock.api|dx.mouse.clip.lock.api|dx.mouse.input.lock.api|dx.mouse.state.api|dx.mouse.api|dx.mouse.cursor"),
@@ -182,50 +182,50 @@ unsigned WINAPI MainThread(PVOID pParam)
 
 	if (dm_ret != 1)
 	{
-		Log(_T("Ö÷:°ó¶¨Ê§°Ü£¬´íÎóÂë:%d"),dm->GetLastError());
-		// Í¨ÖªÖ÷Ïß³Ì½øÐÐ½áÊø²Ù×÷(ÊÍ·Å×ÊÔ´)
+		Log(_T("ä¸»:ç»‘å®šå¤±è´¥ï¼Œé”™è¯¯ç :%d"),dm->GetLastError());
+		// é€šçŸ¥ä¸»çº¿ç¨‹è¿›è¡Œç»“æŸæ“ä½œ(é‡Šæ”¾èµ„æº)
 		ThreadNotifyUI_Post(NOTIFY_STOP,index);
 		return 0;
 	}
 
-	// ½ûÖ¹ÊäÈë
+	// ç¦æ­¢è¾“å…¥
 	/*dm->LockInput(4);*/
 
-	// ÎÒÃÇ¿ÉÒÔ´´½¨¸±Ïß³ÌÁË
-	// ¸üÐÂ¸±Ïß³ÌÐÅÏ¢
+	// æˆ‘ä»¬å¯ä»¥åˆ›å»ºå‰¯çº¿ç¨‹äº†
+	// æ›´æ–°å‰¯çº¿ç¨‹ä¿¡æ¯
 	g_info[index+MAX_HWND].thread_state = State_Starting;
 
-	// Í¨ÖªUI,¸±Ïß³Ì¿ªÊ¼´´½¨ÁË
+	// é€šçŸ¥UI,å‰¯çº¿ç¨‹å¼€å§‹åˆ›å»ºäº†
 	ThreadNotifyUI_Post(NOTIFY_UPDATE,index+MAX_HWND);
 
-	// ´´½¨¸±Ïß³Ì
+	// åˆ›å»ºå‰¯çº¿ç¨‹
 	g_info[index+MAX_HWND].handle = (HANDLE)_beginthreadex(0, 0, SubThread, (PVOID)(DWORD_PTR)(index+MAX_HWND), 0, 0);
 	if (g_info[index+MAX_HWND].handle == NULL)
 	{
-		// ÕâÀï±ØÐëÒª½â°ó,ÒòÎªÄ£Ê½0ºÍ2²»ÔÚµ±Ç°Ïß³Ì½â°óµÄ»°,»áµ¼ÖÂÎÞ·¨½â°ó
+		// è¿™é‡Œå¿…é¡»è¦è§£ç»‘,å› ä¸ºæ¨¡å¼0å’Œ2ä¸åœ¨å½“å‰çº¿ç¨‹è§£ç»‘çš„è¯,ä¼šå¯¼è‡´æ— æ³•è§£ç»‘
 		dm->UnBindWindow();
 
-		Log(_T("´´½¨¸±Ïß³ÌÊ§°Ü"));
-		// Í¨ÖªÖ÷Ïß³Ì½øÐÐ½áÊø²Ù×÷(ÊÍ·Å×ÊÔ´)
+		Log(_T("åˆ›å»ºå‰¯çº¿ç¨‹å¤±è´¥"));
+		// é€šçŸ¥ä¸»çº¿ç¨‹è¿›è¡Œç»“æŸæ“ä½œ(é‡Šæ”¾èµ„æº)
 		ThreadNotifyUI_Post(NOTIFY_STOP,index);
 		return 0;
 	}
 
-	// ¸üÐÂß÷ÂëÏß³ÌÐÅÏ¢
+	// æ›´æ–°å–µç çº¿ç¨‹ä¿¡æ¯
 	g_info[index + MAX_HWND * 2].thread_state = State_Starting;
 
-	// Í¨ÖªUI,¸±Ïß³Ì¿ªÊ¼´´½¨ÁË
+	// é€šçŸ¥UI,å‰¯çº¿ç¨‹å¼€å§‹åˆ›å»ºäº†
 	ThreadNotifyUI_Post(NOTIFY_UPDATE, index + MAX_HWND * 2);
 
-	// ´´½¨ß÷ÂëÏß³Ì
+	// åˆ›å»ºå–µç çº¿ç¨‹
 	g_info[index + MAX_HWND * 2].handle = (HANDLE)_beginthreadex(0, 0, MiaoThread, (PVOID)(DWORD_PTR)(index + MAX_HWND * 2), 0, 0);
 	if (g_info[index + MAX_HWND * 2].handle == NULL)
 	{
-		// ÕâÀï±ØÐëÒª½â°ó,ÒòÎªÄ£Ê½0ºÍ2²»ÔÚµ±Ç°Ïß³Ì½â°óµÄ»°,»áµ¼ÖÂÎÞ·¨½â°ó
+		// è¿™é‡Œå¿…é¡»è¦è§£ç»‘,å› ä¸ºæ¨¡å¼0å’Œ2ä¸åœ¨å½“å‰çº¿ç¨‹è§£ç»‘çš„è¯,ä¼šå¯¼è‡´æ— æ³•è§£ç»‘
 		dm->UnBindWindow();
 
-		Log(_T("´´½¨¸±Ïß³ÌÊ§°Ü"));
-		// Í¨ÖªÖ÷Ïß³Ì½øÐÐ½áÊø²Ù×÷(ÊÍ·Å×ÊÔ´)
+		Log(_T("åˆ›å»ºå‰¯çº¿ç¨‹å¤±è´¥"));
+		// é€šçŸ¥ä¸»çº¿ç¨‹è¿›è¡Œç»“æŸæ“ä½œ(é‡Šæ”¾èµ„æº)
 		ThreadNotifyUI_Post(NOTIFY_STOP, index);
 		return 0;
 	}
@@ -238,16 +238,16 @@ unsigned WINAPI MainThread(PVOID pParam)
 	}
 
 	startBo(index);
-	
-	/* 
+
+	/*
 	while (1)
 	{
-		SetTaskState(index,_T("¿ªÊ¼"));
+		SetTaskState(index,_T("\x5F00\x59CB"));
 		//DoWork(index);
 		startBot(index);
-		SetTaskState(index,_T("Íê³É"));
+		SetTaskState(index,_T("\x5B8C\x6210"));
 		ScriptDelay(index,1000);
-	} 
+	}
 	*/
 }
 
@@ -271,35 +271,35 @@ void SetExcepState(long index,const TCHAR * state)
 	ThreadNotifyUI_Post(NOTIFY_STOP,index);
 }
 
-// ½Å±¾¸±Ïß³Ì,ÓÃÓÚ¼ì²âÒì³£µÈ
+// è„šæœ¬å‰¯çº¿ç¨‹,ç”¨äºŽæ£€æµ‹å¼‚å¸¸ç­‰
 unsigned WINAPI SubThread(PVOID pParam)
 {
 	long index = (long)(DWORD_PTR)pParam;
 
 	sptool* dm;
 
-	// ³õÊ¼»¯µ±Ç°Ïß³Ìcom×é¼þÎªMTAÄ£Ê½
+	// åˆå§‹åŒ–å½“å‰çº¿ç¨‹comç»„ä»¶ä¸ºMTAæ¨¡å¼
 	CoInitializeEx (NULL,0);
 
 	g_info[index].thread_state = State_Runing;
 	ThreadNotifyUI_Post(NOTIFY_UPDATE,index);
 
-	// ´´½¨¶ÔÏó
+	// åˆ›å»ºå¯¹è±¡
 	g_info[index].dm = new sptool;
 	dm = g_info[index].dm;
 
-	// ¼ì²â¶ÔÏóÊÇ·ñ´´½¨³É¹¦,ËäÈ»Õâ¸öÒ»°ã²»»áÊ§°Ü,µ«ÎªÁË³ÌÐò½¡×³ÐÔ¿¼ÂÇ»¹ÊÇ¼ÓÉÏ,Èç¹ûÄÚ´æ³Ô½ô£¬»¹ÊÇ¿ÉÄÜ»áÊ§°Ü
+	// æ£€æµ‹å¯¹è±¡æ˜¯å¦åˆ›å»ºæˆåŠŸ,è™½ç„¶è¿™ä¸ªä¸€èˆ¬ä¸ä¼šå¤±è´¥,ä½†ä¸ºäº†ç¨‹åºå¥å£®æ€§è€ƒè™‘è¿˜æ˜¯åŠ ä¸Š,å¦‚æžœå†…å­˜åƒç´§ï¼Œè¿˜æ˜¯å¯èƒ½ä¼šå¤±è´¥
 	if (dm == NULL || dm->Ver().GetLength() == 0)
 	{
-		Log(_T("¶ÔÏó´´½¨Ê§°Ü"));
-		SetExcepState(index,_T("¶ÔÏó´´½¨Ê§°Ü"));
+		Log(_T("å¯¹è±¡åˆ›å»ºå¤±è´¥"));
+		SetExcepState(index,_T("å¯¹è±¡åˆ›å»ºå¤±è´¥"));
 		return 0;
 	}
 
-	// ¿ªÆôÈ«¾Ö¹²Ïí×Ö¿â
+	// å¼€å¯å…¨å±€å…±äº«å­—åº“
 	dm->EnableShareDict(1);
 
-	// ÆäËûÉèÖÃ,±ÈÈçÂ·¾¶µÈµÈ
+	// å…¶ä»–è®¾ç½®,æ¯”å¦‚è·¯å¾„ç­‰ç­‰
 	dm->SetPath(_T("c:\\sptool"));
 	dm->SetShowErrorMsg(0);
 
@@ -307,15 +307,15 @@ unsigned WINAPI SubThread(PVOID pParam)
 	//long dm_ret = dm->BindWindowEx(g_info[index].hwnd, _T("dx.graphic.3d.10plus"), _T("dx.mouse.position.lock.api|dx.mouse.clip.lock.api|dx.mouse.input.lock.api|dx.mouse.state.api|dx.mouse.api|dx.mouse.cursor"),
 	//	_T("dx.keypad.state.api|dx.keypad.api"), _T("dx.public.active.api|dx.public.active.message"), 0);
 	long dm_ret = dm->BindWindowEx(g_info[index].hwnd, _T("normal"), _T("normal"), _T("normal"), _T(""), 0);
-	//64Î»
+	//64ä½
 	//long dm_ret = dm->BindWindowEx(g_info[index].hwnd, _T("dx2"), _T("dx.mouse.position.lock.api|dx.mouse.clip.lock.api|dx.mouse.input.lock.api|dx.mouse.state.api|dx.mouse.api|dx.mouse.cursor"),
 	//	_T("dx.keypad.input.lock.api|dx.keypad.state.api|dx.keypad.api"), _T("dx.public.active.api|dx.public.active.message"), 11);
 
 	if (dm_ret != 1)
 	{
-		Log(_T("¸±:°ó¶¨Ê§°Ü£¬´íÎóÂë:%d"),dm->GetLastError());
-		// Í¨ÖªÖ÷Ïß³Ì½øÐÐ½áÊø²Ù×÷(ÊÍ·Å×ÊÔ´)
-		SetExcepState(index,_T("¸±:°ó¶¨Ê§°Ü"));
+		Log(_T("å‰¯:ç»‘å®šå¤±è´¥ï¼Œé”™è¯¯ç :%d"),dm->GetLastError());
+		// é€šçŸ¥ä¸»çº¿ç¨‹è¿›è¡Œç»“æŸæ“ä½œ(é‡Šæ”¾èµ„æº)
+		SetExcepState(index,_T("å‰¯:ç»‘å®šå¤±è´¥"));
 		return 0;
 	}
 
@@ -324,8 +324,8 @@ unsigned WINAPI SubThread(PVOID pParam)
 	long count = 0;
 	while (1)
 	{
-		// ¼ì²âÒ»Ð©Òì³£,±ÈÈçÍ»È»µ¯³öµÄ¶Ô»°¿ò£¬Ä¿±ê´°¿Ú±»¹Ø±Õ»òÕßµôÏßµÈÍ»·¢Çé¿ö
-		// ±ÈÈç¼ì²âµ½µôÏß£¬¿É¿¼ÂÇÍ¨ÖªUI,È»ºóÖØÐÂÔËÐÐ
+		// æ£€æµ‹ä¸€äº›å¼‚å¸¸,æ¯”å¦‚çªç„¶å¼¹å‡ºçš„å¯¹è¯æ¡†ï¼Œç›®æ ‡çª—å£è¢«å…³é—­æˆ–è€…æŽ‰çº¿ç­‰çªå‘æƒ…å†µ
+		// æ¯”å¦‚æ£€æµ‹åˆ°æŽ‰çº¿ï¼Œå¯è€ƒè™‘é€šçŸ¥UI,ç„¶åŽé‡æ–°è¿è¡Œ
         if (AutoLogin_IsActive(index)) { ScriptDelay(index, 200); continue; }
 try {
 	gMonitorCheck(index, count);
@@ -347,21 +347,21 @@ unsigned WINAPI MiaoThread(PVOID pParam) {
 
 	sptool* dm;
 
-	// ³õÊ¼»¯µ±Ç°Ïß³Ìcom×é¼þÎªMTAÄ£Ê½
+	// åˆå§‹åŒ–å½“å‰çº¿ç¨‹comç»„ä»¶ä¸ºMTAæ¨¡å¼
 	CoInitializeEx(NULL, 0);
 
 	g_info[index].thread_state = State_Runing;
 	ThreadNotifyUI_Post(NOTIFY_UPDATE, index);
 
-	// ´´½¨¶ÔÏó
+	// åˆ›å»ºå¯¹è±¡
 	g_info[index].dm = new sptool;
 	dm = g_info[index].dm;
 
-	// ¼ì²â¶ÔÏóÊÇ·ñ´´½¨³É¹¦,ËäÈ»Õâ¸öÒ»°ã²»»áÊ§°Ü,µ«ÎªÁË³ÌÐò½¡×³ÐÔ¿¼ÂÇ»¹ÊÇ¼ÓÉÏ,Èç¹ûÄÚ´æ³Ô½ô£¬»¹ÊÇ¿ÉÄÜ»áÊ§°Ü
+	// æ£€æµ‹å¯¹è±¡æ˜¯å¦åˆ›å»ºæˆåŠŸ,è™½ç„¶è¿™ä¸ªä¸€èˆ¬ä¸ä¼šå¤±è´¥,ä½†ä¸ºäº†ç¨‹åºå¥å£®æ€§è€ƒè™‘è¿˜æ˜¯åŠ ä¸Š,å¦‚æžœå†…å­˜åƒç´§ï¼Œè¿˜æ˜¯å¯èƒ½ä¼šå¤±è´¥
 	if (dm == NULL || dm->Ver().GetLength() == 0)
 	{
-		Log(_T("¶ÔÏó´´½¨Ê§°Ü"));
-		SetExcepState(index, _T("¶ÔÏó´´½¨Ê§°Ü"));
+		Log(_T("å¯¹è±¡åˆ›å»ºå¤±è´¥"));
+		SetExcepState(index, _T("å¯¹è±¡åˆ›å»ºå¤±è´¥"));
 		return 0;
 	}
 

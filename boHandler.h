@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <iostream>
 #include <cstdlib>
 #include <time.h>
@@ -40,8 +40,8 @@ using namespace std;
 #define GUILD_PLAYER_NOTIFICATION 3000
 #define WHITE_NOTIFICATION 2000
 
-#define BUFF_TIME 230000  // Ö©Öë
-#define BUFF_TIME_2 180000  // Ì©É½
+#define BUFF_TIME 230000  // èœ˜è››
+#define BUFF_TIME_2 180000  // æ³°å±±
 
 void gMonitorCheck(long index, long count);
 int* findCoordsOnMiniMap(long index, const TCHAR* innerIcon, double sim = 0.95);
@@ -95,38 +95,38 @@ void subSoftStart();
 void detectionStart();
 void detectWhiteIcon();
 
-#define BUFF_TIME_ÊÖÀ× 4000  // 
-#define BUFF_TIME_Ğ¡Á¢³¡ 57000  // 
-#define BUFF_TIME_·É½£ 54000  // 
-#define BUFF_TIME_´óÁ¢³¡ 87000  // 
-#define BUFF_TIME_½£Óê 11000  // 
-#define BUFF_TIME_×ê»ú 30000  // 
-#define BUFF_TIME_ÄÜÁ¿²¹³ä 60000  // 
-#define BUFF_TIME_´úÂë 90000  // 
-#define BUFF_TIME_÷»×Ó 90000  // 
-#define BUFF_TIME_°¬¶û´ïÏ´Ôè 57000
+#define BUFF_TIME_æ‰‹é›· 4000  //
+#define BUFF_TIME_å°ç«‹åœº 57000  //
+#define BUFF_TIME_é£å‰‘ 54000  //
+#define BUFF_TIME_å¤§ç«‹åœº 87000  //
+#define BUFF_TIME_å‰‘é›¨ 11000  //
+#define BUFF_TIME_é’»æœº 30000  //
+#define BUFF_TIME_èƒ½é‡è¡¥å…… 60000  //
+#define BUFF_TIME_ä»£ç  90000  //
+#define BUFF_TIME_éª°å­ 90000  //
+#define BUFF_TIME_è‰¾å°”è¾¾æ´—æ¾¡ 57000
 #ifdef NL
-#define BUFF_TIME_ºÚÇò 58000
+#define BUFF_TIME_é»‘çƒ 58000
 #elif defined(Adele)
-#define BUFF_TIME_ºÚÇò 58000
-#else 
-#define BUFF_TIME_ºÚÇò 58000
-#endif 
+#define BUFF_TIME_é»‘çƒ 58000
+#else
+#define BUFF_TIME_é»‘çƒ 58000
+#endif
 
-#define BUFF_TIME_½ø½×Å®Éñ 180000  // 
-#define BUFF_TIME_¼Å¾²ÂÒÎè 120000  //
-#define BUFF_TIME_·´¿¹·ÅÖÃ 26000  //
-#define BUFF_TIME_ÂÖ»Ø 601000
-#define BUFF_TIME_¼ñÇ® 90000
+#define BUFF_TIME_è¿›é˜¶å¥³ç¥ 180000  //
+#define BUFF_TIME_å¯‚é™ä¹±èˆ 120000  //
+#define BUFF_TIME_åæŠ—æ”¾ç½® 26000  //
+#define BUFF_TIME_è½®å› 601000
+#define BUFF_TIME_æ¡é’± 90000
 
-#define BUFF_TIME_Ö©Öë 238000  // 
-#define BUFF_TIME_Ã×ÌØÀ­ 238000  // 
+#define BUFF_TIME_èœ˜è›› 238000  //
+#define BUFF_TIME_ç±³ç‰¹æ‹‰ 238000  //
 
-#define BUFF_TIME_¾­ÑéÃØÒ©2h 7208000  // 
-#define BUFF_TIME_¾­ÑéÃØÒ©30 1808000  // 
-#define BUFF_TIME_¾­Ñéexp30 1808000  // 
-#define BUFF_TIME_¾­Ñéexp20 1208000  // 
-#define BUFF_TIME_¾­Ñéexp10 908000  // 
+#define BUFF_TIME_ç»éªŒç§˜è¯2h 7208000  //
+#define BUFF_TIME_ç»éªŒç§˜è¯30 1808000  //
+#define BUFF_TIME_ç»éªŒexp30 1808000  //
+#define BUFF_TIME_ç»éªŒexp20 1208000  //
+#define BUFF_TIME_ç»éªŒexp10 908000  //
 
-#define BUFF_TIME_MVP 1806000  // 
-#define BUFF_TIME_¹«Ô° 1808000  // 
+#define BUFF_TIME_MVP 1806000  //
+#define BUFF_TIME_å…¬å›­ 1808000  //

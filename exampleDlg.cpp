@@ -1,4 +1,4 @@
-
+ï»¿
 
 
 
@@ -5781,7 +5781,7 @@ QString ThreadStateToString(ThreadState state)
 
 
 
-		return QString::fromWCharArray(L"Î´Æô¶¯");
+		return QString::fromWCharArray(L"æœªå¯åŠ¨");
 
 
 
@@ -5909,7 +5909,7 @@ QString ThreadStateToString(ThreadState state)
 
 
 
-		return QString::fromWCharArray(L"ÕıÔÚÆô¶¯..");
+		return QString::fromWCharArray(L"æ­£åœ¨å¯åŠ¨..");
 
 
 
@@ -6037,7 +6037,7 @@ QString ThreadStateToString(ThreadState state)
 
 
 
-		return QString::fromWCharArray(L"ÕıÔÚÔËĞĞ");
+		return QString::fromWCharArray(L"æ­£åœ¨è¿è¡Œ");
 
 
 
@@ -6165,7 +6165,7 @@ QString ThreadStateToString(ThreadState state)
 
 
 
-		return QString::fromWCharArray(L"ÕıÔÚÔİÍ£");
+		return QString::fromWCharArray(L"æ­£åœ¨æš‚åœ");
 
 
 
@@ -6293,7 +6293,7 @@ QString ThreadStateToString(ThreadState state)
 
 
 
-		return QString::fromWCharArray(L"ÔİÍ£");
+		return QString::fromWCharArray(L"æš‚åœ");
 
 
 
@@ -6421,7 +6421,7 @@ QString ThreadStateToString(ThreadState state)
 
 
 
-		return QString::fromWCharArray(L"ÕıÔÚ»Ö¸´");
+		return QString::fromWCharArray(L"æ­£åœ¨æ¢å¤");
 
 
 
@@ -6549,7 +6549,7 @@ QString ThreadStateToString(ThreadState state)
 
 
 
-		return QString::fromWCharArray(L"ÕıÔÚÍ£Ö¹");
+		return QString::fromWCharArray(L"æ­£åœ¨åœæ­¢");
 
 
 
@@ -6677,7 +6677,7 @@ QString ThreadStateToString(ThreadState state)
 
 
 
-		Log(_T("Î´¶¨ÒåµÄÏß³Ì×´Ì¬:%d"), state);
+		Log(_T("æœªå®šä¹‰çš„çº¿ç¨‹çŠ¶æ€:%d"), state);
 
 
 
@@ -7878,17 +7878,17 @@ QString WuyaModeToString(int mode)
 
 	case kWuyaModeExternalOnly:
 
-		return QString::fromWCharArray(L"½öÍâÖÃ");
+		return QString::fromWCharArray(L"ä»…å¤–ç½®");
 
 	case kWuyaModePreferExternal:
 
-		return QString::fromWCharArray(L"ÓÅÏÈÍâÖÃ");
+		return QString::fromWCharArray(L"ä¼˜å…ˆå¤–ç½®");
 
 	case kWuyaModeNativeOnly:
 
 	default:
 
-		return QString::fromWCharArray(L"½öÔ­Éú");
+		return QString::fromWCharArray(L"ä»…åŸç”Ÿ");
 
 	}
 
@@ -7906,17 +7906,17 @@ QString WuyaBackendToString(int backend)
 
 	case kWuyaBackendExternal:
 
-		return QString::fromWCharArray(L"ÍâÖÃ");
+		return QString::fromWCharArray(L"å¤–ç½®");
 
 	case kWuyaBackendNative:
 
-		return QString::fromWCharArray(L"Ô­Éú");
+		return QString::fromWCharArray(L"åŸç”Ÿ");
 
 	case kWuyaBackendNone:
 
 	default:
 
-		return QString::fromWCharArray(L"Î´Ê¹ÓÃ");
+		return QString::fromWCharArray(L"æœªä½¿ç”¨");
 
 	}
 
@@ -19668,7 +19668,7 @@ void CexampleDlg::InitUi()
 
 
 
-		
+
 
 
 
@@ -20308,7 +20308,7 @@ void CexampleDlg::InitUi()
 
 
 
-	QLabel* controlsTitle = new QLabel(QString::fromWCharArray(L"¿ØÖÆÃæ°å"), controlsCard);
+	QLabel* controlsTitle = new QLabel(QString::fromWCharArray(L"æ§åˆ¶é¢æ¿"), controlsCard);
 
 
 
@@ -20692,7 +20692,7 @@ void CexampleDlg::InitUi()
 
 
 
-	QPushButton* startAll = new QPushButton(QString::fromWCharArray(L"Æô¶¯È«²¿"), controlsCard);
+	QPushButton* startAll = new QPushButton(QString::fromWCharArray(L"å¯åŠ¨å…¨éƒ¨"), controlsCard);
 
 
 
@@ -21204,7 +21204,7 @@ void CexampleDlg::InitUi()
 
 
 
-	QPushButton* softBtn = new QPushButton(QString::fromWCharArray(L"ÈíÍ£Ö¹/¿ªÊ¼"), controlsCard);
+	QPushButton* softBtn = new QPushButton(QString::fromWCharArray(L"è½¯åœæ­¢/å¼€å§‹"), controlsCard);
 
 
 
@@ -22164,7 +22164,7 @@ void CexampleDlg::InitUi()
 
 
 
-	QPushButton* pauseAll = new QPushButton(QString::fromWCharArray(L"ÔİÍ£È«²¿"), controlsCard);
+	QPushButton* pauseAll = new QPushButton(QString::fromWCharArray(L"æš‚åœå…¨éƒ¨"), controlsCard);
 
 
 
@@ -22676,7 +22676,7 @@ void CexampleDlg::InitUi()
 
 
 
-	QPushButton* resumeAll = new QPushButton(QString::fromWCharArray(L"»Ö¸´È«²¿"), controlsCard);
+	QPushButton* resumeAll = new QPushButton(QString::fromWCharArray(L"æ¢å¤å…¨éƒ¨"), controlsCard);
 
 
 
@@ -23572,7 +23572,7 @@ void CexampleDlg::InitUi()
 
 
 
-	QPushButton* stopAll = new QPushButton(QString::fromWCharArray(L"Í£Ö¹È«²¿"), controlsCard);
+	QPushButton* stopAll = new QPushButton(QString::fromWCharArray(L"åœæ­¢å…¨éƒ¨"), controlsCard);
 
 
 
@@ -24148,7 +24148,7 @@ void CexampleDlg::InitUi()
 
 
 
-	
+
 
 
 
@@ -24404,7 +24404,7 @@ void CexampleDlg::InitUi()
 
 
 
-	
+
 
 
 
@@ -24724,7 +24724,7 @@ void CexampleDlg::InitUi()
 
 
 
-	QLabel* hotkeyLine = new QLabel(QString::fromWCharArray(L"¿ì½İ¼ü: Ctrl+L ÈíÍ£/¿ªÊ¼   Ctrl+P ÔİÍ£/»Ö¸´"), controlsCard);
+	QLabel* hotkeyLine = new QLabel(QString::fromWCharArray(L"å¿«æ·é”®: Ctrl+L è½¯åœ/å¼€å§‹   Ctrl+P æš‚åœ/æ¢å¤"), controlsCard);
 
 
 
@@ -25748,7 +25748,7 @@ void CexampleDlg::InitUi()
 
 
 
-	QLabel* infoTitle = new QLabel(QString::fromWCharArray(L"ÊµÊ±ĞÅÏ¢"), infoCard);
+	QLabel* infoTitle = new QLabel(QString::fromWCharArray(L"å®æ—¶ä¿¡æ¯"), infoCard);
 
 
 
@@ -26260,7 +26260,7 @@ void CexampleDlg::InitUi()
 
 
 
-	QLabel* coordTitle = new QLabel(QString::fromWCharArray(L"µ±Ç°×ø±ê"), infoCard);
+	QLabel* coordTitle = new QLabel(QString::fromWCharArray(L"å½“å‰åæ ‡"), infoCard);
 
 
 
@@ -26388,7 +26388,7 @@ void CexampleDlg::InitUi()
 
 
 
-	m_coordLabel = new QLabel(QString::fromWCharArray(L"£¨0,0£©"), infoCard);
+	m_coordLabel = new QLabel(QString::fromWCharArray(L"ï¼ˆ0,0ï¼‰"), infoCard);
 
 
 
@@ -26656,7 +26656,7 @@ void CexampleDlg::InitUi()
 
 
 
-	QLabel* wuyaImageTitle = new QLabel(QString::fromWCharArray(L"ÍâÖÃÊ¶Í¼"), infoCard);
+	QLabel* wuyaImageTitle = new QLabel(QString::fromWCharArray(L"å¤–ç½®è¯†å›¾"), infoCard);
 
 	wuyaImageTitle->setFixedWidth(56);
 
@@ -26664,15 +26664,15 @@ void CexampleDlg::InitUi()
 
 
 
-	m_wuyaImageModeValue = new QLabel(QString::fromWCharArray(L"Ä£Ê½: -"), infoCard);
+	m_wuyaImageModeValue = new QLabel(QString::fromWCharArray(L"æ¨¡å¼: -"), infoCard);
 
-	m_wuyaImageBackendValue = new QLabel(QString::fromWCharArray(L"ºó¶Ë: -"), infoCard);
+	m_wuyaImageBackendValue = new QLabel(QString::fromWCharArray(L"åç«¯: -"), infoCard);
 
-	m_wuyaImageReadyValue = new QLabel(QString::fromWCharArray(L"ÉÏÏÂÎÄ: -"), infoCard);
+	m_wuyaImageReadyValue = new QLabel(QString::fromWCharArray(L"ä¸Šä¸‹æ–‡: -"), infoCard);
 
 
 
-	QLabel* wuyaInputTitle = new QLabel(QString::fromWCharArray(L"ÍâÖÃ¼üÊó"), infoCard);
+	QLabel* wuyaInputTitle = new QLabel(QString::fromWCharArray(L"å¤–ç½®é”®é¼ "), infoCard);
 
 	wuyaInputTitle->setFixedWidth(56);
 
@@ -26680,11 +26680,11 @@ void CexampleDlg::InitUi()
 
 
 
-	m_wuyaInputModeValue = new QLabel(QString::fromWCharArray(L"Ä£Ê½: -"), infoCard);
+	m_wuyaInputModeValue = new QLabel(QString::fromWCharArray(L"æ¨¡å¼: -"), infoCard);
 
-	m_wuyaInputBackendValue = new QLabel(QString::fromWCharArray(L"ºó¶Ë: -"), infoCard);
+	m_wuyaInputBackendValue = new QLabel(QString::fromWCharArray(L"åç«¯: -"), infoCard);
 
-	m_wuyaInputReadyValue = new QLabel(QString::fromWCharArray(L"Éè±¸: -"), infoCard);
+	m_wuyaInputReadyValue = new QLabel(QString::fromWCharArray(L"è®¾å¤‡: -"), infoCard);
 
 
 
@@ -27284,7 +27284,7 @@ void CexampleDlg::InitUi()
 
 
 
-	QLabel* statusTitle = new QLabel(QString::fromWCharArray(L"Ïß³Ì×´Ì¬"), statusCard);
+	QLabel* statusTitle = new QLabel(QString::fromWCharArray(L"çº¿ç¨‹çŠ¶æ€"), statusCard);
 
 
 
@@ -27732,7 +27732,7 @@ void CexampleDlg::InitUi()
 
 
 
-		QStringList() << QString::fromWCharArray(L"Ö÷Ïß³Ì×´Ì¬")
+		QStringList() << QString::fromWCharArray(L"ä¸»çº¿ç¨‹çŠ¶æ€")
 
 
 
@@ -27796,7 +27796,7 @@ void CexampleDlg::InitUi()
 
 
 
-					  << QString::fromWCharArray(L"¸±Ïß³Ì×´Ì¬")
+					  << QString::fromWCharArray(L"å‰¯çº¿ç¨‹çŠ¶æ€")
 
 
 
@@ -27860,7 +27860,7 @@ void CexampleDlg::InitUi()
 
 
 
-					  << QString::fromWCharArray(L"ÈÎÎñ×´Ì¬"));
+					  << QString::fromWCharArray(L"ä»»åŠ¡çŠ¶æ€"));
 
 
 
@@ -29204,7 +29204,7 @@ void CexampleDlg::InitUi()
 
 
 
-	QLabel* optionsTitle = new QLabel(QString::fromWCharArray(L"ÆäËûÑ¡Ïî"), optionsCard);
+	QLabel* optionsTitle = new QLabel(QString::fromWCharArray(L"å…¶ä»–é€‰é¡¹"), optionsCard);
 
 
 
@@ -29844,7 +29844,7 @@ void CexampleDlg::InitUi()
 
 
 
-	m_tabCommon->setText(QString::fromWCharArray(L"³£ÓÃ"));
+	m_tabCommon->setText(QString::fromWCharArray(L"å¸¸ç”¨"));
 
 
 
@@ -30292,7 +30292,7 @@ void CexampleDlg::InitUi()
 
 
 
-	m_tabDetect->setText(QString::fromWCharArray(L"¼ì²â"));
+	m_tabDetect->setText(QString::fromWCharArray(L"æ£€æµ‹"));
 
 
 
@@ -32468,7 +32468,7 @@ void CexampleDlg::InitUi()
 
 
 
-	QLabel* mapTitle = new QLabel(QString::fromWCharArray(L"µØÍ¼Ñ¡Ôñ"), pageCommon);
+	QLabel* mapTitle = new QLabel(QString::fromWCharArray(L"åœ°å›¾é€‰æ‹©"), pageCommon);
 
 
 
@@ -33108,7 +33108,7 @@ void CexampleDlg::InitUi()
 
 
 
-	hunt->setText(QString::fromWCharArray(L"Ë¢Í¼"));
+	hunt->setText(QString::fromWCharArray(L"åˆ·å›¾"));
 
 
 
@@ -35028,17 +35028,17 @@ void CexampleDlg::InitUi()
 
 
 
-		expPot = createPill(QString::fromWCharArray(L"ÃØÒ©"));
+		expPot = createPill(QString::fromWCharArray(L"ç§˜è¯"));
 	expPotDurationDropdown = new QComboBox(commonGridWidget);
 	expPotDurationDropdown->setFixedHeight(kInputHeight);
 	expPotDurationDropdown->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-	EXP30M = createPill(QString::fromWCharArray(L"¾­Ñé"));
+	EXP30M = createPill(QString::fromWCharArray(L"ç»éªŒ"));
 	expDurationDropdown = new QComboBox(commonGridWidget);
 	expDurationDropdown->setFixedHeight(kInputHeight);
 	expDurationDropdown->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-	EXP15M = createPill(QString::fromWCharArray(L"¼Ò×åVB"));
+	EXP15M = createPill(QString::fromWCharArray(L"å®¶æ—VB"));
 
 	commonGrid->addWidget(expPot, 0, 0);
 	commonGrid->addWidget(expPotDurationDropdown, 0, 1);
@@ -35172,7 +35172,7 @@ void CexampleDlg::InitUi()
 
 
 
-	EXP_PARK = createPill(QString::fromWCharArray(L"¹«Ô°"));
+	EXP_PARK = createPill(QString::fromWCharArray(L"å…¬å›­"));
 
 
 
@@ -35556,7 +35556,7 @@ void CexampleDlg::InitUi()
 
 
 
-	autoOil = createPill(QString::fromWCharArray(L"×Ô¶¯¼ÓÓÍ"));
+	autoOil = createPill(QString::fromWCharArray(L"è‡ªåŠ¨åŠ æ²¹"));
 
 
 
@@ -35748,7 +35748,7 @@ void CexampleDlg::InitUi()
 
 
 
-	bless = createPill(QString::fromWCharArray(L"µã»ğ"));
+	bless = createPill(QString::fromWCharArray(L"ç‚¹ç«"));
 
 
 
@@ -37092,7 +37092,7 @@ void CexampleDlg::InitUi()
 
 
 
-	autoRuneSolver = createPill(QString::fromWCharArray(L"·ûÎÄ"));
+	autoRuneSolver = createPill(QString::fromWCharArray(L"ç¬¦æ–‡"));
 
 
 
@@ -37284,7 +37284,7 @@ void CexampleDlg::InitUi()
 
 
 
-	huangMen = createPill(QString::fromWCharArray(L"ºì»ÆÃÅ¼ì²â"));
+	huangMen = createPill(QString::fromWCharArray(L"çº¢é»„é—¨æ£€æµ‹"));
 
 
 
@@ -37476,7 +37476,7 @@ void CexampleDlg::InitUi()
 
 
 
-	whiteDetect = createPill(QString::fromWCharArray(L"°×Îİ¼ì²â"));
+	whiteDetect = createPill(QString::fromWCharArray(L"ç™½å±‹æ£€æµ‹"));
 
 
 
@@ -37668,7 +37668,7 @@ void CexampleDlg::InitUi()
 
 
 
-	friendPlayerNotification = createPill(QString::fromWCharArray(L"ºÃÓÑ¼ì²â"));
+	friendPlayerNotification = createPill(QString::fromWCharArray(L"å¥½å‹æ£€æµ‹"));
 
 
 
@@ -37734,7 +37734,7 @@ void CexampleDlg::InitUi()
 
 	detectGrid->addWidget(friendPlayerNotification, 0, 3);
 
-	autoLogin = createPill(QString::fromWCharArray(L"×Ô¶¯µÇÂ¼"));
+	autoLogin = createPill(QString::fromWCharArray(L"è‡ªåŠ¨ç™»å½•"));
 	detectGrid->addWidget(autoLogin, 1, 0);
 
 	QWidget* autoLoginChannelWidget = new QWidget(pageDetect);
@@ -37742,7 +37742,7 @@ void CexampleDlg::InitUi()
 	autoLoginChannelRow->setContentsMargins(0, 0, 0, 0);
 	autoLoginChannelRow->setSpacing(6);
 
-	QLabel* autoLoginChannelLabel = new QLabel(QString::fromWCharArray(L"ÆµµÀ"), autoLoginChannelWidget);
+	QLabel* autoLoginChannelLabel = new QLabel(QString::fromWCharArray(L"é¢‘é“"), autoLoginChannelWidget);
 	autoLoginChannelLabel->setProperty("muted", true);
 	autoLoginChannel = new QComboBox(autoLoginChannelWidget);
 	autoLoginChannel->setFixedHeight(kInputHeight);
@@ -37882,20 +37882,20 @@ void CexampleDlg::InitUi()
 
 
 
-	
+
 
 	QWidget* autoLoginModeWidget = new QWidget(pageDetect);
 	QHBoxLayout* autoLoginModeRow = new QHBoxLayout(autoLoginModeWidget);
 	autoLoginModeRow->setContentsMargins(0, 2, 0, 0);
 	autoLoginModeRow->setSpacing(6);
 
-	QLabel* autoLoginModeLabel = new QLabel(QString::fromWCharArray(L"µÇÂ¼·½Ê½"), autoLoginModeWidget);
+	QLabel* autoLoginModeLabel = new QLabel(QString::fromWCharArray(L"ç™»å½•æ–¹å¼"), autoLoginModeWidget);
 	autoLoginModeLabel->setProperty("muted", true);
 	autoLoginMode = new QComboBox(autoLoginModeWidget);
 	autoLoginMode->setFixedHeight(kInputHeight);
 	autoLoginMode->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-	autoLoginMode->addItem(QString::fromWCharArray(L"ÆµµÀÑ¡Ôñ"));
-	autoLoginMode->addItem(QString::fromWCharArray(L"¿ìËÙµÇÂ¼"));
+	autoLoginMode->addItem(QString::fromWCharArray(L"é¢‘é“é€‰æ‹©"));
+	autoLoginMode->addItem(QString::fromWCharArray(L"å¿«é€Ÿç™»å½•"));
 
 	autoLoginModeRow->addWidget(autoLoginModeLabel);
 	autoLoginModeRow->addWidget(autoLoginMode);
@@ -37915,15 +37915,15 @@ void CexampleDlg::InitUi()
 	presetRow->setContentsMargins(0, 2, 0, 0);
 	presetRow->setSpacing(6);
 
-	QLabel* presetLabel = new QLabel(QString::fromWCharArray(L"Ö°ÒµÔ¤Éè"), presetRowWidget);
+	QLabel* presetLabel = new QLabel(QString::fromWCharArray(L"èŒä¸šé¢„è®¾"), presetRowWidget);
 	presetLabel->setProperty("muted", true);
 	autoLoginPreset = new QComboBox(presetRowWidget);
 	autoLoginPreset->setFixedHeight(kInputHeight);
 	autoLoginPreset->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-	autoLoginPreset->addItem(QString::fromWCharArray(L"×Ô¶¨Òå"));
-	autoLoginPreset->addItem(QString::fromWCharArray(L"Ô¤Éè1"));
-	autoLoginPreset->addItem(QString::fromWCharArray(L"Ô¤Éè2"));
-	autoLoginPreset->addItem(QString::fromWCharArray(L"Ô¤Éè3"));
+	autoLoginPreset->addItem(QString::fromWCharArray(L"è‡ªå®šä¹‰"));
+	autoLoginPreset->addItem(QString::fromWCharArray(L"é¢„è®¾1"));
+	autoLoginPreset->addItem(QString::fromWCharArray(L"é¢„è®¾2"));
+	autoLoginPreset->addItem(QString::fromWCharArray(L"é¢„è®¾3"));
 
 	presetRow->addWidget(presetLabel);
 	presetRow->addWidget(autoLoginPreset);
@@ -37946,14 +37946,14 @@ void CexampleDlg::InitUi()
 	autoLoginRow->setContentsMargins(0, 2, 0, 0);
 	autoLoginRow->setSpacing(6);
 
-	QLabel* autoLoginLabel = new QLabel(QString::fromWCharArray(L"µÇÂ¼ºó°´¼ü"), autoLoginRowWidget);
+	QLabel* autoLoginLabel = new QLabel(QString::fromWCharArray(L"ç™»å½•åæŒ‰é”®"), autoLoginRowWidget);
 	autoLoginLabel->setProperty("muted", true);
 	autoLoginKeys = new QLineEdit(autoLoginRowWidget);
 	autoLoginKeys->setFixedHeight(kInputHeight);
-	autoLoginKeys->setPlaceholderText(QString::fromWCharArray(L"Àı: f1,f2,f3"));
+	autoLoginKeys->setPlaceholderText(QString::fromWCharArray(L"ä¾‹: f1,f2,f3"));
 	autoLoginKeys->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-	QLabel* autoLoginDelayLabel = new QLabel(QString::fromWCharArray(L"¼ä¸ô"), autoLoginRowWidget);
+	QLabel* autoLoginDelayLabel = new QLabel(QString::fromWCharArray(L"é—´éš”"), autoLoginRowWidget);
 	autoLoginDelayLabel->setProperty("muted", true);
 	autoLoginDelay = new QLineEdit(autoLoginRowWidget);
 	autoLoginDelay->setFixedHeight(kInputHeight);
@@ -38383,7 +38383,7 @@ void CexampleDlg::InitUi()
 
 
 
-	QLabel* imageModeLabel = new QLabel(QString::fromWCharArray(L"Ê¶Í¼Ä£¿é"), pageDetect);
+	QLabel* imageModeLabel = new QLabel(QString::fromWCharArray(L"è¯†å›¾æ¨¡å—"), pageDetect);
 
 
 
@@ -38895,7 +38895,7 @@ void CexampleDlg::InitUi()
 
 
 
-	QLabel* inputModeLabel = new QLabel(QString::fromWCharArray(L"¼üÊóÄ£¿é"), pageDetect);
+	QLabel* inputModeLabel = new QLabel(QString::fromWCharArray(L"é”®é¼ æ¨¡å—"), pageDetect);
 
 
 
@@ -50227,7 +50227,7 @@ void CexampleDlg::InitCombos()
 
 
 
-		mapList->addItem(QString::fromWCharArray(L"¼×°åÉÏ²ã1"));
+		mapList->addItem(QString::fromWCharArray(L"ç”²æ¿ä¸Šå±‚1"));
 
 
 
@@ -50291,7 +50291,7 @@ void CexampleDlg::InitCombos()
 
 
 
-		mapList->addItem(QString::fromWCharArray(L"Ê÷3"));
+		mapList->addItem(QString::fromWCharArray(L"æ ‘3"));
 
 
 
@@ -50627,7 +50627,7 @@ void CexampleDlg::InitCombos()
 
 
 
-		wyImageMode->addItem(QString::fromWCharArray(L"½öÍâÖÃ"));
+		wyImageMode->addItem(QString::fromWCharArray(L"ä»…å¤–ç½®"));
 
 
 
@@ -50691,7 +50691,7 @@ void CexampleDlg::InitCombos()
 
 
 
-		wyImageMode->addItem(QString::fromWCharArray(L"ÓÅÏÈÍâÖÃ"));
+		wyImageMode->addItem(QString::fromWCharArray(L"ä¼˜å…ˆå¤–ç½®"));
 
 
 
@@ -50755,7 +50755,7 @@ void CexampleDlg::InitCombos()
 
 
 
-		wyImageMode->addItem(QString::fromWCharArray(L"½öÔ­Éú"));
+		wyImageMode->addItem(QString::fromWCharArray(L"ä»…åŸç”Ÿ"));
 
 
 
@@ -51203,7 +51203,7 @@ void CexampleDlg::InitCombos()
 
 
 
-		wyInputMode->addItem(QString::fromWCharArray(L"½öÍâÖÃ"));
+		wyInputMode->addItem(QString::fromWCharArray(L"ä»…å¤–ç½®"));
 
 
 
@@ -51267,7 +51267,7 @@ void CexampleDlg::InitCombos()
 
 
 
-		wyInputMode->addItem(QString::fromWCharArray(L"ÓÅÏÈÍâÖÃ"));
+		wyInputMode->addItem(QString::fromWCharArray(L"ä¼˜å…ˆå¤–ç½®"));
 
 
 
@@ -51331,7 +51331,7 @@ void CexampleDlg::InitCombos()
 
 
 
-		wyInputMode->addItem(QString::fromWCharArray(L"½öÔ­Éú"));
+		wyInputMode->addItem(QString::fromWCharArray(L"ä»…åŸç”Ÿ"));
 
 
 
@@ -66501,7 +66501,7 @@ bool CexampleDlg::eventFilter(QObject* obj, QEvent* event)
 
 
 
-		
+
 
 
 
@@ -71045,7 +71045,7 @@ bool CexampleDlg::nativeEvent(const QByteArray& eventType, void* message, long* 
 
 
 
-			Log(_T("Ë÷ÒıÕÒ²»µ½ ĞòºÅ:%d"), msg->lParam);
+			Log(_T("ç´¢å¼•æ‰¾ä¸åˆ° åºå·:%d"), msg->lParam);
 
 
 
@@ -77253,7 +77253,7 @@ void CexampleDlg::resizeEvent(QResizeEvent* event)
 
 
 
-		
+
 
 
 
@@ -77445,7 +77445,7 @@ void CexampleDlg::resizeEvent(QResizeEvent* event)
 
 
 
-		
+
 
 
 
@@ -77637,7 +77637,7 @@ void CexampleDlg::resizeEvent(QResizeEvent* event)
 
 
 
-		
+
 
 
 
@@ -78085,7 +78085,7 @@ void CexampleDlg::resizeEvent(QResizeEvent* event)
 
 
 
-		
+
 
 
 
@@ -78213,7 +78213,7 @@ void CexampleDlg::resizeEvent(QResizeEvent* event)
 
 
 
-		
+
 
 
 
@@ -83589,7 +83589,7 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-			
+
 
 
 
@@ -83845,7 +83845,7 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-			
+
 
 
 
@@ -84037,7 +84037,7 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-			
+
 
 
 
@@ -84293,7 +84293,7 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-			
+
 
 
 
@@ -85509,7 +85509,7 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-				
+
 
 
 
@@ -87695,7 +87695,7 @@ void CexampleDlg::SaveAutoLoginPreset(int presetIndex)
     }
 
     QString keyText = autoLoginKeys->text().trimmed();
-    CString keys = CString(keyText.toLocal8Bit().constData());
+    CString keys(keyText.toStdWString().c_str());
     bool ok = false;
     int delay = autoLoginDelay->text().trimmed().toInt(&ok);
     if (!ok)
@@ -87779,17 +87779,17 @@ void CexampleDlg::UpdateWuyaStatus()
 
 
 
-	m_wuyaImageModeValue->setText(QString::fromWCharArray(L"Ä£Ê½: ") + WuyaModeToString(imageMode));
+	m_wuyaImageModeValue->setText(QString::fromWCharArray(L"æ¨¡å¼: ") + WuyaModeToString(imageMode));
 
-	m_wuyaInputModeValue->setText(QString::fromWCharArray(L"Ä£Ê½: ") + WuyaModeToString(inputMode));
+	m_wuyaInputModeValue->setText(QString::fromWCharArray(L"æ¨¡å¼: ") + WuyaModeToString(inputMode));
 
-	m_wuyaImageBackendValue->setText(QString::fromWCharArray(L"ºó¶Ë: ") + WuyaBackendToString(imageBackend));
+	m_wuyaImageBackendValue->setText(QString::fromWCharArray(L"åç«¯: ") + WuyaBackendToString(imageBackend));
 
-	m_wuyaInputBackendValue->setText(QString::fromWCharArray(L"ºó¶Ë: ") + WuyaBackendToString(inputBackend));
+	m_wuyaInputBackendValue->setText(QString::fromWCharArray(L"åç«¯: ") + WuyaBackendToString(inputBackend));
 
-	m_wuyaImageReadyValue->setText(QString::fromWCharArray(L"ÉÏÏÂÎÄ: ") + WuyaReadyToString(imageReady, L"ÒÑ´ò¿ª", L"Î´´ò¿ª"));
+	m_wuyaImageReadyValue->setText(QString::fromWCharArray(L"ä¸Šä¸‹æ–‡: ") + WuyaReadyToString(imageReady, L"å·²æ‰“å¼€", L"æœªæ‰“å¼€"));
 
-	m_wuyaInputReadyValue->setText(QString::fromWCharArray(L"Éè±¸: ") + WuyaReadyToString(inputReady, L"¿ÉÓÃ", L"Î´·¢ÏÖ"));
+	m_wuyaInputReadyValue->setText(QString::fromWCharArray(L"è®¾å¤‡: ") + WuyaReadyToString(inputReady, L"å¯ç”¨", L"æœªå‘ç°"));
 
 }
 
@@ -88243,7 +88243,7 @@ void CexampleDlg::CoordUpdate(int x, int y)
 
 
 
-	QString tips = QString::fromWCharArray(L"£¨%1,%2£©").arg(x).arg(y);
+	QString tips = QString::fromWCharArray(L"ï¼ˆ%1,%2ï¼‰").arg(x).arg(y);
 
 
 
@@ -96050,7 +96050,7 @@ void CexampleDlg::OnBnClickedButtonStopall()
 	int item_count = m_statusList->rowCount();
 	if (item_count == 0)
 	{
-		Log(_T("Ã»ÓĞ´°¿Ú"));
+		Log(_T("æ²¡æœ‰çª—å£"));
 		return;
 	}
 
@@ -96128,7 +96128,7 @@ void CexampleDlg::OnBnClickedButtonPauseall()
 	int item_count = m_statusList->rowCount();
 	if (item_count == 0)
 	{
-		Log(_T("Ã»ÓĞ´°¿Ú"));
+		Log(_T("æ²¡æœ‰çª—å£"));
 		return;
 	}
 
@@ -96157,7 +96157,7 @@ void CexampleDlg::OnBnClickedButtonResumeall()
 	int item_count = m_statusList->rowCount();
 	if (item_count == 0)
 	{
-		Log(_T("Ã»ÓĞ´°¿Ú"));
+		Log(_T("æ²¡æœ‰çª—å£"));
 		return;
 	}
 
@@ -96178,7 +96178,7 @@ void CexampleDlg::OnBnClickedButtonResumeall()
 
 void CexampleDlg::OnBnClickedButtonSoft()
 {
-	Log(_T("ÈíÆô¶¯/Í£Ö¹"));
+	Log(_T("è½¯å¯åŠ¨/åœæ­¢"));
 	detectWhiteIcon();
 	subSoftStartPause();
 }
@@ -96221,12 +96221,12 @@ LRESULT CexampleDlg::OnHotKey(WPARAM wParam, LPARAM lParam)
 		}
 		if (should_resume)
 		{
-			Log(_T("»Ö¸´ËùÓĞ"));
+			Log(_T("æ¢å¤æ‰€æœ‰"));
 			CexampleDlg::OnBnClickedButtonResumeall();
 		}
 		else
 		{
-			Log(_T("ÔİÍ£ËùÓĞ"));
+			Log(_T("æš‚åœæ‰€æœ‰"));
 			CexampleDlg::OnBnClickedButtonPauseall();
 		}
 	}
@@ -96239,4 +96239,3 @@ LRESULT CexampleDlg::OnHotKey(WPARAM wParam, LPARAM lParam)
 void CexampleDlg::OnBnClickedButtonCloseallwin()
 {
 }
-
