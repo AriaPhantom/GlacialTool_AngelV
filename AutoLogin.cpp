@@ -104,6 +104,9 @@ constexpr int kDisconnectWatcherActiveIntervalMs = 500;
 constexpr int kDisconnectWatcherIdleIntervalMs = 1000;
 constexpr long kDisconnectWatcherBaseCheckIntervalMs = 1000;
 constexpr long kDisconnectWatcherImageCheckIntervalMs = 3000;
+constexpr ULONGLONG kWhiteIconRecentTtlMs = 1000;
+constexpr int kWhiteIconGateRight = 350;
+constexpr int kWhiteIconGateBottom = 300;
 constexpr long kNetchGuardCheckIntervalMs = 1000;
 constexpr long kNetchGuardSoftPauseMs = 5000;
 constexpr long kNetchGuardHardCloseMs = 10000;
@@ -118,6 +121,7 @@ const wchar_t* kLaunchCommand = L"nxl://launch/10100";
 std::atomic<bool> g_loginRunning[MAX_HWND];
 std::atomic<long> g_lastCheckMs[MAX_HWND];
 std::atomic<long> g_lastImageCheckMs[MAX_HWND];
+std::atomic<ULONGLONG> g_lastWhiteIconSeenTick[MAX_HWND];
 std::atomic<long> g_loginPendingSinceMs[MAX_HWND];
 std::atomic<bool> g_loginNeedRestart[MAX_HWND];
 std::atomic<bool> g_forceRelaunch[MAX_HWND];
@@ -141,8 +145,15 @@ long height = 0;
 long tickMs = 0;
 };
 std::mutex g_iconFindHintMutex;
+std::mutex g_disconnectWatcherActionMutex;
 IconFindHint g_iconFindHints[MAX_HWND];
-void TriggerAutoLogin(long mainIndex);
+bool IsDisconnectWatcherCurrent(long mainIndex, unsigned long long generation) {
+	if (generation == 0) return true;
+	return mainIndex >= 0 && mainIndex < MAX_HWND &&
+		g_disconnectWatcherGeneration[mainIndex].load() == generation &&
+		!g_info[mainIndex].is_stop;
+}
+void TriggerAutoLogin(long mainIndex, unsigned long long generation = 0);
 void KillMapleStoryProcesses();
 
 size_t NetchGuardDiscardWrite(char* ptr, size_t size, size_t nmemb, void* userdata) {
@@ -197,11 +208,14 @@ bool IsNetchSocksHealthy() {
 	return false;
 }
 
-bool HandleNetchGuard(long mainIndex) {
+bool HandleNetchGuard(long mainIndex, unsigned long long generation = 0) {
 	if (mainIndex < 0 || mainIndex >= MAX_HWND) return true;
+	if (!IsDisconnectWatcherCurrent(mainIndex, generation)) return false;
 	if (g_info[mainIndex].is_stop) return true;
 
 	if (!GetNetchGuard()) {
+		std::lock_guard<std::mutex> actionLock(g_disconnectWatcherActionMutex);
+		if (!IsDisconnectWatcherCurrent(mainIndex, generation)) return false;
 		bool softPaused = g_netchSoftPaused[mainIndex].exchange(false);
 		bool hardClosed = g_netchHardClosed[mainIndex].exchange(false);
 		g_netchDownSinceMs[mainIndex].store(0);
@@ -221,6 +235,7 @@ bool HandleNetchGuard(long mainIndex) {
 	g_netchLastCheckMs[mainIndex].store(nowMs);
 
 	bool healthy = IsNetchSocksHealthy();
+	if (!IsDisconnectWatcherCurrent(mainIndex, generation)) return false;
 	nowMs = GetTime();
 	if (healthy) {
 		long downSinceMs = g_netchDownSinceMs[mainIndex].exchange(0);
@@ -229,14 +244,18 @@ bool HandleNetchGuard(long mainIndex) {
 		long downMs = (downSinceMs > 0 && nowMs >= downSinceMs) ? (nowMs - downSinceMs) : 0;
 
 		if (hardClosed) {
+			std::lock_guard<std::mutex> actionLock(g_disconnectWatcherActionMutex);
+			if (!IsDisconnectWatcherCurrent(mainIndex, generation)) return false;
 			Log(_T("[NETCH] Scania probe recovered after hard close idx=%ld downMs=%ld"), mainIndex, downMs);
 			SetTaskState(mainIndex, _T("NETCH RECOVER"));
 			g_forceRelaunch[mainIndex].store(true);
-			TriggerAutoLogin(mainIndex);
+			TriggerAutoLogin(mainIndex, generation);
 			return false;
 		}
 
 		if (softPaused) {
+			std::lock_guard<std::mutex> actionLock(g_disconnectWatcherActionMutex);
+			if (!IsDisconnectWatcherCurrent(mainIndex, generation)) return false;
 			Log(_T("[NETCH] Scania probe recovered, soft start idx=%ld downMs=%ld"), mainIndex, downMs);
 			SetTaskState(mainIndex, _T("NETCH OK"));
 			subSoftStart();
@@ -253,6 +272,8 @@ bool HandleNetchGuard(long mainIndex) {
 
 	long downMs = nowMs >= downSinceMs ? (nowMs - downSinceMs) : 0;
 	if (downMs >= kNetchGuardHardCloseMs) {
+		std::lock_guard<std::mutex> actionLock(g_disconnectWatcherActionMutex);
+		if (!IsDisconnectWatcherCurrent(mainIndex, generation)) return false;
 		if (!g_netchHardClosed[mainIndex].exchange(true)) {
 			g_netchSoftPaused[mainIndex].store(true);
 			subSoftPause();
@@ -265,6 +286,8 @@ bool HandleNetchGuard(long mainIndex) {
 	}
 
 	if (downMs >= kNetchGuardSoftPauseMs) {
+		std::lock_guard<std::mutex> actionLock(g_disconnectWatcherActionMutex);
+		if (!IsDisconnectWatcherCurrent(mainIndex, generation)) return false;
 		if (!g_netchSoftPaused[mainIndex].exchange(true)) {
 			subSoftPause();
 			SetTaskState(mainIndex, _T("NETCH PAUSE"));
@@ -391,8 +414,11 @@ for (long offset : offsets) {
 }
 }
 
-void BeginAutoRest(long mainIndex, unsigned long long nowTick, unsigned long long restMs) {
-if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
+void BeginAutoRest(long mainIndex, unsigned long long nowTick, unsigned long long restMs,
+	unsigned long long generation = 0) {
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
+	std::lock_guard<std::mutex> actionLock(g_disconnectWatcherActionMutex);
+	if (!IsDisconnectWatcherCurrent(mainIndex, generation)) return;
 ResetAutoRestState(mainIndex, false);
 g_autoRestUntilTickMs[mainIndex].store(nowTick + restMs);
 g_forceRelaunch[mainIndex].store(true);
@@ -403,8 +429,9 @@ KillMapleStoryProcesses();
 ClearWindowForAllThreads(mainIndex);
 }
 
-bool HandleAutoRest(long mainIndex) {
-if (mainIndex < 0 || mainIndex >= MAX_HWND) return false;
+bool HandleAutoRest(long mainIndex, unsigned long long generation = 0) {
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) return false;
+	if (!IsDisconnectWatcherCurrent(mainIndex, generation)) return true;
 
 int runMinutes = 0;
 int restMinutes = 0;
@@ -423,7 +450,7 @@ if (restUntilTick > nowTick) {
 if (restUntilTick != 0) {
 	g_autoRestUntilTickMs[mainIndex].store(0);
 	ResetAutoRestState(mainIndex, false);
-	TriggerAutoLogin(mainIndex);
+	TriggerAutoLogin(mainIndex, generation);
 	return true;
 }
 
@@ -461,7 +488,7 @@ if (accumulatedMs < runLimitMs) {
 	return false;
 }
 
-BeginAutoRest(mainIndex, nowTick, restMs);
+BeginAutoRest(mainIndex, nowTick, restMs, generation);
 return true;
 }
 
@@ -1255,7 +1282,8 @@ g_loginRunning[mainIndex].store(false);
 g_lastCheckMs[mainIndex].store(GetTime());
 }
 
-void TriggerAutoLogin(long mainIndex) {
+void TriggerAutoLogin(long mainIndex, unsigned long long generation) {
+if (!IsDisconnectWatcherCurrent(mainIndex, generation)) return;
 bool expected = false;
 if (!g_loginRunning[mainIndex].compare_exchange_strong(expected, true)) return;
 ResetAutoRestState(mainIndex);
@@ -1311,8 +1339,9 @@ while (true) {
 		break;
 	}
 
-	if (HandleNetchGuard(mainIndex)) {
-		AutoLogin_CheckAndTrigger(mainIndex);
+	if (HandleNetchGuard(mainIndex, generation) &&
+		IsDisconnectWatcherCurrent(mainIndex, generation)) {
+		AutoLogin_CheckAndTrigger(mainIndex, generation);
 	}
 	if (AutoLogin_IsActive(mainIndex)) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(kDisconnectWatcherActiveIntervalMs));
@@ -1323,12 +1352,39 @@ while (true) {
 }
 }
 
+bool HasRecentWhiteIcon(long mainIndex, ULONGLONG nowTick) {
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) return false;
+	ULONGLONG lastSeenTick = g_lastWhiteIconSeenTick[mainIndex].load(std::memory_order_relaxed);
+	return lastSeenTick != 0 && nowTick >= lastSeenTick && nowTick - lastSeenTick <= kWhiteIconRecentTtlMs;
+}
+
+bool TryRecordWhiteIconGate(long mainIndex, unsigned long long generation) {
+	long x = -1;
+	long y = -1;
+	if (!findPicWithOpenCV(mainIndex, 0, 0, kWhiteIconGateRight, kWhiteIconGateBottom,
+		whiteIcon, 0.9, x, y)) {
+		return false;
+	}
+	{
+		std::lock_guard<std::mutex> actionLock(g_disconnectWatcherActionMutex);
+		if (!IsDisconnectWatcherCurrent(mainIndex, generation)) return false;
+		AutoLogin_RecordWhiteIconSeen(mainIndex);
+	}
+	return true;
+}
+
 }
 
 bool AutoLogin_IsActive(long index) {
 long mainIndex = NormalizeMainIndex(index);
 if (mainIndex < 0 || mainIndex >= MAX_HWND) return false;
 return g_loginRunning[mainIndex].load();
+}
+
+void AutoLogin_RecordWhiteIconSeen(long index) {
+	long mainIndex = NormalizeMainIndex(index);
+	if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
+	g_lastWhiteIconSeenTick[mainIndex].store(GetTickCount64(), std::memory_order_relaxed);
 }
 
 bool AutoLogin_RunStartup(long index) {
@@ -1383,11 +1439,15 @@ if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
 g_loginPendingSinceMs[mainIndex].store(0);
 }
 
-void AutoLogin_CheckAndTrigger(long index) {
+void AutoLogin_CheckAndTrigger(long index, unsigned long long generation) {
 	long mainIndex = NormalizeMainIndex(index);
 	if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
+	auto watcherIsCurrent = [mainIndex, generation]() {
+		return IsDisconnectWatcherCurrent(mainIndex, generation);
+	};
+	if (!watcherIsCurrent()) return;
 	if (g_info[mainIndex].is_stop) return;
-	if (HandleAutoRest(mainIndex)) return;
+	if (HandleAutoRest(mainIndex, generation)) return;
 	if (!GetAutoLogin()) return;
 	if (g_loginRunning[mainIndex].load()) return;
 
@@ -1398,14 +1458,16 @@ void AutoLogin_CheckAndTrigger(long index) {
 
 	HWND hwnd = reinterpret_cast<HWND>(static_cast<LONG_PTR>(g_info[mainIndex].hwnd));
 	if (!hwnd || !IsWindow(hwnd)) {
+		if (!watcherIsCurrent()) return;
 		g_stuckScreenConsecutiveCount[mainIndex].store(0);
 		g_disconnectDialogConsecutiveCount[mainIndex].store(0);
 		NotifyDisconnectMiao("window missing");
-		TriggerAutoLogin(mainIndex);
+		TriggerAutoLogin(mainIndex, generation);
 		return;
 	}
 
 	HWND dialogHwnd = DismissDisconnectDialog(mainIndex);
+	if (!watcherIsCurrent()) return;
 	if (dialogHwnd != nullptr) {
 		int count = g_disconnectDialogConsecutiveCount[mainIndex].fetch_add(1) + 1;
 		if (count >= 1) {
@@ -1423,38 +1485,59 @@ void AutoLogin_CheckAndTrigger(long index) {
 			#endif
 
 			NotifyDisconnectMiao("disconnect dialog");
-			KillMapleStoryProcesses();
-			g_forceRelaunch[mainIndex].store(true);
-			TriggerAutoLogin(mainIndex);
+			{
+				std::lock_guard<std::mutex> actionLock(g_disconnectWatcherActionMutex);
+				if (!watcherIsCurrent()) return;
+				KillMapleStoryProcesses();
+				g_forceRelaunch[mainIndex].store(true);
+			}
+			TriggerAutoLogin(mainIndex, generation);
 			return;
 		}
 	} else {
 		g_disconnectDialogConsecutiveCount[mainIndex].store(0);
+	}
+
+	if (!HasRecentWhiteIcon(mainIndex, GetTickCount64())) {
+		TryRecordWhiteIconGate(mainIndex, generation);
+	}
+	if (!watcherIsCurrent()) return;
+	if (HasRecentWhiteIcon(mainIndex, GetTickCount64())) {
+		g_stuckScreenConsecutiveCount[mainIndex].store(0);
+		return;
 	}
 
 	long lastImageCheck = g_lastImageCheckMs[mainIndex].load();
 	if (nowMs - lastImageCheck < kDisconnectWatcherImageCheckIntervalMs) return;
 	g_lastImageCheckMs[mainIndex].store(nowMs);
 
-	if (IsStuckScreen(mainIndex)) {
+	bool stuckScreen = IsStuckScreen(mainIndex);
+	if (!watcherIsCurrent()) return;
+	if (stuckScreen) {
 		int count = g_stuckScreenConsecutiveCount[mainIndex].fetch_add(1) + 1;
 		if (count >= 1) {
 			g_stuckScreenConsecutiveCount[mainIndex].store(0);
 			g_disconnectDialogConsecutiveCount[mainIndex].store(0);
 			NotifyDisconnectMiao("stuck screen");
-			g_forceRelaunch[mainIndex].store(true);
-			TriggerAutoLogin(mainIndex);
+			{
+				std::lock_guard<std::mutex> actionLock(g_disconnectWatcherActionMutex);
+				if (!watcherIsCurrent()) return;
+				g_forceRelaunch[mainIndex].store(true);
+			}
+			TriggerAutoLogin(mainIndex, generation);
 			return;
 		}
 	} else {
 		g_stuckScreenConsecutiveCount[mainIndex].store(0);
 	}
 
-	if (IsOnLoginScreen(mainIndex)) {
+	bool onLoginScreen = IsOnLoginScreen(mainIndex);
+	if (!watcherIsCurrent()) return;
+	if (onLoginScreen) {
 		g_stuckScreenConsecutiveCount[mainIndex].store(0);
 		g_disconnectDialogConsecutiveCount[mainIndex].store(0);
 		NotifyDisconnectMiao("login screen");
-		TriggerAutoLogin(mainIndex);
+		TriggerAutoLogin(mainIndex, generation);
 	}
 }
 
@@ -1462,12 +1545,17 @@ void AutoLogin_CheckAndTrigger(long index) {
 void AutoLogin_StartDisconnectWatcher(long index) {
 	long mainIndex = NormalizeMainIndex(index);
 	if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
+unsigned long long generation;
+{
+	std::lock_guard<std::mutex> actionLock(g_disconnectWatcherActionMutex);
+	generation = g_disconnectWatcherGeneration[mainIndex].fetch_add(1) + 1;
+}
 	g_stuckScreenConsecutiveCount[mainIndex].store(0);
 	g_disconnectDialogConsecutiveCount[mainIndex].store(0);
+g_lastWhiteIconSeenTick[mainIndex].store(0, std::memory_order_relaxed);
 ResetAutoRestState(mainIndex);
 ResetNetchGuardState(mainIndex);
 
-unsigned long long generation = g_disconnectWatcherGeneration[mainIndex].fetch_add(1) + 1;
 std::thread([mainIndex, generation]() {
 	DisconnectWatcherLoop(mainIndex, generation);
 }).detach();
@@ -1476,11 +1564,15 @@ std::thread([mainIndex, generation]() {
 void AutoLogin_StopDisconnectWatcher(long index) {
 	long mainIndex = NormalizeMainIndex(index);
 	if (mainIndex < 0 || mainIndex >= MAX_HWND) return;
+{
+	std::lock_guard<std::mutex> actionLock(g_disconnectWatcherActionMutex);
+	g_disconnectWatcherGeneration[mainIndex].fetch_add(1);
+}
 	g_stuckScreenConsecutiveCount[mainIndex].store(0);
 	g_disconnectDialogConsecutiveCount[mainIndex].store(0);
+g_lastWhiteIconSeenTick[mainIndex].store(0, std::memory_order_relaxed);
 ResetAutoRestState(mainIndex);
 ResetNetchGuardState(mainIndex);
-g_disconnectWatcherGeneration[mainIndex].fetch_add(1);
 }
 
 

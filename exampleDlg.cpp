@@ -1094,7 +1094,6 @@ HWND findMSWindow();
 
 
 
-#include <QtWidgets/QGraphicsOpacityEffect>
 
 
 
@@ -85125,7 +85124,6 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-				QGraphicsOpacityEffect* opacity = qobject_cast<QGraphicsOpacityEffect*>(dot->graphicsEffect());
 
 
 
@@ -85189,7 +85187,6 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-				if (!opacity)
 
 
 
@@ -85317,7 +85314,6 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-					opacity = new QGraphicsOpacityEffect(dot);
 
 
 
@@ -85381,7 +85377,6 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-					dot->setGraphicsEffect(opacity);
 
 
 
@@ -85573,7 +85568,6 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-				QPropertyAnimation* anim = dot->findChild<QPropertyAnimation*>("PulseAnim");
 
 
 
@@ -85637,7 +85631,6 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-				if (!anim)
 
 
 
@@ -85765,7 +85758,6 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-					anim = new QPropertyAnimation(opacity, "opacity", dot);
 
 
 
@@ -85829,7 +85821,6 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-					anim->setObjectName("PulseAnim");
 
 
 
@@ -85893,7 +85884,6 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-					anim->setDuration(1200);
 
 
 
@@ -85957,7 +85947,6 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-					anim->setStartValue(1.0);
 
 
 
@@ -86021,7 +86010,6 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-					anim->setKeyValueAt(0.5, 0.3);
 
 
 
@@ -86085,7 +86073,6 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-					anim->setEndValue(1.0);
 
 
 
@@ -86149,7 +86136,6 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-					anim->setLoopCount(-1);
 
 
 
@@ -86213,7 +86199,6 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-					anim->start();
 
 
 

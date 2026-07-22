@@ -227,6 +227,10 @@ constexpr ULONGLONG kPlayerCoordCheckIntervalMs = 50;
 
 constexpr ULONGLONG kPlayerCoordCheckIdleIntervalMs = 250;
 
+constexpr ULONGLONG kPlayerCoordHintTtlMs = 2000;
+constexpr int kPlayerCoordRoiHalfSize = 48;
+constexpr int kPlayerCoordRoiTemplatePad = 16;
+
 constexpr ULONGLONG kWhiteCheckIntervalMs = 200;
 constexpr ULONGLONG kLieCheckIntervalMs = 1000;
 
@@ -249,6 +253,12 @@ ULONGLONG g_lastPlayerCoordCheckMs[MAX_HWND] = {};
 
 ULONGLONG g_lastWhiteCheckMs[MAX_HWND] = {};
 ULONGLONG g_lastLieCheckMs[MAX_HWND] = {};
+
+int g_lastPlayerMatchX[MAX_HWND] = {};
+int g_lastPlayerMatchY[MAX_HWND] = {};
+ULONGLONG g_lastPlayerMatchTickMs[MAX_HWND] = {};
+HWND g_lastPlayerMatchHwnd[MAX_HWND] = {};
+long g_lastPlayerMatchPid[MAX_HWND] = {};
 
 volatile LONG g_isGoToActive[MAX_HWND] = {};
 
@@ -314,6 +324,45 @@ bool FindIconInMiniMapSnapshot(const SPUtils::ImageSnapshot& snapshot, const TCH
 
 	outX = static_cast<int>(matchX);
 	outY = static_cast<int>(matchY);
+	return true;
+}
+
+bool FindPlayerIconInMiniMapSnapshot(const SPUtils::ImageSnapshot& snapshot, long mainIndex,
+	HWND hwnd, long pid, ULONGLONG nowMs, double sim, int& outX, int& outY) {
+	outX = -1;
+	outY = -1;
+	if (!snapshot.IsValid()) return false;
+
+	long matchX = -1;
+	long matchY = -1;
+	bool matched = false;
+	if (mainIndex >= 0 && mainIndex < MAX_HWND &&
+		g_lastPlayerMatchTickMs[mainIndex] != 0 &&
+		nowMs >= g_lastPlayerMatchTickMs[mainIndex] &&
+		nowMs - g_lastPlayerMatchTickMs[mainIndex] <= kPlayerCoordHintTtlMs &&
+		g_lastPlayerMatchHwnd[mainIndex] == hwnd &&
+		g_lastPlayerMatchPid[mainIndex] == pid) {
+		const int roiX = g_lastPlayerMatchX[mainIndex] - kPlayerCoordRoiHalfSize;
+		const int roiY = g_lastPlayerMatchY[mainIndex] - kPlayerCoordRoiHalfSize;
+		const int roiSize = kPlayerCoordRoiHalfSize * 2 + kPlayerCoordRoiTemplatePad;
+		matched = SPUtils::FindPicInSnapshotRegion(snapshot, ToWideStringLocal(playerIcon), sim,
+			roiX, roiY, roiSize, roiSize, matchX, matchY);
+	}
+
+	if (!matched) {
+		matched = SPUtils::FindPicInSnapshot(snapshot, ToWideStringLocal(playerIcon), sim, matchX, matchY);
+	}
+	if (!matched) return false;
+
+	outX = static_cast<int>(matchX);
+	outY = static_cast<int>(matchY);
+	if (mainIndex >= 0 && mainIndex < MAX_HWND) {
+		g_lastPlayerMatchX[mainIndex] = outX;
+		g_lastPlayerMatchY[mainIndex] = outY;
+		g_lastPlayerMatchTickMs[mainIndex] = nowMs;
+		g_lastPlayerMatchHwnd[mainIndex] = hwnd;
+		g_lastPlayerMatchPid[mainIndex] = pid;
+	}
 	return true;
 }
 
@@ -758,7 +807,17 @@ void gMonitorCheck(long index, long count)
 
 		int playerY = -1;
 
-		if (findMiniMapIcon(playerIcon, 0.95, playerX, playerY)) {
+		HWND playerHwnd = reinterpret_cast<HWND>(static_cast<LONG_PTR>(g_info[index].hwnd));
+		long playerPid = g_info[index].pid;
+		bool playerFound = false;
+		if (miniMapSnapshot.IsValid()) {
+			playerFound = FindPlayerIconInMiniMapSnapshot(miniMapSnapshot, mainIndex, playerHwnd, playerPid, nowMs,
+				0.95, playerX, playerY);
+		}
+		else {
+			playerFound = findMiniMapIcon(playerIcon, 0.95, playerX, playerY);
+		}
+		if (playerFound) {
 
 			int* currentWhiteIconCoords = gMonitorInstance.getWhiteIconCoords();
 
@@ -4235,4 +4294,3 @@ void leftRight(long index, int& count) {
 	}
 
 }
-
