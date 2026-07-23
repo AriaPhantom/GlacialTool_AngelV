@@ -65,6 +65,7 @@
 #include "stdafx.h"
 #include <atomic>
 static std::atomic<int> g_netchGuardEnabled{0};
+static std::atomic<int> g_lieSoundEnabled{0};
 
 
 
@@ -9480,6 +9481,7 @@ CexampleDlg::CexampleDlg(QWidget* parent)
 
 
 	, whiteDetect(NULL)
+	, lieSound(NULL)
 
 
 
@@ -37476,6 +37478,11 @@ void CexampleDlg::InitUi()
 
 
 	whiteDetect = createPill(QString::fromWCharArray(L"白屋检测"));
+	lieSound = createPill(QString::fromWCharArray(L"Lie提示音"));
+	lieSound->setToolTip(QString::fromWCharArray(L"Lie检测命中时播放系统提示音"));
+	QObject::connect(lieSound, &QToolButton::toggled, [](bool checked) {
+		g_lieSoundEnabled.store(checked ? 1 : 0, std::memory_order_relaxed);
+	});
 
 
 
@@ -37540,6 +37547,7 @@ void CexampleDlg::InitUi()
 
 
 	detectGrid->addWidget(whiteDetect, 0, 2);
+	detectGrid->addWidget(lieSound, 2, 0);
 
 
 
@@ -52419,6 +52427,7 @@ void CexampleDlg::LoadUiState()
 
 
 	if (whiteDetect) whiteDetect->setChecked(app->GetProfileInt(kUiStateSection, _T("WhiteDetect"), 1) != 0);
+	if (lieSound) lieSound->setChecked(app->GetProfileInt(kUiStateSection, _T("LieSound"), 0) != 0);
     if (autoLogin) autoLogin->setChecked(app->GetProfileInt(kUiStateSection, _T("AutoLogin"), 1) != 0);
     if (autoLoginChannel)
     {
@@ -56031,6 +56040,7 @@ void CexampleDlg::SaveUiState()
 
 
 	if (whiteDetect) app->WriteProfileInt(kUiStateSection, _T("WhiteDetect"), whiteDetect->isChecked());
+	if (lieSound) app->WriteProfileInt(kUiStateSection, _T("LieSound"), lieSound->isChecked());
     if (autoLogin) app->WriteProfileInt(kUiStateSection, _T("AutoLogin"), autoLogin->isChecked());
     if (autoLoginChannel)
     {
@@ -95732,6 +95742,10 @@ int GetExp30()
 int GetWhiteDetect()
 {
     return g_main_cwnd ? g_main_cwnd->GetWhiteDetect() : 0;
+}
+int GetLieSound()
+{
+	return g_lieSoundEnabled.load(std::memory_order_relaxed);
 }
 
 int GetAutoLogin()

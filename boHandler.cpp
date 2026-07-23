@@ -192,6 +192,7 @@ extern int GetautoOil();
 extern int Getignite();
 
 extern int GetWhiteDetect();
+extern int GetLieSound();
 
 
 
@@ -1067,6 +1068,7 @@ void gMonitorCheck(long index, long count)
 		if (findPicRet == 1 && lieX >= 0 && lieY >= 0) {
 			Log(_T("detect Lie, trigger white"));
 			miaoSenderInstance.setWhite(1);
+			if (GetLieSound()) MessageBeep(MB_ICONEXCLAMATION);
 			string s = "C:\\sptool\\WhitePic";
 			long a = dm->GetTime() % 10000;
 			string s_type = ".png";

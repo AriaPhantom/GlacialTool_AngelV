@@ -112,6 +112,7 @@ QToolButton* EXP_PARK;
     QToolButton* EXP30M;
         QComboBox* expDurationDropdown;
 QToolButton* whiteDetect;
+QToolButton* lieSound;
     QToolButton* autoLogin;
     QLineEdit* autoLoginKeys;
     QLineEdit* autoLoginDelay;
