@@ -66,6 +66,7 @@
 #include <atomic>
 static std::atomic<int> g_netchGuardEnabled{0};
 extern void PlayLieAlertSound();
+extern void PreviewLieAlertSound();
 static std::atomic<int> g_lieSoundEnabled{0};
 
 
@@ -37485,7 +37486,7 @@ void CexampleDlg::InitUi()
 		g_lieSoundEnabled.store(checked ? 1 : 0, std::memory_order_relaxed);
 	});
 	QObject::connect(lieSound, &QToolButton::clicked, [](bool checked) {
-		if (checked) PlayLieAlertSound();
+		if (checked) PreviewLieAlertSound();
 	});
 
 

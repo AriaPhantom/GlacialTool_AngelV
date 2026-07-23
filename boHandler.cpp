@@ -197,6 +197,24 @@ extern int GetWhiteDetect();
 extern int GetLieSound();
 void PlayLieAlertSound()
 {
+    static std::mutex stateMutex;
+    static ULONGLONG playingUntil = 0;
+    static ULONGLONG cooldownUntil = 0;
+    const ULONGLONG now = GetTickCount64();
+    std::lock_guard<std::mutex> lock(stateMutex);
+
+    if (playingUntil != 0 && now >= playingUntil) {
+        PlaySoundW(nullptr, nullptr, 0);
+        playingUntil = 0;
+    }
+    if (now < playingUntil || now < cooldownUntil) return;
+    if (!PlaySoundW(L"C:\\sptool\\maple_lie_alert.wav", nullptr, SND_FILENAME | SND_ASYNC | SND_NODEFAULT)) return;
+
+    playingUntil = now + 5000;
+    cooldownUntil = now + 65000;
+}
+void PreviewLieAlertSound()
+{
     PlaySoundW(L"C:\\sptool\\maple_lie_alert.wav", nullptr, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
 }
 
