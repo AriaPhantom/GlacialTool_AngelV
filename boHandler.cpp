@@ -1,6 +1,8 @@
 ﻿#include "stdafx.h"
 
 #include "boHandler.h"
+#include <mmsystem.h>
+#pragma comment(lib, "winmm.lib")
 
 #include "AutoLogin.h"
 
@@ -193,6 +195,10 @@ extern int Getignite();
 
 extern int GetWhiteDetect();
 extern int GetLieSound();
+void PlayLieAlertSound()
+{
+    PlaySoundW(L"C:\\sptool\\maple_lie_alert.wav", nullptr, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+}
 
 
 
@@ -1068,7 +1074,7 @@ void gMonitorCheck(long index, long count)
 		if (findPicRet == 1 && lieX >= 0 && lieY >= 0) {
 			Log(_T("detect Lie, trigger white"));
 			miaoSenderInstance.setWhite(1);
-			if (GetLieSound()) MessageBeep(MB_ICONEXCLAMATION);
+			if (GetLieSound()) PlayLieAlertSound();
 			string s = "C:\\sptool\\WhitePic";
 			long a = dm->GetTime() % 10000;
 			string s_type = ".png";

@@ -65,6 +65,7 @@
 #include "stdafx.h"
 #include <atomic>
 static std::atomic<int> g_netchGuardEnabled{0};
+extern void PlayLieAlertSound();
 static std::atomic<int> g_lieSoundEnabled{0};
 
 
@@ -37479,9 +37480,12 @@ void CexampleDlg::InitUi()
 
 	whiteDetect = createPill(QString::fromWCharArray(L"白屋检测"));
 	lieSound = createPill(QString::fromWCharArray(L"Lie提示音"));
-	lieSound->setToolTip(QString::fromWCharArray(L"Lie检测命中时播放系统提示音"));
+	lieSound->setToolTip(QString::fromWCharArray(L"Lie检测命中时播放冒险岛提示音，开启时试听"));
 	QObject::connect(lieSound, &QToolButton::toggled, [](bool checked) {
 		g_lieSoundEnabled.store(checked ? 1 : 0, std::memory_order_relaxed);
+	});
+	QObject::connect(lieSound, &QToolButton::clicked, [](bool checked) {
+		if (checked) PlayLieAlertSound();
 	});
 
 
