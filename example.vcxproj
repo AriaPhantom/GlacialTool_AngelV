@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{E0447294-495B-49E2-9796-0F235548C14C}</ProjectGuid>
+    <ProjectGuid>{16A8E0F7-297C-46BF-B7F3-43D031E14271}</ProjectGuid>
     <RootNamespace>NNuan</RootNamespace>
     <Keyword>MFCProj</Keyword>
     <ProjectName>Angi</ProjectName>
@@ -73,6 +73,7 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <Import Project="Angel.Build.props" />
   <PropertyGroup>
     <_ProjectFileVersion>16.0.31515.66</_ProjectFileVersion>
   </PropertyGroup>

@@ -35,31 +35,21 @@ echo ========================================
 
 echo.
 echo [1/3] Building NL...
-echo #pragma once> ProjVer.h
-echo #define NL>> ProjVer.h
-"%MSBUILD%" Angi.sln /t:Build /p:RunPostBuildEvent=Always /p:Configuration=Release /p:Platform=x64 %MSBUILD_PROPS% /m /v:minimal
+"%MSBUILD%" Angi.sln /t:Build /p:RunPostBuildEvent=Always /p:Configuration=Release /p:Platform=x64 /p:ProfessionVariant=NL %MSBUILD_PROPS% /m /v:minimal
 if errorlevel 1 goto build_failed
 if exist "x64\Release\Angi.exe" copy /Y "x64\Release\Angi.exe" "x64\Release\Angi_NL.exe" >nul
 
 echo.
 echo [2/3] Building Angel...
-echo #pragma once> ProjVer.h
-echo #define Angel>> ProjVer.h
-"%MSBUILD%" Angi.sln /t:Build /p:RunPostBuildEvent=Always /p:Configuration=Release /p:Platform=x64 %MSBUILD_PROPS% /m /v:minimal
+"%MSBUILD%" Angi.sln /t:Build /p:RunPostBuildEvent=Always /p:Configuration=Release /p:Platform=x64 /p:ProfessionVariant=Angel %MSBUILD_PROPS% /m /v:minimal
 if errorlevel 1 goto build_failed
 if exist "x64\Release\Angi.exe" copy /Y "x64\Release\Angi.exe" "x64\Release\Angi_Angel.exe" >nul
 
 echo.
 echo [3/3] Building Adele...
-echo #pragma once> ProjVer.h
-echo #define Adele>> ProjVer.h
-"%MSBUILD%" Angi.sln /t:Build /p:RunPostBuildEvent=Always /p:Configuration=Release /p:Platform=x64 %MSBUILD_PROPS% /m /v:minimal
+"%MSBUILD%" Angi.sln /t:Build /p:RunPostBuildEvent=Always /p:Configuration=Release /p:Platform=x64 /p:ProfessionVariant=Adele %MSBUILD_PROPS% /m /v:minimal
 if errorlevel 1 goto build_failed
 if exist "x64\Release\Angi.exe" copy /Y "x64\Release\Angi.exe" "x64\Release\Angi_Adele.exe" >nul
-
-rem Restore default to NL
-echo #pragma once> ProjVer.h
-echo #define NL>> ProjVer.h
 
 echo.
 echo ========================================
