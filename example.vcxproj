@@ -242,14 +242,12 @@
     <ClCompile Include="gMonitor.cpp" />
     <ClCompile Include="lodepng.cpp" />
     <ClCompile Include="log.cpp" />
-    <ClCompile Include="..\GlacialTool_Common\MiaoSender.cpp" />
     <ClCompile Include="StartupVerify.cpp" />
     <ClCompile Include="obj.cpp" />
     <ClCompile Include="runeData.cpp" />
     <ClCompile Include="script.cpp" />
     <ClCompile Include="AutoLogin.cpp" />
     
-    <ClCompile Include="..\GlacialTool_Common\SPUtils_legacy.cpp" /><ClCompile Include="..\GlacialTool_Common\SPUtils.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -267,7 +265,6 @@
     <ClInclude Include="KyStting.h" />
     <ClInclude Include="lodepng.h" />
     <ClInclude Include="log.h" />
-    <ClInclude Include="..\GlacialTool_Common\MiaoSender.h" />
     <ClInclude Include="obj.h" />
     <ClInclude Include="ProjVer.h" />
     <ClInclude Include="Resource.h" />
@@ -276,7 +273,6 @@
     <ClInclude Include="script.h" />
     <ClInclude Include="AutoLogin.h" />
     
-    <ClInclude Include="..\GlacialTool_Common\SPUtils_legacy.h" /><ClInclude Include="..\GlacialTool_Common\SPUtils.h" />
     <ClInclude Include="StartupVerify.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="thread_control.h" />
@@ -295,6 +291,7 @@
   <ItemGroup>
     <Text Include="ReadMe.txt" />
   </ItemGroup>
+  <Import Project="$(ProjectDir)..\GlacialTool_Common\GlacialTool.Common.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
