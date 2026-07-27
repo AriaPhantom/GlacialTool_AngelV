@@ -238,6 +238,7 @@ unsigned WINAPI MainThread(PVOID pParam)
 	}
 
 	startBo(index);
+	return 0;
 
 	/*
 	while (1)
@@ -366,6 +367,7 @@ unsigned WINAPI MiaoThread(PVOID pParam) {
 	}
 
 	startMiao(index);
+	return 0;
 
 }
 
