@@ -115,7 +115,8 @@ std::wstring BuildOutputPath() {
 		<< std::setw(2) << now.wDay << L'_'
 		<< std::setw(2) << now.wHour
 		<< std::setw(2) << now.wMinute
-		<< std::setw(2) << now.wSecond << L'_'
+		<< std::setw(2) << now.wSecond
+		<< std::setw(3) << now.wMilliseconds << L'_'
 		<< GetCurrentProcessId() << L".mp4";
 	return name.str();
 }
