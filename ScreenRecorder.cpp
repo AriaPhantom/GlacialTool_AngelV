@@ -22,7 +22,7 @@ namespace {
 using Microsoft::WRL::ComPtr;
 
 constexpr UINT32 kFramesPerSecond = 10;
-constexpr UINT32 kRecordingSeconds = 60;
+constexpr UINT32 kRecordingSeconds = 30;
 constexpr UINT32 kAverageBitrate = 8'000'000;
 constexpr int kCaptureX = 310;
 constexpr int kCaptureY = 116;
