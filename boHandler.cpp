@@ -26,6 +26,8 @@
 
 #include "SPUtils.h"
 
+#include "ScreenRecorder.h"
+
 #include <sstream>
 
 #include <iostream>
@@ -1091,6 +1093,11 @@ void gMonitorCheck(long index, long count)
 		long findPicRet = dm->FindPic(0, 0, mapleWindowWidth, mapleWindowHeight, lieIcon, _T("000000"), 0.98, 0, &lieX, &lieY);
 		if (findPicRet == 1 && lieX >= 0 && lieY >= 0) {
 			Log(_T("detect Lie, trigger white"));
+			HWND gameWindow = reinterpret_cast<HWND>(static_cast<LONG_PTR>(g_info[index].hwnd));
+			std::wstring recordingPath;
+			if (LieScreenRecorder::Start(gameWindow, recordingPath)) {
+				Log(_T("Lie game recording started: %s"), recordingPath.c_str());
+			}
 			miaoSenderInstance.setWhite(1);
 			if (GetLieSound()) PlayLieAlertSound();
 			string s = "C:\\sptool\\WhitePic";

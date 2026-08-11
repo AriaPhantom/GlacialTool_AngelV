@@ -46,6 +46,9 @@
     <ClCompile Include="boHandler.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="ScreenRecorder.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="runeData.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -99,6 +102,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="boHandler.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ScreenRecorder.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="runeData.h">
