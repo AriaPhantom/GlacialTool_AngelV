@@ -290,6 +290,13 @@ bool g_whiteIconUpdateFailureNotified[MAX_HWND] = {};
 // instead of one per monitor tick (mirrors UniversalV).
 bool g_whiteCaptureLatched[MAX_HWND] = {};
 bool g_lieCaptureLatched[MAX_HWND] = {};
+// Last Lie hit location per window; seeds the hint ROI fast path. A stale
+// hint only costs one tiny ROI search before the full-window fallback.
+long g_lieLastHitX[MAX_HWND] = {};
+long g_lieLastHitY[MAX_HWND] = {};
+bool g_lieHintValid[MAX_HWND] = {};
+constexpr long kLieHintPaddingX = 120;
+constexpr long kLieHintPaddingY = 60;
 
 int g_lastPlayerMatchX[MAX_HWND] = {};
 int g_lastPlayerMatchY[MAX_HWND] = {};
@@ -1141,8 +1148,32 @@ void gMonitorCheck(long index, long count)
 		}
 
 		long lieX = -1, lieY = -1;
-		long findPicRet = dm->FindPic(0, 0, mapleWindowWidth, mapleWindowHeight, lieIcon, _T("000000"), 0.98, 0, &lieX, &lieY);
+		long findPicRet = 0;
+		// Two-level search: the Lie banner stays put while visible, so retry
+		// the last hit neighborhood first; a miss still falls back to the full
+		// window, keeping coverage and the 1000ms cadence unchanged.
+		if (mainIndex >= 0 && mainIndex < MAX_HWND && g_lieHintValid[mainIndex]) {
+			long hintX1 = g_lieLastHitX[mainIndex] - kLieHintPaddingX;
+			long hintY1 = g_lieLastHitY[mainIndex] - kLieHintPaddingY;
+			long hintX2 = g_lieLastHitX[mainIndex] + kLieHintPaddingX;
+			long hintY2 = g_lieLastHitY[mainIndex] + kLieHintPaddingY;
+			if (hintX1 < 0) hintX1 = 0;
+			if (hintY1 < 0) hintY1 = 0;
+			if (hintX2 > mapleWindowWidth) hintX2 = mapleWindowWidth;
+			if (hintY2 > mapleWindowHeight) hintY2 = mapleWindowHeight;
+			if (hintX2 > hintX1 && hintY2 > hintY1) {
+				findPicRet = dm->FindPic(hintX1, hintY1, hintX2, hintY2, lieIcon, _T("000000"), 0.98, 0, &lieX, &lieY);
+			}
+		}
+		if (findPicRet != 1 || lieX < 0 || lieY < 0) {
+			findPicRet = dm->FindPic(0, 0, mapleWindowWidth, mapleWindowHeight, lieIcon, _T("000000"), 0.98, 0, &lieX, &lieY);
+		}
 		if (findPicRet == 1 && lieX >= 0 && lieY >= 0) {
+			if (mainIndex >= 0 && mainIndex < MAX_HWND) {
+				g_lieLastHitX[mainIndex] = lieX;
+				g_lieLastHitY[mainIndex] = lieY;
+				g_lieHintValid[mainIndex] = true;
+			}
 			Log(_T("detect Lie, trigger white"));
 			HWND gameWindow = reinterpret_cast<HWND>(static_cast<LONG_PTR>(g_info[index].hwnd));
 			std::wstring recordingPath;

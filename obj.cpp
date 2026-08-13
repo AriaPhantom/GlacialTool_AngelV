@@ -486,8 +486,12 @@ CString sptool::GetColor(long x, long y) {
 	if (mat.empty()) return _T("");
 
 	int b = 0, g = 0, r = 0;
-	if (mat.channels() >= 3) {
+	if (mat.channels() == 4) {
 		cv::Vec4b px = mat.at<cv::Vec4b>(0, 0);
+		b = px[0]; g = px[1]; r = px[2];
+	}
+	else if (mat.channels() == 3) {
+		cv::Vec3b px = mat.at<cv::Vec3b>(0, 0);
 		b = px[0]; g = px[1]; r = px[2];
 	}
 	CString out;
