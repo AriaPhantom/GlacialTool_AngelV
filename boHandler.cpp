@@ -265,6 +265,9 @@ constexpr ULONGLONG kLieCheckIntervalMs = 1000;
 constexpr ULONGLONG kPlayerCoordCheckIntervalExtMs = 50;
 constexpr ULONGLONG kPlayerCoordCheckIdleExtMs = 300;
 constexpr ULONGLONG kWhiteCheckIntervalExtMs = 350;
+// Gate the map-border refresh retry so a persistent failure does not rerun
+// the 500x600 template scan on every monitor tick (mirrors UniversalV).
+constexpr ULONGLONG kWhiteIconUpdateRetryGateMs = 350;
 
 ULONGLONG g_lastOtherPlayerCheckMs[MAX_HWND] = {};
 
@@ -280,6 +283,13 @@ ULONGLONG g_lastPlayerCoordCheckMs[MAX_HWND] = {};
 
 ULONGLONG g_lastWhiteCheckMs[MAX_HWND] = {};
 ULONGLONG g_lastLieCheckMs[MAX_HWND] = {};
+
+ULONGLONG g_whiteIconUpdateRetryAfterMs[MAX_HWND] = {};
+bool g_whiteIconUpdateFailureNotified[MAX_HWND] = {};
+// Latch evidence captures so a persistent white/Lie state writes one PNG
+// instead of one per monitor tick (mirrors UniversalV).
+bool g_whiteCaptureLatched[MAX_HWND] = {};
+bool g_lieCaptureLatched[MAX_HWND] = {};
 
 int g_lastPlayerMatchX[MAX_HWND] = {};
 int g_lastPlayerMatchY[MAX_HWND] = {};
@@ -768,6 +778,12 @@ void gMonitorCheck(long index, long count)
 
 	if (gMonitorInstance.whiteIconUpdate > 0) {
 
+		const bool hasWhiteIconUpdateState = (mainIndex >= 0 && mainIndex < MAX_HWND);
+		const bool retryAllowed = !hasWhiteIconUpdateState ||
+			g_whiteIconUpdateRetryAfterMs[mainIndex] == 0 ||
+			nowMs >= g_whiteIconUpdateRetryAfterMs[mainIndex];
+		if (retryAllowed) {
+
 		long whiteTopLeftX = 0;
 
 		long whiteTopLeftY = 0;
@@ -814,16 +830,35 @@ void gMonitorCheck(long index, long count)
 
 			gMonitorInstance.whiteIconUpdate = 0;
 
+			if (hasWhiteIconUpdateState) {
+				g_whiteIconUpdateRetryAfterMs[mainIndex] = 0;
+				g_whiteIconUpdateFailureNotified[mainIndex] = false;
+			}
+
 			SetTaskState(index - MAX_HWND, _T("地图边界已更新"));
 
 		}
 
 		else {
 
-			SetTaskState(index - MAX_HWND, _T("地图边界更新失败"));
+			// Notify once per failure streak; retry after the gate interval
+			// instead of on every monitor tick.
+			if (!hasWhiteIconUpdateState || !g_whiteIconUpdateFailureNotified[mainIndex]) {
+				SetTaskState(index - MAX_HWND, _T("地图边界更新失败"));
+			}
+			if (hasWhiteIconUpdateState) {
+				g_whiteIconUpdateRetryAfterMs[mainIndex] = nowMs + kWhiteIconUpdateRetryGateMs;
+				g_whiteIconUpdateFailureNotified[mainIndex] = true;
+			}
 
 		}
 
+		}
+
+	}
+	else if (mainIndex >= 0 && mainIndex < MAX_HWND) {
+		g_whiteIconUpdateRetryAfterMs[mainIndex] = 0;
+		g_whiteIconUpdateFailureNotified[mainIndex] = false;
 	}
 
 
@@ -1016,6 +1051,13 @@ void gMonitorCheck(long index, long count)
 
 				gMonitorInstance.setWhiteTimer(0);
 
+				// Feed the AutoLogin white gate so the disconnect watcher can
+				// skip its own duplicate white-icon probe.
+				AutoLogin_RecordWhiteIconSeen(index);
+				if (mainIndex >= 0 && mainIndex < MAX_HWND) {
+					g_whiteCaptureLatched[mainIndex] = false;
+				}
+
 				AutoLogin_ClearLoginPending(index);
 
 			}
@@ -1029,6 +1071,13 @@ void gMonitorCheck(long index, long count)
 			if (detectWhiteRoom(x, y)) {
 
 				gMonitorInstance.setWhiteTimer(0);
+
+				// Feed the AutoLogin white gate so the disconnect watcher can
+				// skip its own duplicate white-icon probe.
+				AutoLogin_RecordWhiteIconSeen(index);
+				if (mainIndex >= 0 && mainIndex < MAX_HWND) {
+					g_whiteCaptureLatched[mainIndex] = false;
+				}
 
 			}
 
@@ -1048,17 +1097,19 @@ void gMonitorCheck(long index, long count)
 
 						miaoSenderInstance.setWhite(1);
 
-						string s = "C:\\sptool\\WhitePic";
-
-						long a = dm->GetTime() % 10000;
-
-						string s_type = ".png";
-
-						string filePath = s + to_string(a) + s_type;
-
-						CString filePathT(filePath.c_str());
-
-						dm->CapturePng(0, 0, 2000, 1200, filePathT);
+						// One evidence PNG per white episode; the latch resets
+						// when the white icon is seen again.
+						if (mainIndex < 0 || mainIndex >= MAX_HWND || !g_whiteCaptureLatched[mainIndex]) {
+							string s = "C:\\sptool\\WhitePic";
+							long a = dm->GetTime() % 10000;
+							string s_type = ".png";
+							string filePath = s + to_string(a) + s_type;
+							CString filePathT(filePath.c_str());
+							dm->CapturePng(0, 0, 2000, 1200, filePathT);
+							if (mainIndex >= 0 && mainIndex < MAX_HWND) {
+								g_whiteCaptureLatched[mainIndex] = true;
+							}
+						}
 
 					}
 
@@ -1100,13 +1151,22 @@ void gMonitorCheck(long index, long count)
 			}
 			miaoSenderInstance.setWhite(1);
 			if (GetLieSound()) PlayLieAlertSound();
-			string s = "C:\\sptool\\WhitePic";
-			long a = dm->GetTime() % 10000;
-			string s_type = ".png";
-			string filePath = s + to_string(a) + s_type;
-			CString filePathT(filePath.c_str());
-			dm->CapturePng(0, 0, 2000, 1200, filePathT);
+			// One evidence PNG per Lie episode; latch resets when Lie clears.
+			if (mainIndex < 0 || mainIndex >= MAX_HWND || !g_lieCaptureLatched[mainIndex]) {
+				string s = "C:\\sptool\\WhitePic";
+				long a = dm->GetTime() % 10000;
+				string s_type = ".png";
+				string filePath = s + to_string(a) + s_type;
+				CString filePathT(filePath.c_str());
+				dm->CapturePng(0, 0, 2000, 1200, filePathT);
+				if (mainIndex >= 0 && mainIndex < MAX_HWND) {
+					g_lieCaptureLatched[mainIndex] = true;
+				}
+			}
 			subSoftPause();
+		}
+		else if (mainIndex >= 0 && mainIndex < MAX_HWND) {
+			g_lieCaptureLatched[mainIndex] = false;
 		}
 	}
 
@@ -1876,7 +1936,18 @@ void goTo(long index, long targetX, long targetY, long rangeFromCoords, bool isR
 
 
 
-	while (success == 0) {
+	while (success == 0 && gMonitorInstance.status > 0) {
+
+		if (*currentPlayerLocation <= 0) {
+			// Coordinates unknown: yield instead of busy-spinning at full CPU
+			// while the monitor thread refreshes them; keeps pause/stop
+			// responsive (mirrors the UniversalV goTo fix).
+			ScriptDelay(index, 75);
+			if (gMonitorInstance.status > 0) {
+				currentPlayerLocation = gMonitorInstance.getPlayerCoords();
+			}
+			continue;
+		}
 
 		if (*currentPlayerLocation > 0) {
 

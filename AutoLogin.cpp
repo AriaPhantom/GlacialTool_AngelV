@@ -939,13 +939,17 @@ return false;
 }
 
 bool FindIconInWindowBmpFirst(long mainIndex, const wchar_t* bmpPath, const wchar_t* pngPath, double sim, long& outx, long& outy) {
-if (bmpPath && FileExists(bmpPath)) {
-	if (FindIconInWindow(mainIndex, bmpPath, sim, outx, outy)) return true;
-}
+// Search both templates in a single engine pass ("bmp|png"): one capture and
+// one coarse gate per call instead of two independent full-window searches
+// when the first template misses (and one batched CPFindPicN in external mode).
+std::wstring joined;
+if (bmpPath && FileExists(bmpPath)) joined = bmpPath;
 if (pngPath && FileExists(pngPath)) {
-	if (FindIconInWindow(mainIndex, pngPath, sim, outx, outy)) return true;
+	if (!joined.empty()) joined += L"|";
+	joined += pngPath;
 }
-return false;
+if (joined.empty()) return false;
+return FindIconInWindow(mainIndex, joined, sim, outx, outy);
 }
 
 bool WaitForIcon(long mainIndex, const std::wstring& iconPath, int timeoutMs, double sim,

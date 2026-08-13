@@ -84819,7 +84819,12 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-			label->setText(mainStatusText);
+			// Skip redundant repaints: identical text/state arrive many
+			// times per second from monitor threads.
+			if (label->text() != mainStatusText)
+			{
+				label->setText(mainStatusText);
+			}
 
 
 
@@ -84884,6 +84889,14 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 			ThreadState state = g_info[index].thread_state;
+
+			// Restyle the dot only when the state actually changed; the
+			// if/else chain below is skipped for repeat states.
+			const int stateKey = static_cast<int>(state);
+			const QVariant lastStateKey = dot->property("lastStateKey");
+			if (!lastStateKey.isValid() || lastStateKey.toInt() != stateKey)
+			{
+				dot->setProperty("lastStateKey", stateKey);
 
 
 
@@ -87111,6 +87124,8 @@ void CexampleDlg::UpdateList(long index, long action)
 
 			}
 
+			}
+
 
 
 
@@ -87301,7 +87316,11 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-		subItem->setText(ThreadStateToString(g_info[index + MAX_HWND].thread_state));
+		const QString subStatusText = ThreadStateToString(g_info[index + MAX_HWND].thread_state);
+		if (subItem->text() != subStatusText)
+		{
+			subItem->setText(subStatusText);
+		}
 
 
 
@@ -87365,7 +87384,11 @@ void CexampleDlg::UpdateList(long index, long action)
 
 
 
-		taskItem->setText(TCharToQString(g_info[index].task_state));
+		const QString taskText = TCharToQString(g_info[index].task_state);
+		if (taskItem->text() != taskText)
+		{
+			taskItem->setText(taskText);
+		}
 
 
 
