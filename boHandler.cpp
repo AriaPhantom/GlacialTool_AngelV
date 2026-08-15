@@ -1462,73 +1462,14 @@ void keyUp(long index, const TCHAR* key) {
 
 
 void holdKey(long index, const TCHAR* key, long holdTime, long interval) {
-
-	// 增加一个健壮性检查，防止 key 是空指针或空字符串
-
-	if (key == nullptr || _tcscmp(key, _T("")) == 0) {
-
-		return;
-
-	}
-
-
+	if (key == nullptr || _tcscmp(key, _T("")) == 0 || holdTime <= 0) return;
+	(void)interval;
 
 	sptool* dm = g_info[index].dm;
-
-	long safeInterval = min(interval, holdTime);
-
-
-
-	// 判断key是否为方向键
-
-	// 注意：这里的 "up", "down", "left", "right" 是示例
-
-	// 您需要根据您实际传入的按键字符串进行调整
-
-	if (_tcscmp(key, _T("up")) == 0 ||
-
-		_tcscmp(key, _T("down")) == 0 ||
-
-		_tcscmp(key, _T("left")) == 0 ||
-
-		_tcscmp(key, _T("right")) == 0)
-
-	{
-
-		// 方向键的逻辑：按下 -> 等待(holdTime) -> 弹起
-
-		dm->KeyDownChar(key);
-
-		ScriptDelay(index, holdTime); // 直接延迟 holdTime
-
-		dm->KeyUpChar(key);
-
-	}
-
-	else
-
-	{
-
-		// 其他按键的逻辑：保持原有行为
-
-		long startTime = dm->GetTime();
-
-		while (dm->GetTime() - startTime < holdTime) {
-
-			dm->KeyDownChar(key);
-
-			ScriptDelay(index, safeInterval);
-
-		}
-
-		dm->KeyUpChar(key);
-
-	}
-
+	dm->KeyDownChar(key);
+	ScriptDelay(index, holdTime);
+	dm->KeyUpChar(key);
 }
-
-
-
 void press(long index, const TCHAR* key, int times, long delay) {
 
 	if (key == _T("")) {
@@ -3293,17 +3234,11 @@ void CheckRoutineBuff(long index, bool left = true, bool spider = false, int job
 
 		sptool* dm = g_info[index].dm;
 
-		long startTime = dm->GetTime();
+		dm->KeyDownChar(飞剑);
 
-		while (dm->GetTime() - startTime < 3000) {
+		dm->KeyDownChar(轰炸);
 
-			dm->KeyDownChar(飞剑);
-
-			dm->KeyDownChar(轰炸);
-
-			ScriptDelay(index, 133);
-
-		}
+		ScriptDelay(index, 3000);
 
 		dm->KeyUpChar(飞剑);
 
