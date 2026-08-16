@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <time.h>
 #include "stdafx.h"
+#include "InputActions.h"
 #include "log.h"
 #include "KyStting.h"
 using namespace std;
@@ -49,10 +50,6 @@ int* findPic(long index, long TopLeftX, long TopLeftY, long BottomRightX, long B
 
 long randomUniform(long lower, long upper);
 
-void keyDown(long index, const TCHAR* key);
-void keyUp(long index, const TCHAR* key);
-void holdKey(long index, const TCHAR* key, long holdTime, long interval = 133);
-void press(long index, const TCHAR* key, int times = 1, long delay = 0);
 
 
 void startBo(long index);

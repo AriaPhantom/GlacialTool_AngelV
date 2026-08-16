@@ -42,48 +42,6 @@
 
 
 
-namespace {
-std::wstring Utf8ToWide(const char* value) {
-	if (value == nullptr || *value == '\0') {
-		return std::wstring();
-	}
-
-	int length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, value, -1, nullptr, 0);
-	if (length <= 0) {
-		length = MultiByteToWideChar(CP_UTF8, 0, value, -1, nullptr, 0);
-	}
-	if (length <= 0) {
-		return std::wstring();
-	}
-
-	std::wstring result(static_cast<size_t>(length), L'\0');
-	if (MultiByteToWideChar(CP_UTF8, 0, value, -1, &result[0], length) <= 0) {
-		return std::wstring();
-	}
-	result.resize(static_cast<size_t>(length - 1));
-	return result;
-}
-}
-
-void keyDown(long index, const char* key) {
-	const std::wstring converted = Utf8ToWide(key);
-	keyDown(index, converted.c_str());
-}
-
-void keyUp(long index, const char* key) {
-	const std::wstring converted = Utf8ToWide(key);
-	keyUp(index, converted.c_str());
-}
-
-void holdKey(long index, const char* key, long holdTime, long interval = 133) {
-	const std::wstring converted = Utf8ToWide(key);
-	holdKey(index, converted.c_str(), holdTime, interval);
-}
-
-void press(long index, const char* key, int times = 1, long delay = 0) {
-	const std::wstring converted = Utf8ToWide(key);
-	press(index, converted.c_str(), times, delay);
-}
 gMonitor gMonitorInstance = gMonitor();
 
 MiaoSender miaoSenderInstance = MiaoSender();
@@ -1420,89 +1378,6 @@ long randomUniform(long lower, long upper) {
 	srand((unsigned)time(NULL));
 
 	return (rand() % (upper - lower + 1)) + lower;
-
-}
-
-
-
-void keyDown(long index, const TCHAR* key) {
-
-	if (key == _T("")) {
-
-		return;
-
-	}
-
-
-
-	sptool* dm = g_info[index].dm;
-
-	dm->KeyDownChar(key);
-
-}
-
-
-
-void keyUp(long index, const TCHAR* key) {
-
-	if (key == _T("")) {
-
-		return;
-
-	}
-
-
-
-	sptool* dm = g_info[index].dm;
-
-	dm->KeyUpChar(key);
-
-}
-
-
-
-void holdKey(long index, const TCHAR* key, long holdTime, long interval) {
-	if (key == nullptr || _tcscmp(key, _T("")) == 0 || holdTime <= 0) return;
-	(void)interval;
-
-	sptool* dm = g_info[index].dm;
-	dm->KeyDownChar(key);
-	ScriptDelay(index, holdTime);
-	dm->KeyUpChar(key);
-}
-void press(long index, const TCHAR* key, int times, long delay) {
-
-	if (key == _T("")) {
-
-		return;
-
-	}
-
-
-
-	sptool* dm = g_info[index].dm;
-
-	for (size_t i = 0; i < times; i++)
-
-	{
-
-		// Pause hotkey can arrive between ScriptDelay checkpoints; block any extra key injection immediately.
-
-		if (g_info[index].is_pause ||
-
-			g_info[index].thread_state == State_Pausing ||
-
-			g_info[index].thread_state == State_Pause) {
-
-			break;
-
-		}
-
-		dm->KeyPressChar(key);
-
-		ScriptDelay(index, delay);
-
-	}
 
 }
 

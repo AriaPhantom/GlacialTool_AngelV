@@ -39,45 +39,6 @@ extern void subSoftStart();
 extern void subSoftPause();
 extern MiaoSender miaoSenderInstance;
 
-#if defined(GT_LEGACY_NO_INPUT) && defined(_MBCS)
-static std::string WideToAnsiLocal(const wchar_t* value) {
-if (value == nullptr || *value == L'\0') {
-	return std::string();
-}
-int size = WideCharToMultiByte(CP_ACP, 0, value, -1, nullptr, 0, nullptr, nullptr);
-if (size <= 1) {
-	return std::string();
-}
-std::string result(static_cast<size_t>(size), '\0');
-int converted = WideCharToMultiByte(CP_ACP, 0, value, -1, &result[0], size, nullptr, nullptr);
-if (converted <= 1) {
-	return std::string();
-}
-result.resize(static_cast<size_t>(converted - 1));
-return result;
-}
-
-void keyDown(long index, const wchar_t* key) {
-std::string narrow = WideToAnsiLocal(key);
-if (!narrow.empty()) {
-	keyDown(index, narrow.c_str());
-}
-}
-
-void keyUp(long index, const wchar_t* key) {
-std::string narrow = WideToAnsiLocal(key);
-if (!narrow.empty()) {
-	keyUp(index, narrow.c_str());
-}
-}
-
-void press(long index, const wchar_t* key, int times, long delay) {
-std::string narrow = WideToAnsiLocal(key);
-if (!narrow.empty()) {
-	press(index, narrow.c_str(), times, delay);
-}
-}
-#endif
 
 namespace {
 
